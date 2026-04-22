@@ -522,12 +522,13 @@ Respond in JSON format ONLY (no preamble):
 
 # ==================== LLM-POWERED FLASHCARD GENERATION ====================
 
-def generate_flashcards_from_llm(raw_text):
+def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
     """
     Send raw text to Claude API and get structured flashcards back as JSON.
     
     Args:
         raw_text: Raw text block to convert to flashcards
+        reading_level: "simple" (ages 4-11), "intermediate" (ages 11-18), or "complex" (ages 18+)
     
     Returns:
         List of flashcard dicts with 'title', 'facts', 'emoji', 'image_prompt' keys
@@ -541,26 +542,58 @@ def generate_flashcards_from_llm(raw_text):
         st.error("❌ ANTHROPIC_API_KEY not set. Please add it to your environment.")
         return None
     
-    prompt = f"""Extract flashcard data from this text and return ONLY a valid JSON array.
+    # Adapt the prompt based on reading level
+    if reading_level == "simple":
+        level_instructions = """READING LEVEL: EASY (Ages 4-11 — Primary School)
+- Use VERY simple words only. Like a children's picture book.
+- Short sentences (8-12 words max per fact).
+- Avoid big/technical/academic words entirely.
+- If a complex word MUST be used, explain it simply in the same sentence.
+- Use "kids" instead of "children", "big" instead of "significant", "start" instead of "commence", etc.
+- Titles should be 2-4 simple words.
+- Make it sound friendly and fun, like a teacher explaining to young kids.
+- Examples of good simple facts:
+  * "The moon goes around the Earth."
+  * "Plants need sun and water to grow."
+  * "Chimpanzees live in groups called communities."
+"""
+    elif reading_level == "complex":
+        level_instructions = """READING LEVEL: ADVANCED (Ages 18+ — University)
+- Use precise, academic language where appropriate.
+- Include technical terms and proper terminology.
+- Can use longer, more detailed facts (up to 25 words per fact).
+- Assume the reader has strong vocabulary and background knowledge.
+- Maintain accuracy and depth.
+"""
+    else:  # intermediate
+        level_instructions = """READING LEVEL: MEDIUM (Ages 11-18 — Secondary School)
+- Use clear, everyday language that a teenager would understand.
+- Medium-length sentences (12-18 words per fact).
+- Explain any technical terms briefly when used.
+- Balance clarity with informativeness.
+"""
+    
+    prompt = f"""You are creating flashcards for a student. Follow the reading level requirements EXACTLY.
 
-TEXT:
+{level_instructions}
+
+TEXT TO CONVERT:
 {raw_text}
 
-Return JSON in this exact format (no preamble, just JSON):
+Return ONLY a valid JSON array in this exact format (no preamble, no explanation, just JSON):
 [
   {{
-    "title": "Brief title/topic (3-5 words)",
+    "title": "Brief title/topic",
     "facts": ["Fact 1", "Fact 2", "Fact 3"],
     "topic_keyword": "main keyword for emoji matching"
-  }},
-  {{
-    "title": "Another topic",
-    "facts": ["Fact about this"],
-    "topic_keyword": "keyword"
   }}
 ]
 
-Create 3-5 flashcards. Each card should have 1-3 facts. Keep facts concise and clear."""
+Rules:
+- Create 3-5 flashcards
+- Each card has 1-3 facts
+- Facts MUST match the reading level above — this is critical!
+- If the reading level is Easy, even a 6-year-old should understand every word."""
 
     try:
         response = requests.post(
