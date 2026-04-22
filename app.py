@@ -80,41 +80,33 @@ apply_styles(st.session_state.font_style, st.session_state.text_size, st.session
 
 # ==================== MAIN UI ====================
 
-# Enhanced title with better visual hierarchy
-st.markdown(f"""
-<style>
-.header-container {{
-    background: linear-gradient(135deg, #FF6B6B 0%, #FF8787 100%);
-    padding: 40px 30px;
-    border-radius: 12px;
-    margin-bottom: 40px;
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.15);
-}}
+# Survey feedback URL
+FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
 
-.header-title {{
-    font-size: 2.8em;
-    font-weight: 800;
-    color: #FFFFFF;
-    margin: 0;
-    letter-spacing: -0.5px;
-    line-height: 1.1;
-}}
+# ==================== HEADER: TITLE (LEFT) + SURVEY LINK (RIGHT) ====================
+header_left, header_right = st.columns([2, 1], gap="medium")
 
-.header-subtitle {{
-    font-size: 1.1em;
-    color: rgba(255, 255, 255, 0.95);
-    margin: 12px 0 0 0;
-    font-weight: 400;
-    line-height: 1.5;
-    opacity: 0.9;
-}}
-</style>
+with header_left:
+    st.markdown(f"""
+    <div style='background: linear-gradient(135deg, #D4A017 0%, #E8B923 50%, #DAA520 100%); padding: 28px 26px; border-radius: 12px; box-shadow: 0 4px 16px rgba(218, 165, 32, 0.25); height: 100%; box-sizing: border-box;'>
+        <h1 style='font-size: 2em; font-weight: 800; color: #FFFFFF; margin: 0; letter-spacing: -0.5px; line-height: 1.1; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);'>💡 {APP_TITLE}</h1>
+        <p style='font-size: 0.95em; color: rgba(255, 255, 255, 0.95); margin: 10px 0 0 0; font-weight: 400; line-height: 1.5;'>{APP_SUBTITLE}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-<div class="header-container">
-    <h1 class="header-title">💡 {APP_TITLE}</h1>
-    <p class="header-subtitle">{APP_SUBTITLE}</p>
-</div>
-""", unsafe_allow_html=True)
+with header_right:
+    st.markdown(
+        f"""
+        <div style='text-align:center; padding:20px 16px; background:rgba(255, 107, 107, 0.08); border:2px solid rgba(255, 107, 107, 0.2); border-radius:12px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;'>
+            <p style='margin:0 0 8px 0; font-size:0.95em; font-weight:700; color:#2C2416;'>💬 Help improve this app!</p>
+            <p style='margin:0 0 12px 0; font-size:0.8em; color:#5C5246;'>Your feedback supports our research</p>
+            <a href='{FEEDBACK_URL}' target='_blank' style='display:inline-block; padding:10px 20px; background:#FF6B6B; color:white; text-decoration:none; border-radius:8px; font-weight:700; font-size:0.9em; box-shadow:0 4px 12px rgba(255, 107, 107, 0.25);'>📝 Take Survey</a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 
 # Create two columns: settings on left, content on right
 settings_col, content_col = st.columns([0.95, 3.5], gap="medium")
