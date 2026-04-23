@@ -213,7 +213,10 @@ Return ONLY a valid JSON array in this exact format (no preamble, no explanation
 [
   {{
     "title": "Brief title/topic",
-    "facts": ["Fact 1", "Fact 2", "Fact 3"],
+    "facts": [
+      {{"emoji": "🌊", "text": "Fact 1 goes here"}},
+      {{"emoji": "⚡", "text": "Fact 2 goes here"}}
+    ],
     "topic_keyword": "main keyword for emoji matching",
     "image_search": "specific search term to find a relevant wikipedia image (be precise, e.g. 'African elephant' not just 'elephant')"
   }}
@@ -223,6 +226,7 @@ Rules:
 - Create 3-5 flashcards
 - Each card has 1-3 facts
 - Facts MUST match the reading level above
+- Each fact needs ONE emoji that visually represents THAT specific fact (not the whole card topic). Pick something concrete and memorable — e.g. a fact about whale sounds gets 🔊, a fact about whale size gets 📏, a fact about whale food gets 🦐. Avoid generic bullets like • or ▶. Pick different emojis for different facts on the same card.
 - image_search should be a specific noun or phrase that would find the right picture on wikipedia"""
 
     try:
@@ -263,11 +267,29 @@ Rules:
         
         flashcards = []
         for card in flashcard_data:
-            emoji = get_emoji_for_topic(card.get("topic_keyword", card["title"]))
+            topic_emoji = get_emoji_for_topic(card.get("topic_keyword", card["title"]))
+            
+            # normalize facts to a consistent {emoji, text} shape.
+            # handles both the new dict format and the old string format in case
+            # the LLM falls back — we stay resilient to schema drift.
+            normalized_facts = []
+            for raw_fact in card.get('facts', []):
+                if isinstance(raw_fact, dict):
+                    normalized_facts.append({
+                        'emoji': raw_fact.get('emoji', topic_emoji),
+                        'text': raw_fact.get('text', '').strip(),
+                    })
+                elif isinstance(raw_fact, str):
+                    normalized_facts.append({
+                        'emoji': topic_emoji,
+                        'text': raw_fact.strip(),
+                    })
+                # silently skip anything malformed rather than crash
+            
             flashcards.append({
                 'title': card['title'],
-                'facts': card['facts'],
-                'emoji': emoji,
+                'facts': normalized_facts,
+                'emoji': topic_emoji,
                 'image_search': card.get('image_search', card['title']),
             })
         
