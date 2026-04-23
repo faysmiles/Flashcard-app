@@ -13,12 +13,13 @@ try:
 except Exception:
     pass
 
-# auto-create the theme config file
+# create the theme config file (only if it doesn't exist yet)
 config_dir = os.path.expanduser("~/.streamlit")
 config_file = os.path.join(config_dir, "config.toml")
-os.makedirs(config_dir, exist_ok=True)
-with open(config_file, "w") as f:
-    f.write("""[theme]
+if not os.path.exists(config_file):
+    os.makedirs(config_dir, exist_ok=True)
+    with open(config_file, "w") as f:
+        f.write("""[theme]
 primaryColor = "#FF6B6B"
 backgroundColor = "#F5F1E8"
 secondaryBackgroundColor = "#FFFFFF"
@@ -41,7 +42,7 @@ from config import (
 from utils import (
     apply_styles, extract_text_from_file,
     generate_flashcards_from_llm, get_card_colors,
-    search_wikipedia_image
+    search_wikipedia_image, render_header, render_feedback_box
 )
 
 # page setup
@@ -55,8 +56,8 @@ st.set_page_config(
 # session state - keeps track of stuff between reruns
 defaults = {
     "flashcard_generated": False,
-    "flashcards_direct": None,
-    "final_input_text": "",
+    "flashcards": None,
+    "saved_text": "",
     "font_style": "Verdana",
     "text_size": DEFAULT_FONT_SIZE,
     "colour_scheme": "Cream (Dyslexia Friendly)",
@@ -72,26 +73,16 @@ apply_styles(st.session_state.font_style, st.session_state.text_size, st.session
 # feedback survey link
 FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
 DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
+MAX_CHARS = 8000  # stop very long text from hitting AI token limits
 
 # --- header ---
 header_left, header_right = st.columns([2, 1], gap="medium")
 
 with header_left:
-    st.markdown(f"""
-    <div style='background: linear-gradient(135deg, #D4A017 0%, #E8B923 50%, #DAA520 100%); padding: 28px 26px; border-radius: 12px; box-shadow: 0 4px 16px rgba(218, 165, 32, 0.25); height: 100%; box-sizing: border-box;'>
-        <h1 style='font-size: 2em; font-weight: 800; color: #FFFFFF; margin: 0; line-height: 1.1; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);'>💡 {APP_TITLE}</h1>
-        <p style='font-size: 0.95em; color: rgba(255, 255, 255, 0.95); margin: 10px 0 0 0;'>{APP_SUBTITLE}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size)
 
 with header_right:
-    st.markdown(f"""
-    <div style='text-align:center; padding:20px 16px; background:rgba(255, 107, 107, 0.08); border:2px solid rgba(255, 107, 107, 0.2); border-radius:12px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;'>
-        <p style='margin:0 0 8px 0; font-size:0.95em; font-weight:700; color:#2C2416;'>💬 Help improve this app!</p>
-        <p style='margin:0 0 12px 0; font-size:0.8em; color:#5C5246;'>Your feedback supports our research</p>
-        <a href='{FEEDBACK_URL}' target='_blank' style='display:inline-block; padding:10px 20px; background:#FF6B6B; color:white; text-decoration:none; border-radius:8px; font-weight:700; font-size:0.9em;'>📝 Take Survey</a>
-    </div>
-    """, unsafe_allow_html=True)
+    render_feedback_box(FEEDBACK_URL)
 
 st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 
@@ -120,7 +111,7 @@ with settings_col:
         st.session_state.colour_scheme = new_colour
         st.rerun()
     
-    make_pictures = st.checkbox("Show Images", value=True, key="make_pictures_check", help="Show relevant images from Wikipedia on flipped cards")
+    show_images = st.checkbox("Show Images", value=True, key="show_images_check", help="Show relevant images from Wikipedia on flipped cards")
 
 # main content area
 with content_col:
@@ -138,13 +129,21 @@ with content_col:
         else:
             user_text = ""
     
+    # if the text is really long, cut it down so the AI can handle it
+    if user_text and len(user_text) > MAX_CHARS:
+        st.info(f"ℹ️ Your text is quite long - we'll use the first {MAX_CHARS:,} characters to make flashcards.")
+        user_text = user_text[:MAX_CHARS]
+    
     # show a little word count
     word_count = len(user_text.split()) if user_text else 0
     st.caption(f"📝 {word_count} words")
     
+    # privacy note - let users know where their text goes
+    st.caption("⚠️ Your text is sent to Anthropic's AI and Wikipedia to make the flashcards. Please don't paste anything confidential.")
+    
     # generate button
-    btn1, btn2, btn3 = st.columns([1, 1.2, 1])
-    with btn2:
+    _, btn, _ = st.columns([1, 1.2, 1])
+    with btn:
         if st.button("✨ Make Flashcard", use_container_width=True, key="make_flashcard_btn"):
             if not user_text.strip():
                 st.warning("⚠️ Please enter or upload some text first!")
@@ -156,15 +155,22 @@ with content_col:
                 st.session_state.card_flipped = {}
                 
                 with st.spinner(f"🤖 AI is creating {reading_level.split('(')[0].strip()} flashcards..."):
-                    flashcards = generate_flashcards_from_llm(user_text, reading_level=level_code)
-                    if flashcards:
-                        st.session_state.flashcards_direct = flashcards
-                        st.session_state.final_input_text = user_text
+                    new_cards = generate_flashcards_from_llm(user_text, reading_level=level_code)
+                    if new_cards:
+                        st.session_state.flashcards = new_cards
+                        st.session_state.saved_text = user_text
                         st.session_state.flashcard_generated = True
     
+    # welcome message when no cards yet
+    if not st.session_state.flashcard_generated:
+        st.markdown(
+            "<p style='text-align:center; opacity:0.75; margin-top:20px;'>👆 Paste some text above to get started!</p>",
+            unsafe_allow_html=True
+        )
+    
     # --- show the flashcards ---
-    if st.session_state.flashcard_generated and st.session_state.flashcards_direct:
-        flashcards = st.session_state.flashcards_direct
+    if st.session_state.flashcard_generated and st.session_state.flashcards:
+        flashcards = st.session_state.flashcards
         
         # make sure we have flip state for each card
         for i in range(len(flashcards)):
@@ -174,21 +180,7 @@ with content_col:
         card_colors = get_card_colors(st.session_state.colour_scheme)
         
         st.markdown("---")
-        
-        # header + regenerate button
-        hdr_l, hdr_r = st.columns([3, 1])
-        with hdr_l:
-            st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
-        with hdr_r:
-            if st.button("🔁 Regenerate", use_container_width=True, key="regenerate_btn", help="Not happy with the cards? Make new ones from the same text."):
-                level_code = READING_LEVELS[reading_level]
-                st.session_state.card_images = {}
-                st.session_state.card_flipped = {}
-                with st.spinner("🤖 Making new flashcards..."):
-                    new_cards = generate_flashcards_from_llm(st.session_state.final_input_text, reading_level=level_code)
-                    if new_cards:
-                        st.session_state.flashcards_direct = new_cards
-                        st.rerun()
+        st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
         
         # how many cards studied so far
         flipped_count = sum(1 for i in range(len(flashcards)) if st.session_state.card_flipped.get(i, False))
@@ -197,16 +189,29 @@ with content_col:
             unsafe_allow_html=True
         )
         
+        # celebrate when all cards have been flipped
+        if flipped_count == len(flashcards):
+            st.success("🎉 You've studied all the cards! Well done!")
+        
+        # shared card frame style
+        card_frame = (
+            "background: #FFFEF9;"
+            "border-radius: 16px;"
+            "border-left: 6px solid {accent};"
+            "box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);"
+            "padding: 28px 24px;"
+            "margin: 8px 0;"
+        )
+        
         # loop through each card
         for idx, card in enumerate(flashcards):
             is_flipped = st.session_state.card_flipped.get(idx, False)
             emoji = card.get('emoji', '💡')
-            
-            # pick some decoration emojis
             deco = [DECORATION_EMOJIS[(idx + i*2) % len(DECORATION_EMOJIS)] for i in range(4)]
-            
             text_color = card_colors['text']
             label_color = card_colors['label']
+            accent_color = card_colors.get('accent', label_color)
+            frame_style = card_frame.format(accent=accent_color)
             
             # card number
             st.markdown(
@@ -214,51 +219,58 @@ with content_col:
                 unsafe_allow_html=True
             )
             
-            # fetch wikipedia image when card is flipped (uses the LLM-generated search term)
-            if is_flipped and make_pictures and idx not in st.session_state.card_images:
+            # fetch wikipedia image when card is flipped
+            if is_flipped and show_images and idx not in st.session_state.card_images:
                 with st.spinner(f"🖼️ Finding picture for card {idx + 1}..."):
                     search_term = card.get('image_search', card['title'])
                     image_url = search_wikipedia_image(search_term)
                     st.session_state.card_images[idx] = image_url
             
-            # the actual card
-            with st.container(border=True):
-                if is_flipped:
-                    # BACK side - show facts and maybe an image
-                    has_image = (make_pictures and idx in st.session_state.card_images and st.session_state.card_images[idx] is not None)
-                    
-                    if has_image:
-                        col_facts, col_image = st.columns([1.3, 1])
-                        with col_facts:
-                            st.markdown(f"<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em;'>{deco[0]} KEY FACTS {deco[1]}</p>", unsafe_allow_html=True)
-                            facts_html = "".join([
-                                f"<p style='color:{text_color}; font-family:{st.session_state.font_style}, sans-serif; font-size:{st.session_state.text_size}px; line-height:1.8; margin:8px 0;'>• {fact}</p>"
-                                for fact in card['facts']
-                            ])
-                            st.markdown(facts_html, unsafe_allow_html=True)
-                        with col_image:
-                            st.image(st.session_state.card_images[idx], width=250)
-                    else:
-                        st.markdown(f"<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin-top:20px;'>{deco[0]} KEY FACTS {deco[1]}</p>", unsafe_allow_html=True)
-                        facts_html = "".join([
-                            f"<p style='color:{text_color}; font-family:{st.session_state.font_style}, sans-serif; font-size:{st.session_state.text_size}px; line-height:1.8; margin:10px 20px;'>• {fact}</p>"
-                            for fact in card['facts']
-                        ])
-                        st.markdown(facts_html, unsafe_allow_html=True)
-                        st.markdown(f"<p style='text-align:center; font-size:24px; opacity:0.5; margin-top:20px;'>{deco[2]} {deco[3]}</p>", unsafe_allow_html=True)
-                else:
-                    # FRONT side - big emoji and title
+            # build the card as pure HTML so we control the frame
+            if is_flipped:
+                # BACK side - facts with optional image
+                has_image = (show_images and idx in st.session_state.card_images and st.session_state.card_images[idx] is not None)
+                
+                facts_html = "".join([
+                    f"<p style='color:{text_color}; font-family:{st.session_state.font_style}, sans-serif; font-size:{st.session_state.text_size}px; line-height:1.8; margin:8px 0;'>• {fact}</p>"
+                    for fact in card['facts']
+                ])
+                
+                if has_image:
+                    img_url = st.session_state.card_images[idx]
                     st.markdown(f"""
-                    <div style='text-align:center; padding:40px 20px;'>
-                        <div style='font-size:100px; line-height:1; margin-bottom:20px;'>{emoji}</div>
-                        <p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>TOPIC</p>
-                        <h2 style='color:{text_color}; font-family:{st.session_state.font_style}, sans-serif; font-size:{max(st.session_state.text_size + 10, 26)}px; margin:0; font-weight:700;'>{card['title']}</h2>
-                        <p style='font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;'>{deco[0]} {deco[1]} {deco[2]} {deco[3]}</p>
+                    <div style='{frame_style}'>
+                        <p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>{deco[0]} KEY FACTS {deco[1]}</p>
+                        <div style='display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;'>
+                            <div style='flex:1; min-width:200px;'>{facts_html}</div>
+                            <div style='flex-shrink:0; text-align:center;'>
+                                <img src='{img_url}' alt='{card["title"]}' style='width:220px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);' />
+                                <p style='font-size:0.75em; color:{label_color}; margin-top:6px;'>{card["title"]}</p>
+                            </div>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style='{frame_style}'>
+                        <p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{deco[0]} KEY FACTS {deco[1]}</p>
+                        {facts_html}
+                        <p style='text-align:center; font-size:24px; opacity:0.5; margin-top:20px;'>{deco[2]} {deco[3]}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                # FRONT side - big emoji and title
+                st.markdown(f"""
+                <div style='{frame_style} text-align:center; padding:40px 24px;'>
+                    <div style='font-size:100px; line-height:1; margin-bottom:20px;'>{emoji}</div>
+                    <p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>TOPIC</p>
+                    <div style='color:{text_color}; font-family:{st.session_state.font_style}, sans-serif; font-size:{max(st.session_state.text_size + 10, 26)}px; font-weight:700;'>{card['title']}</div>
+                    <p style='font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;'>{deco[0]} {deco[1]} {deco[2]} {deco[3]}</p>
+                </div>
+                """, unsafe_allow_html=True)
             
             # flip button
-            btn_l, btn_m, btn_r = st.columns([1, 1, 1])
+            _, btn_m, _ = st.columns([1, 1, 1])
             with btn_m:
                 flip_text = "🔄 Show Topic" if is_flipped else "🔄 Reveal Facts"
                 if st.button(flip_text, key=f"flip_{idx}", use_container_width=True):
@@ -268,8 +280,8 @@ with content_col:
         # download button
         st.markdown("---")
         st.markdown("### 📥 Download Study Cards")
-        dl1, dl2, dl3 = st.columns([1, 1.2, 1])
-        with dl2:
+        _, dl_btn, _ = st.columns([1, 1.2, 1])
+        with dl_btn:
             st.download_button(
                 label="📥 Download as Text File",
                 data="\n\n".join([
