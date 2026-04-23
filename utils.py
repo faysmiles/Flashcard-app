@@ -312,6 +312,33 @@ def extract_text_from_file(uploaded_file):
         return "Sorry, couldn't read that file - please try a different one."
 
 
+# --- page header and feedback box ---
+
+def render_header(app_title, app_subtitle, text_size):
+    """show the big gold banner at the top of the page.
+    title will be twice the body text size. we use <div> instead of <h1>
+    because streamlit aggressively styles h1 tags which overrides our size."""
+    title_px = text_size * 2
+    subtitle_px = text_size
+    st.markdown(f"""
+    <div style='background: linear-gradient(135deg, #D4A017 0%, #E8B923 50%, #DAA520 100%); padding: 28px 26px; border-radius: 12px; box-shadow: 0 4px 16px rgba(218, 165, 32, 0.25); height: 100%; box-sizing: border-box;'>
+        <div style='font-size: {title_px}px; font-weight: 800; color: #FFFFFF; margin: 0; line-height: 1.1; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);'>💡 {app_title}</div>
+        <div style='font-size: {subtitle_px}px; color: rgba(255, 255, 255, 0.95); margin: 10px 0 0 0;'>{app_subtitle}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_feedback_box(feedback_url):
+    """show the survey feedback box next to the header"""
+    st.markdown(f"""
+    <div style='text-align:center; padding:20px 16px; background:rgba(255, 107, 107, 0.08); border:2px solid rgba(255, 107, 107, 0.2); border-radius:12px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;'>
+        <p style='margin:0 0 8px 0; font-size:0.95em; font-weight:700; color:#2C2416;'>💬 Help improve this app!</p>
+        <p style='margin:0 0 12px 0; font-size:0.8em; color:#5C5246;'>Your feedback supports our research</p>
+        <a href='{feedback_url}' target='_blank' style='display:inline-block; padding:10px 20px; background:#FF6B6B; color:white; text-decoration:none; border-radius:8px; font-weight:700; font-size:0.9em;'>📝 Take Survey</a>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # --- CSS styling ---
 
 def apply_styles(font_style, text_size, colour_scheme):
@@ -391,5 +418,52 @@ def apply_styles(font_style, text_size, colour_scheme):
     button:hover {{ background-color: rgba(0, 0, 0, 0.05) !important; }}
     i, em {{ font-style: normal !important; }}
     hr {{ border-color: var(--accent) !important; }}
+    
+    /* give flashcard images nice rounded corners */
+    [data-testid="stImage"] img {{
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    }}
+    
+    /* style the flashcard containers (try multiple selectors since streamlit's DOM varies) */
+    div[data-testid="stVerticalBlockBorderWrapper"],
+    div[data-testid="stContainer"],
+    .stContainer,
+    div[class*="stVerticalBlockBorderWrapper"] {{
+        background-color: #FFFEF9 !important;
+        border-radius: 16px !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        border-left: 6px solid var(--accent) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+        padding: 20px !important;
+        margin-bottom: 8px !important;
+        transition: box-shadow 0.2s ease !important;
+    }}
+    
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover,
+    div[data-testid="stContainer"]:hover {{
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    }}
+    
+    /* clear focus outlines for accessibility */
+    button:focus-visible,
+    [data-testid="stTextArea"] textarea:focus,
+    [data-testid="stSelectbox"] *:focus {{
+        outline: 3px solid var(--accent) !important;
+        outline-offset: 2px !important;
+    }}
+    
+    /* make buttons feel more tactile */
+    [data-testid="stButton"] button {{
+        border-radius: 10px !important;
+        padding: 10px 16px !important;
+        font-weight: 600 !important;
+        transition: transform 0.1s ease, box-shadow 0.2s ease !important;
+    }}
+    
+    [data-testid="stButton"] button:hover {{
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
