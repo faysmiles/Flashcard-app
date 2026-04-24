@@ -5,6 +5,266 @@ import re
 import os
 import requests
 import json
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+
+
+# --- download helpers for "save as PNG" feature ---
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_image_bytes(url):
+    """download raw bytes for a wikipedia image url. cached for the session
+    so the same image isn't re-fetched when the user downloads cards.
+    returns None on any error - the renderer will draw a no-image card."""
+    if not url:
+        return None
+    try:
+        r = requests.get(
+            url,
+            headers={"User-Agent": "FlashcardApp/1.0 (educational use)"},
+            timeout=10,
+        )
+        if r.ok:
+            return r.content
+    except Exception:
+        pass
+    return None
+
+
+def build_cards_zip(flashcards, card_images, colors, page_bg_hex, cache_key):
+    """build a ZIP of PNG flashcards. cache_key is a stable fingerprint of
+    the inputs (deck contents + scheme) - we accept it as a parameter rather
+    than computing it here so st.cache_data can hash it cheaply. callers
+    must pass a cache_key that changes iff the zip contents should change."""
+    return _build_cards_zip_cached(
+        tuple((c["title"], tuple((f.get("text", "") if isinstance(f, dict) else str(f)) for f in c["facts"])) for c in flashcards),
+        tuple(card_images.get(i) for i in range(len(flashcards))),
+        page_bg_hex,
+        colors["accent"],
+        colors["text"],
+        colors["label"],
+        cache_key,
+    )
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def _build_cards_zip_cached(cards_fingerprint, image_urls, page_bg_hex, accent, text, label, cache_key):
+    """inner cached function - hashes on primitives only so streamlit can
+    cache it. reconstructs the flashcards from the fingerprint."""
+    import io as _io
+    import zipfile as _zipfile
+    import re as _re
+
+    colors = {"accent": accent, "text": text, "label": label}
+    total = len(cards_fingerprint)
+    zip_buf = _io.BytesIO()
+    with _zipfile.ZipFile(zip_buf, "w", _zipfile.ZIP_DEFLATED) as zf:
+        for i, (title, fact_texts) in enumerate(cards_fingerprint):
+            c = {
+                "title": title,
+                "facts": [{"emoji": "*", "text": t} for t in fact_texts],
+            }
+            url = image_urls[i]
+            image_bytes = fetch_image_bytes(url) if url else None
+            png = render_card_to_png(
+                card=c,
+                colors=colors,
+                idx=i,
+                total=total,
+                wiki_image_bytes=image_bytes,
+                page_bg_hex=page_bg_hex,
+            )
+            safe_title = _re.sub(r"[^a-zA-Z0-9_-]+", "_", title).strip("_") or "card"
+            zf.writestr(f"card_{i + 1}_{safe_title}.png", png)
+    return zip_buf.getvalue()
+
+
+def _hex_to_rgb(h):
+    """#RRGGBB -> (R, G, B)."""
+    h = h.lstrip("#")
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+
+def _wrap_text_for_png(text, font, max_width, draw):
+    """greedy word-wrap for the PNG renderer: build lines by adding words
+    until the next word would exceed max_width."""
+    words = text.split()
+    if not words:
+        return [""]
+    lines = []
+    current = words[0]
+    for w in words[1:]:
+        trial = f"{current} {w}"
+        bbox = draw.textbbox((0, 0), trial, font=font)
+        if bbox[2] - bbox[0] <= max_width:
+            current = trial
+        else:
+            lines.append(current)
+            current = w
+    lines.append(current)
+    return lines
+
+
+def render_card_to_png(card, colors, idx, total, wiki_image_bytes=None, page_bg_hex="#F5F1E8"):
+    """render ONE flashcard as a PNG and return the raw bytes.
+
+    DESIGN NOTE: this deliberately doesn't try to match the browser version
+    pixel-for-pixel. Pillow can't render colour emoji (🦒, 🪨 etc) and can't
+    load web fonts like OpenDyslexic, so attempting an exact match produces
+    broken boxes in place of missing glyphs. instead, we render a clean,
+    print-friendly variant: em-dash separators instead of sparkles, numbered
+    badge instead of topic emoji, bullet dots instead of per-fact emoji,
+    DejaVu Sans (bundled with Pillow) instead of the user's chosen font.
+    all of which means the PNG looks like a clean sibling of the on-screen
+    card - same colours, same structure, same vibe - rather than a broken
+    attempt at the same render.
+    """
+    W = 700
+    MARGIN = 30
+    ACCENT_BAR_W = 6
+    PAD_X = 30
+    PAD_Y = 30
+    IMG_MAX_H = 260
+    IMG_MAX_W = W - (MARGIN * 2) - (PAD_X * 2)
+    FOOTER_H = 36
+
+    accent      = _hex_to_rgb(colors["accent"])
+    text_color  = _hex_to_rgb(colors["text"])
+    label_color = _hex_to_rgb(colors["label"])
+    card_bg     = (255, 254, 249)
+    page_bg     = _hex_to_rgb(page_bg_hex)
+
+    try:
+        f_label  = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
+        f_title  = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        f_body   = ImageFont.truetype("DejaVuSans.ttf", 18)
+        f_footer = ImageFont.truetype("DejaVuSans.ttf", 12)
+        f_badge  = ImageFont.truetype("DejaVuSans-Bold.ttf", 22)
+    except (OSError, IOError):
+        f_label = f_title = f_body = f_footer = f_badge = ImageFont.load_default()
+
+    # --- pre-pass: compute canvas height before drawing ---
+    tmp = Image.new("RGB", (10, 10))
+    d_tmp = ImageDraw.Draw(tmp)
+
+    image_height_used = 0
+    pil_image = None
+    if wiki_image_bytes:
+        try:
+            pil_image = Image.open(BytesIO(wiki_image_bytes)).convert("RGB")
+            iw, ih = pil_image.size
+            scale = min(IMG_MAX_W / iw, IMG_MAX_H / ih)
+            new_w = int(iw * scale)
+            new_h = int(ih * scale)
+            pil_image = pil_image.resize((new_w, new_h), Image.LANCZOS)
+            image_height_used = new_h + 20
+        except Exception:
+            pil_image = None
+            image_height_used = 0
+
+    title_lines = _wrap_text_for_png(card["title"], f_title, IMG_MAX_W, d_tmp)
+    title_block_h = len(title_lines) * 36 + 10
+
+    BULLET_W = 24
+    FACT_INDENT = BULLET_W + 8
+    facts_block_h = 0
+    wrapped_facts = []
+    for fact in card["facts"]:
+        text = fact.get("text", "") if isinstance(fact, dict) else str(fact)
+        lines = _wrap_text_for_png(text, f_body, IMG_MAX_W - FACT_INDENT, d_tmp)
+        wrapped_facts.append(lines)
+        facts_block_h += len(lines) * 26 + 10
+
+    content_h = (
+        PAD_Y + 24 + 14
+        + image_height_used
+        + title_block_h + 18
+        + facts_block_h
+        + PAD_Y
+    )
+    H = content_h + FOOTER_H + (MARGIN * 2)
+
+    # --- draw for real ---
+    img = Image.new("RGB", (W, H), page_bg)
+    draw = ImageDraw.Draw(img)
+
+    card_x0, card_y0 = MARGIN, MARGIN
+    card_x1, card_y1 = W - MARGIN, H - MARGIN - FOOTER_H
+
+    draw.rounded_rectangle([card_x0, card_y0, card_x1, card_y1], radius=16, fill=card_bg)
+    draw.rounded_rectangle(
+        [card_x0, card_y0, card_x0 + ACCENT_BAR_W, card_y1],
+        radius=3, fill=accent,
+    )
+
+    y = card_y0 + PAD_Y
+    label_text = f"- CARD {idx + 1} OF {total} -"
+    lb_bbox = draw.textbbox((0, 0), label_text, font=f_label)
+    lb_w = lb_bbox[2] - lb_bbox[0]
+    draw.text(((W - lb_w) // 2, y), label_text, font=f_label, fill=label_color)
+    y += 24 + 14
+
+    if pil_image is not None:
+        img_w, img_h = pil_image.size
+        img_x = (W - img_w) // 2
+        draw.rounded_rectangle(
+            [img_x - 4, y - 4, img_x + img_w + 4, y + img_h + 4],
+            radius=14, fill=accent,
+        )
+        mask = Image.new("L", (img_w, img_h), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, img_w, img_h], radius=10, fill=255)
+        img.paste(pil_image, (img_x, y), mask)
+
+        sticker_r = 26
+        sticker_cx = img_x + img_w - 6
+        sticker_cy = y - 6
+        draw.ellipse(
+            [sticker_cx - sticker_r, sticker_cy - sticker_r,
+             sticker_cx + sticker_r, sticker_cy + sticker_r],
+            fill=accent, outline=card_bg, width=3,
+        )
+        badge_text = str(idx + 1)
+        bt_bbox = draw.textbbox((0, 0), badge_text, font=f_badge)
+        bt_w = bt_bbox[2] - bt_bbox[0]
+        bt_h = bt_bbox[3] - bt_bbox[1]
+        draw.text(
+            (sticker_cx - bt_w // 2, sticker_cy - bt_h // 2 - 2),
+            badge_text, font=f_badge, fill=card_bg,
+        )
+        y += img_h + 20
+
+    for line in title_lines:
+        t_bbox = draw.textbbox((0, 0), line, font=f_title)
+        draw.text(((W - (t_bbox[2] - t_bbox[0])) // 2, y), line, font=f_title, fill=text_color)
+        y += 36
+    y += 10
+
+    draw.line(
+        [(card_x0 + PAD_X, y), (card_x1 - PAD_X, y)],
+        fill=accent, width=1,
+    )
+    y += 18
+
+    fact_x = card_x0 + PAD_X
+    text_x = fact_x + BULLET_W + 8
+    for lines in wrapped_facts:
+        draw.text((fact_x, y), "*", font=f_body, fill=accent)
+        for line in lines:
+            draw.text((text_x, y), line, font=f_body, fill=text_color)
+            y += 26
+        y += 10
+
+    footer_text = "Made with Simple Facts with Simple Images"
+    ft_bbox = draw.textbbox((0, 0), footer_text, font=f_footer)
+    ft_w = ft_bbox[2] - ft_bbox[0]
+    draw.text(
+        ((W - ft_w) // 2, H - MARGIN - 14),
+        footer_text, font=f_footer, fill=label_color,
+    )
+
+    out = BytesIO()
+    img.save(out, format="PNG", optimize=True)
+    return out.getvalue()
 
 
 # --- Wikipedia image search ---
@@ -13,7 +273,6 @@ import json
 def search_wikipedia_image(query):
     """search wikipedia for a picture that matches the topic"""
     try:
-        # clean up the query - remove emojis etc
         clean_query = re.sub(r'[^\w\s-]', '', query).strip()
         if not clean_query:
             return None
@@ -24,7 +283,7 @@ def search_wikipedia_image(query):
             "format": "json",
             "generator": "search",
             "gsrsearch": clean_query,
-            "gsrlimit": 5,  # get more results so we can pick the best one
+            "gsrlimit": 5,
             "prop": "pageimages",
             "piprop": "thumbnail",
             "pithumbsize": 500,
@@ -43,14 +302,8 @@ def search_wikipedia_image(query):
         data = response.json()
         pages = data.get("query", {}).get("pages", {})
         
-        # skip junk pages (disambiguation, lists, etc.)
         junk_keywords = ['disambiguation', 'list of', '(surname)', '(given name)']
         
-        # score each candidate page by how well its title matches the query.
-        # initial score of 0 (not -1) means pages with ZERO word overlap are
-        # never picked — better to return no image than a confidently-wrong one.
-        # (a "giraffe habitat" search that returned a "Savanna" page with an
-        # elephant photo was the original bug this guards against.)
         query_words = set(clean_query.lower().split())
         best_match = None
         best_score = 0
@@ -61,15 +314,12 @@ def search_wikipedia_image(query):
             
             page_title = page_data.get("title", "").lower()
             
-            # skip junk pages
             if any(junk in page_title for junk in junk_keywords):
                 continue
             
-            # score how well the page title matches our query
             title_words = set(page_title.split())
             overlap = len(query_words & title_words)
             
-            # prefer pages where the title actually contains our search words
             if overlap > best_score:
                 best_score = overlap
                 best_match = page_data["thumbnail"]["source"]
@@ -84,7 +334,7 @@ def search_wikipedia_image(query):
 def get_card_colors(colour_scheme):
     """return the three per-card colours the renderer actually uses.
     previously returned card_bg/question_bg/success/flipped_bg too but
-    nothing read them — trimmed to keep the schema honest."""
+    nothing read them - trimmed to keep the schema honest."""
     color_map = {
         "Soft Blue": {
             "text":   "#1A237E",
@@ -97,17 +347,11 @@ def get_card_colors(colour_scheme):
             "accent": "#9C27B0",
         },
         "Pale Mint": {
-            # label darkened from #3C8C6C (4.03:1, failed WCAG AA) to
-            # #2F7A55 (5.15:1, passes AA with headroom).
             "text":   "#1B5E20",
             "label":  "#2F7A55",
             "accent": "#4CAF50",
         },
         "Low Stimulation": {
-            # low-chroma near-greyscale for users who find saturated
-            # palettes overstimulating (common for autism / sensory
-            # processing differences). all three values pass WCAG AA
-            # on a #FFFEF9 card background.
             "text":   "#2E2E2E",
             "label":  "#555555",
             "accent": "#7A7A7A",
@@ -161,11 +405,6 @@ def get_emoji_for_topic(text):
 
 # --- LLM flashcard generation (this is the main one) ---
 
-# Tool schema for structured output.
-# Using tool_choice forces Claude to return JSON that conforms to this schema,
-# which eliminates the whole class of "malformed JSON" errors we used to get.
-# The description fields also double as hints to Claude about what each
-# field is for — they're surfaced during generation, not just validation.
 FLASHCARD_TOOL = {
     "name": "create_flashcards",
     "description": (
@@ -222,6 +461,7 @@ FLASHCARD_TOOL = {
 }
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
     """send text to claude and get flashcards back"""
     
@@ -230,7 +470,6 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
         st.error("Can't find the AI key - please check your settings.")
         return None
     
-    # set up the reading level instructions
     if reading_level == "simple":
         level_instructions = """READING LEVEL: EASY (Ages 4-11)
 - Use very simple words only, like a children's book
@@ -259,7 +498,7 @@ DYSLEXIA-FRIENDLY WRITING RULES (apply to EVERY fact at every reading level):
 - One idea per sentence. Avoid "which", "that", or "and" chains that bundle multiple ideas together.
 - Use concrete, specific nouns instead of abstract ones. "A loud bang" beats "an acoustic disturbance."
 - Prefer short, common, everyday words over rare or long ones when they mean the same thing.
-- Write numbers as digits (5, 100) not words (five, one hundred) — easier for dyslexic readers to process.
+- Write numbers as digits (5, 100) not words (five, one hundred) - easier for dyslexic readers to process.
 - Avoid double negatives. "It is helpful" beats "It is not unhelpful."
 - At the Easy reading level ONLY: no idioms, metaphors, or figurative language. Some learners take these literally.
 
@@ -270,12 +509,12 @@ EMOJI RULES (per fact):
 
 IMAGE SEARCH RULES (CRITICAL - getting this wrong gives learners the wrong picture):
 - image_search must name the MAIN SUBJECT of the card, NOT its habitat, context, action, or property.
-  - Card titled "Where Giraffes Live" → use "giraffe" (NOT "African savanna" — that page's photo is often an elephant).
-  - Card titled "How DNA Copies Itself" → use "DNA" (NOT "cell division" or "genetic replication").
-  - Card titled "What Elephants Eat" → use "elephant" (NOT "plants" or "African vegetation").
-  - Card titled "The Life Cycle of Butterflies" → use "butterfly" (NOT "life cycle" or "metamorphosis").
-- The subject must be PHOTOGRAPHABLE — Wikipedia needs an actual photo of it.
-- For genuinely abstract concepts (no physical subject), pick a concrete stand-in: "inflation" → "shopping basket", "democracy" → "ballot box", "friendship" → "people holding hands".
+  - Card titled "Where Giraffes Live" -> use "giraffe" (NOT "African savanna" - that page's photo is often an elephant).
+  - Card titled "How DNA Copies Itself" -> use "DNA" (NOT "cell division" or "genetic replication").
+  - Card titled "What Elephants Eat" -> use "elephant" (NOT "plants" or "African vegetation").
+  - Card titled "The Life Cycle of Butterflies" -> use "butterfly" (NOT "life cycle" or "metamorphosis").
+- The subject must be PHOTOGRAPHABLE - Wikipedia needs an actual photo of it.
+- For genuinely abstract concepts (no physical subject), pick a concrete stand-in: "inflation" -> "shopping basket", "democracy" -> "ballot box", "friendship" -> "people holding hands".
 - Add a distinguishing adjective ONLY when it helps find the right picture and doesn't drop the main subject: "steam locomotive" is fine, "African elephant" is fine. Never drop the core noun.
 
 TEXT TO CONVERT:
@@ -292,13 +531,9 @@ Now call the create_flashcards tool with 3 to 5 cards."""
                 "content-type": "application/json",
             },
             json={
-                "model": "claude-sonnet-4-6",
+                "model": "claude-haiku-4-5-20251001",
                 "max_tokens": 2000,
                 "messages": [{"role": "user", "content": prompt}],
-                # structured output via tool use: the API validates Claude's
-                # response against FLASHCARD_TOOL's schema before returning,
-                # so we don't have to parse markdown-fenced JSON or handle
-                # malformed output ourselves.
                 "tools": [FLASHCARD_TOOL],
                 "tool_choice": {"type": "tool", "name": "create_flashcards"},
             },
@@ -309,9 +544,6 @@ Now call the create_flashcards tool with 3 to 5 cards."""
             st.error("Something went wrong talking to the AI - please try again in a moment.")
             return None
         
-        # extract the tool_use block. with tool_choice forcing this specific
-        # tool, there should always be exactly one - but we look it up by name
-        # rather than index in case the API adds other block types in future.
         api_response = response.json()
         tool_use_block = next(
             (
@@ -332,9 +564,6 @@ Now call the create_flashcards tool with 3 to 5 cards."""
         for card in flashcard_data:
             topic_emoji = get_emoji_for_topic(card.get("topic_keyword", card["title"]))
             
-            # normalize facts to a consistent {emoji, text} shape.
-            # handles both the new dict format and the old string format in case
-            # the LLM falls back — we stay resilient to schema drift.
             normalized_facts = []
             for raw_fact in card.get('facts', []):
                 if isinstance(raw_fact, dict):
@@ -347,7 +576,6 @@ Now call the create_flashcards tool with 3 to 5 cards."""
                         'emoji': topic_emoji,
                         'text': raw_fact.strip(),
                     })
-                # silently skip anything malformed rather than crash
             
             flashcards.append({
                 'title': card['title'],
@@ -399,14 +627,6 @@ def extract_text_from_file(uploaded_file):
 
 # --- page header and feedback box ---
 
-# Per-scheme theming for the header banner + feedback survey box.
-# Single source of truth — both renderers read from here, so adding a new
-# colour scheme later means adding one entry, not editing two places.
-#
-# Header gradients are chosen to be dark enough for white title text to
-# pass WCAG AA contrast (4.5:1). Low Stimulation uses a solid muted grey
-# (no gradient, no shadow) because a bold gradient would undercut the
-# whole point of that scheme.
 _SCHEME_THEMES = {
     "Soft Blue": {
         "header_bg":       "linear-gradient(135deg, #2C5282 0%, #3182CE 50%, #2B6CB0 100%)",
@@ -430,9 +650,6 @@ _SCHEME_THEMES = {
         "feedback_btn":    "#2F7A55",
     },
     "Low Stimulation": {
-        # deliberately flat: no gradient, no shadow. users who chose this
-        # scheme want less visual activity, so the header should follow
-        # suit — a bold gradient would fight the whole intent.
         "header_bg":       "#5A5A5A",
         "header_shadow":   "none",
         "feedback_tint":   "rgba(90, 90, 90, 0.06)",
@@ -490,7 +707,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
         card rendering can pick it up.
     reduce_motion (bool): when True, injects a global rule that kills every
         transition, animation and hover-lift. separate from the OS-level
-        @media (prefers-reduced-motion) rule further down in the CSS —
+        @media (prefers-reduced-motion) rule further down in the CSS -
         this is an in-app override some users prefer.
     """
     
@@ -498,24 +715,11 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
         "Soft Blue":                  {"bg": "#E8F1F5", "text": "#1C3A42", "accent": "#3A7CA5"},
         "Pale Lavender":              {"bg": "#F5E8F5", "text": "#3C2C42", "accent": "#7C3C9C"},
         "Pale Mint":                  {"bg": "#E8F5F1", "text": "#1C3C32", "accent": "#2F7A55"},
-        # low-chroma near-greyscale page-level palette to match the card-level
-        # Low Stimulation scheme in get_card_colors().
         "Low Stimulation":            {"bg": "#F2F2EC", "text": "#2E2E2E", "accent": "#555555"},
     }
     
     c = colors.get(colour_scheme, colors["Low Stimulation"])
     
-    # we use css variables so we only inject the theme values once at the top
-    # then the rest of the css just references them with var(--name)
-    # font-family is WRAPPED IN QUOTES because some font names are multi-word
-    # ("Comic Sans MS", "Open Dyslexic", "Trebuchet MS") — unquoted, those
-    # fall back silently. quoting covers single-word names too, harmlessly.
-    # in-app reduce-motion override. when the user has ticked "Reduce Motion"
-    # in the sidebar, we prepend a block that kills every transition and
-    # animation globally, overriding anything declared later. kept separate
-    # from the OS-level @media (prefers-reduced-motion) block at the bottom
-    # of the CSS — that one triggers from Windows/macOS/iOS/Android settings
-    # without any app-side action, and this one is direct in-app control.
     reduce_motion_css = ""
     if reduce_motion:
         reduce_motion_css = """
@@ -536,7 +740,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
        anchor letters and stop flipping). Served by cdnfonts.
        Lexend: research-backed for reading proficiency in general readers.
        Served by Google Fonts.
-       Both @import lines degrade gracefully — if the CDN is unreachable,
+       Both @import lines degrade gracefully - if the CDN is unreachable,
        the chosen font falls back to sans-serif via the stack below. */
     @import url('https://fonts.cdnfonts.com/css/opendyslexic');
     @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap');
@@ -580,12 +784,12 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
     }}
     
     [data-testid="stSelectbox"] div div {{
-        background-color: #FFFFFF !important;
+        background-color:
         color: var(--text) !important;
     }}
     
     [data-testid="stTextArea"] textarea {{
-        background-color: #FFFFFF !important;
+        background-color:
         color: var(--text) !important;
         font-family: var(--font-family), sans-serif !important;
         font-size: var(--font-size) !important;
@@ -614,7 +818,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
     div[data-testid="stContainer"],
     .stContainer,
     div[class*="stVerticalBlockBorderWrapper"] {{
-        background-color: #FFFEF9 !important;
+        background-color:
         border-radius: 16px !important;
         border: 1px solid rgba(0, 0, 0, 0.06) !important;
         border-left: 6px solid var(--accent) !important;
@@ -630,7 +834,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
     }}
     
     /* clear focus outlines for accessibility.
-       on selectboxes we DON'T outline the whole component (too big — wraps
+       on selectboxes we DON'T outline the whole component (too big - wraps
        the label too). instead we highlight each dropdown option as the
        cursor moves over it OR as the user navigates with arrow keys. this
        gives a small focus indicator that follows what the user is about
@@ -649,7 +853,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
     li[role="option"]:hover,
     li[role="option"][aria-selected="true"] {{
         background-color: var(--accent) !important;
-        color: #FFFFFF !important;
+        color:
         border-radius: 6px !important;
         margin: 2px 4px !important;
     }}
@@ -657,7 +861,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
     /* pointer cursor on every interactive setting in the sidebar.
        browsers default to the text I-beam on form inputs, but for
        click-to-pick controls (selectbox, slider, checkbox) the pointer
-       hand is the clearer signal — matches the "Make Flashcard" button
+       hand is the clearer signal - matches the "Make Flashcard" button
        and gives learners consistent "this is clickable" feedback. */
     [data-testid="stSelectbox"],
     [data-testid="stSelectbox"] *,
@@ -684,7 +888,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
 
     /* respect the user's OS-level "reduce motion" setting.
        autistic users, users with vestibular disorders, and anyone prone
-       to migraines often have this enabled — it's enforced from Windows,
+       to migraines often have this enabled - it's enforced from Windows,
        macOS, iOS, and Android accessibility settings. we disable every
        transition, transform and animation so nothing moves that they
        didn't ask to move. */
