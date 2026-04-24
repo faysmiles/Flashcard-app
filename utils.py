@@ -686,13 +686,59 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
 def render_feedback_box(feedback_url, colour_scheme):
     """show the survey feedback box next to the header.
     tint, border, and button colour all follow the active colour scheme so
-    the two boxes read as a coherent pair rather than clashing."""
+    the two boxes read as a coherent pair rather than clashing.
+
+    MOBILE NOTE: the desktop layout uses st.columns([2, 1]) and height:100%
+    so the feedback box matches the header height. on mobile streamlit
+    stacks those columns vertically and the parent column loses its defined
+    height - a height:100% child then collapses to almost nothing, hiding
+    the survey button. the media query below switches to height:auto
+    (+ some margin + a bigger tap target) when the viewport is narrow."""
     theme = _theme_for(colour_scheme)
     st.markdown(f"""
-    <div style='text-align:center; padding:20px 16px; background:{theme["feedback_tint"]}; border:2px solid {theme["feedback_border"]}; border-radius:12px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;'>
+    <style>
+    .feedback-box {{
+        text-align: center;
+        padding: 20px 16px;
+        background: {theme["feedback_tint"]};
+        border: 2px solid {theme["feedback_border"]};
+        border-radius: 12px;
+        height: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }}
+    .feedback-box a.survey-btn {{
+        display: inline-block;
+        padding: 12px 22px;
+        background: {theme["feedback_btn"]};
+        color: white !important;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.9em;
+        min-height: 44px;
+        line-height: 1.4;
+        align-self: center;
+    }}
+    @media (max-width: 640px) {{
+        .feedback-box {{
+            height: auto;
+            margin-top: 12px;
+            padding: 16px 14px;
+        }}
+        .feedback-box a.survey-btn {{
+            display: block;
+            padding: 14px 20px;
+            align-self: stretch;
+        }}
+    }}
+    </style>
+    <div class='feedback-box'>
         <p style='margin:0 0 8px 0; font-size:0.95em; font-weight:700; color:var(--text);'>💬 Help improve this app!</p>
         <p style='margin:0 0 12px 0; font-size:0.8em; color:var(--text); opacity:0.75;'>Your feedback supports our research</p>
-        <a href='{feedback_url}' target='_blank' style='display:inline-block; padding:10px 20px; background:{theme["feedback_btn"]}; color:white; text-decoration:none; border-radius:8px; font-weight:700; font-size:0.9em;'>📝 Take Survey</a>
+        <a class='survey-btn' href='{feedback_url}' target='_blank' rel='noopener'>📝 Take Survey</a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -884,6 +930,39 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
     [data-testid="stButton"] button:hover {{
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    }}
+
+    /* when the sidebar is collapsed (auto on mobile, manual on desktop),
+       streamlit's default toggle is just a thin ">" arrow - easy to miss
+       on a site where the settings panel holds all the accessibility
+       controls. we pin a "⚙️ Settings" label next to the toggle so users
+       can see at a glance that there's more behind it. both test-ids
+       are listed because streamlit renamed this element between versions. */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {{
+        background: var(--accent) !important;
+        border-radius: 10px !important;
+        padding: 4px 10px 4px 6px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        opacity: 1 !important;
+    }}
+    [data-testid="stSidebarCollapsedControl"]::after,
+    [data-testid="collapsedControl"]::after {{
+        content: "⚙️ Settings";
+        color: #FFFFFF;
+        font-family: var(--font-family), sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        white-space: nowrap;
+    }}
+    /* the inner chevron button comes white on the accent-coloured pill */
+    [data-testid="stSidebarCollapsedControl"] button svg,
+    [data-testid="collapsedControl"] button svg {{
+        color: #FFFFFF !important;
+        fill: #FFFFFF !important;
     }}
 
     /* respect the user's OS-level "reduce motion" setting.
