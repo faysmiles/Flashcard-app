@@ -9,13 +9,15 @@ READING_LEVELS = {
     "Advanced (Ages 18+)": "complex"
 }
 
-# dyslexia-friendly fonts (sans-serif, system fonts only)
+# dyslexia-friendly fonts
 FONT_OPTIONS = [
+    "OpenDyslexic",
+    "Lexend",
     "Verdana",
     "Arial",
     "Calibri",
     "Tahoma",
-    "Comic Sans",
+    "Comic Sans MS",
     "Trebuchet MS",
     "Georgia",
     "Courier New"
