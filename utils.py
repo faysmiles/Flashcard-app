@@ -1011,42 +1011,76 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
         color: #FFFFFF !important;
         fill: #FFFFFF !important;
     }}
-    /* the button itself shows just the chevron (via the SVG above). next
-       to it we float a separate "⚙️ Settings" pill as a hint. keeping
-       the label as an independent HTML element (rather than a ::after
-       on the button) is more reliable - some streamlit versions clip
-       pseudo-element content inside their buttons, which is probably
-       why the previous ::after approach went missing. the hint only
-       appears when the collapsed control exists in the DOM (i.e. the
-       sidebar is actually closed), via :has(). pointer-events:none lets
-       any stray taps on the label pass through to whatever is below. */
-    .sidebar-settings-hint {{
-        position: fixed;
-        top: 12px;
-        left: 62px;
-        z-index: 999997;
-        pointer-events: none;
-        background: var(--accent);
-        color: #FFFFFF !important;
-        padding: 8px 14px;
-        border-radius: 18px;
-        font-family: var(--font-family), sans-serif;
-        font-weight: 700;
-        font-size: 14px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+
+    /* swap the default « chevron icon inside the OPEN sidebar's close
+       button for a ⚙️ emoji. the button still works exactly the same
+       (tapping it closes the sidebar) - we're only changing what's
+       drawn inside. two reasons this is better than the chevron:
+       (1) it echoes the "⚙️ Settings" heading directly below it, so
+       the whole sidebar area reads visually as "settings" at a glance;
+       (2) on mobile, the same gear symbol appears on the collapsed
+       control pill, giving users a consistent visual anchor whether
+       the sidebar is open or closed.
+       multiple selectors are listed because streamlit renamed the
+       sidebar header element between versions. */
+    section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] button svg,
+    section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] button [data-testid="stIconMaterial"],
+    section[data-testid="stSidebar"] button[kind="headerNoPadding"] svg,
+    section[data-testid="stSidebar"] [data-testid="baseButton-headerNoPadding"] svg {{
+        display: none !important;
+    }}
+    section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] button::before,
+    section[data-testid="stSidebar"] button[kind="headerNoPadding"]::before,
+    section[data-testid="stSidebar"] [data-testid="baseButton-headerNoPadding"]::before {{
+        content: "🙈 ⚙️";
+        font-size: 18px;
+        line-height: 1;
+        letter-spacing: 2px;
         white-space: nowrap;
+    }}
+    section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] button,
+    section[data-testid="stSidebar"] button[kind="headerNoPadding"] {{
+        min-width: 64px !important;
+        min-height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 4px 10px !important;
+    }}
+
+    /* an inline "where are my settings?" banner shown only on mobile
+       viewports. this replaces an earlier attempt to float a pill next
+       to the hamburger using :has() and position:fixed - that approach
+       failed silently on android webview (no :has() support) and inside
+       streamlit's transformed containers (position:fixed got trapped).
+       an inline banner in the normal document flow avoids both problems:
+       it's just a div with a media query. the banner sits at the top of
+       the main content, so on a phone the first thing a user sees is
+       "here's where the settings live". on desktop it stays hidden -
+       the sidebar is already visible there. */
+    .mobile-settings-hint {{
         display: none;
     }}
-    body:has([data-testid="stSidebarCollapsedControl"]) .sidebar-settings-hint,
-    body:has([data-testid="collapsedControl"]) .sidebar-settings-hint {{
-        display: block;
-    }}
     @media (max-width: 768px) {{
-        .sidebar-settings-hint {{
-            top: 14px;
-            left: 66px;
-            padding: 10px 16px;
-            font-size: 15px;
+        .mobile-settings-hint {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--accent);
+            color: #FFFFFF;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin: 0 0 14px 0;
+            font-family: var(--font-family), sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.4;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }}
+        .mobile-settings-hint .hint-icon {{
+            font-size: 20px;
+            line-height: 1;
+            flex: 0 0 auto;
         }}
     }}
     /* on mobile, bump size and contrast a touch more so the pill reads
@@ -1076,5 +1110,22 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
         }}
     }}
     </style>
-    <div class="sidebar-settings-hint" aria-hidden="true">⚙️ Settings</div>
     """, unsafe_allow_html=True)
+
+
+def render_mobile_settings_hint():
+    """render a mobile-only help banner explaining where the settings are.
+    shown at the top of the main content area. on desktop viewports
+    (>768px) the banner is display:none via the css in apply_styles, so
+    this function is safe to call unconditionally from app.py - it only
+    produces a visible element on narrow screens where the sidebar is
+    auto-collapsed and users might not realise it exists."""
+    st.markdown(
+        """
+        <div class="mobile-settings-hint" role="note">
+            <span class="hint-icon" aria-hidden="true">⚙️</span>
+            <span>Tap the menu button in the top-left to change text size, font, colour, and reading level.</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
