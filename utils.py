@@ -688,12 +688,15 @@ def render_feedback_box(feedback_url, colour_scheme):
     tint, border, and button colour all follow the active colour scheme so
     the two boxes read as a coherent pair rather than clashing.
 
-    MOBILE NOTE: the desktop layout uses st.columns([2, 1]) and height:100%
-    so the feedback box matches the header height. on mobile streamlit
-    stacks those columns vertically and the parent column loses its defined
-    height - a height:100% child then collapses to almost nothing, hiding
-    the survey button. the media query below switches to height:auto
-    (+ some margin + a bigger tap target) when the viewport is narrow."""
+    MOBILE NOTE: avoid height:100% here. on desktop the sibling header gives
+    the flex row a defined height, but on mobile streamlit stacks the
+    columns so the parent has no explicit height and height:100% can
+    collapse to 0 on android webview / chrome - the button then renders
+    inside a zero-height box and becomes invisible/untappable. we use
+    min-height + height:auto instead. the breakpoint is raised to 768px
+    so phones in landscape and small tablets also get the mobile layout,
+    and a plain-text fallback URL is shown so testers can still reach
+    the form if in-app browsers block target=_blank."""
     theme = _theme_for(colour_scheme)
     st.markdown(f"""
     <style>
@@ -703,7 +706,8 @@ def render_feedback_box(feedback_url, colour_scheme):
         background: {theme["feedback_tint"]};
         border: 2px solid {theme["feedback_border"]};
         border-radius: 12px;
-        height: 100%;
+        min-height: 140px;
+        height: auto;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
@@ -721,10 +725,23 @@ def render_feedback_box(feedback_url, colour_scheme):
         min-height: 44px;
         line-height: 1.4;
         align-self: center;
+        -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+        touch-action: manipulation;
     }}
-    @media (max-width: 640px) {{
+    .feedback-box .survey-fallback {{
+        margin: 10px 0 0 0;
+        font-size: 0.72em;
+        color: var(--text);
+        opacity: 0.65;
+        word-break: break-all;
+    }}
+    .feedback-box .survey-fallback a {{
+        color: inherit;
+        text-decoration: underline;
+    }}
+    @media (max-width: 768px) {{
         .feedback-box {{
-            height: auto;
+            min-height: 0;
             margin-top: 12px;
             padding: 16px 14px;
         }}
@@ -732,13 +749,15 @@ def render_feedback_box(feedback_url, colour_scheme):
             display: block;
             padding: 14px 20px;
             align-self: stretch;
+            font-size: 1em;
         }}
     }}
     </style>
     <div class='feedback-box'>
         <p style='margin:0 0 8px 0; font-size:0.95em; font-weight:700; color:var(--text);'>💬 Help improve this app!</p>
         <p style='margin:0 0 12px 0; font-size:0.8em; color:var(--text); opacity:0.75;'>Your feedback supports our research</p>
-        <a class='survey-btn' href='{feedback_url}' target='_blank' rel='noopener'>📝 Take Survey</a>
+        <a class='survey-btn' href='{feedback_url}' target='_blank' rel='noopener noreferrer'>📝 Take Survey</a>
+        <p class='survey-fallback'>Button not working? Open: <a href='{feedback_url}' target='_blank' rel='noopener noreferrer'>survey link</a></p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -932,37 +951,113 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
     }}
 
+    /* streamlit reserves ~6rem of top space inside the sidebar (either
+       as padding on the block-container or as a min-height on the header
+       area, depending on version) to leave room for its toolbar. that
+       leaves a very visible empty gap above our "⚙️ Settings" heading.
+       below we aggressively override every container that could hold it.
+       the broad net is deliberate: streamlit renames these elements
+       between versions, so rather than target one id we hit all of them. */
+    section[data-testid="stSidebar"] [class*="block-container"],
+    section[data-testid="stSidebar"] div[class*="block-container"],
+    [data-testid="stSidebarUserContent"],
+    [data-testid="stSidebarContent"],
+    section[data-testid="stSidebar"] > div:first-child,
+    section[data-testid="stSidebar"] > div > div:first-child,
+    section[data-testid="stSidebar"] > div > div > div:first-child {{
+        padding-top: 1rem !important;
+        margin-top: 0 !important;
+    }}
+    /* some streamlit builds render a near-empty header bar above the
+       user content purely to hold the collapse arrow. if it's still
+       visible after the padding fix, squash it. */
+    [data-testid="stSidebarHeader"] {{
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }}
+
     /* when the sidebar is collapsed (auto on mobile, manual on desktop),
-       streamlit's default toggle is just a thin ">" arrow - easy to miss
-       on a site where the settings panel holds all the accessibility
-       controls. we pin a "⚙️ Settings" label next to the toggle so users
-       can see at a glance that there's more behind it. both test-ids
-       are listed because streamlit renamed this element between versions. */
+       streamlit's default toggle is just a thin ">" chevron - easy to miss
+       on a site where the sidebar holds all the accessibility controls.
+       we style the BUTTON ITSELF (not just the wrapper) as a chunky pill
+       that reads "⚙️ Settings" - that way the whole pill is a single
+       tap target, not just the tiny arrow. both test-ids are listed
+       because streamlit renamed this element between versions. */
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="collapsedControl"] {{
+        opacity: 1 !important;
+        z-index: 999 !important;
+    }}
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"] button {{
         background: var(--accent) !important;
+        color: #FFFFFF !important;
+        border: none !important;
         border-radius: 10px !important;
-        padding: 4px 10px 4px 6px !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+        padding: 10px 14px 10px 10px !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18) !important;
         display: flex !important;
         align-items: center !important;
-        gap: 4px !important;
-        opacity: 1 !important;
+        gap: 8px !important;
+        font-family: var(--font-family), sans-serif !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        min-height: 44px !important;
+        white-space: nowrap !important;
     }}
-    [data-testid="stSidebarCollapsedControl"]::after,
-    [data-testid="collapsedControl"]::after {{
-        content: "⚙️ Settings";
-        color: #FFFFFF;
-        font-family: var(--font-family), sans-serif;
-        font-weight: 700;
-        font-size: 14px;
-        white-space: nowrap;
-    }}
-    /* the inner chevron button comes white on the accent-coloured pill */
     [data-testid="stSidebarCollapsedControl"] button svg,
     [data-testid="collapsedControl"] button svg {{
         color: #FFFFFF !important;
         fill: #FFFFFF !important;
+    }}
+    /* the button itself shows just the chevron (via the SVG above). next
+       to it we float a separate "⚙️ Settings" pill as a hint. keeping
+       the label as an independent HTML element (rather than a ::after
+       on the button) is more reliable - some streamlit versions clip
+       pseudo-element content inside their buttons, which is probably
+       why the previous ::after approach went missing. the hint only
+       appears when the collapsed control exists in the DOM (i.e. the
+       sidebar is actually closed), via :has(). pointer-events:none lets
+       any stray taps on the label pass through to whatever is below. */
+    .sidebar-settings-hint {{
+        position: fixed;
+        top: 12px;
+        left: 62px;
+        z-index: 999997;
+        pointer-events: none;
+        background: var(--accent);
+        color: #FFFFFF !important;
+        padding: 8px 14px;
+        border-radius: 18px;
+        font-family: var(--font-family), sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+        white-space: nowrap;
+        display: none;
+    }}
+    body:has([data-testid="stSidebarCollapsedControl"]) .sidebar-settings-hint,
+    body:has([data-testid="collapsedControl"]) .sidebar-settings-hint {{
+        display: block;
+    }}
+    @media (max-width: 768px) {{
+        .sidebar-settings-hint {{
+            top: 14px;
+            left: 66px;
+            padding: 10px 16px;
+            font-size: 15px;
+        }}
+    }}
+    /* on mobile, bump size and contrast a touch more so the pill reads
+       clearly even against the brighter colour schemes */
+    @media (max-width: 768px) {{
+        [data-testid="stSidebarCollapsedControl"] button,
+        [data-testid="collapsedControl"] button {{
+            padding: 12px 16px 12px 12px !important;
+            font-size: 15px !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22) !important;
+        }}
     }}
 
     /* respect the user's OS-level "reduce motion" setting.
@@ -981,4 +1076,5 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
         }}
     }}
     </style>
+    <div class="sidebar-settings-hint" aria-hidden="true">⚙️ Settings</div>
     """, unsafe_allow_html=True)
