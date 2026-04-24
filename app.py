@@ -43,6 +43,7 @@ from utils import (
     generate_flashcards_from_llm, get_card_colors,
     search_wikipedia_image, render_header, render_feedback_box,
     render_card_to_png, fetch_image_bytes, build_cards_zip,
+    render_mobile_settings_hint,
 )
 
 st.set_page_config(
@@ -98,6 +99,10 @@ with header_right:
     render_feedback_box(FEEDBACK_URL, st.session_state.colour_scheme)
 
 st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
+
+# on mobile only (hidden via CSS on desktop), show a banner explaining
+# that settings live behind the collapsed sidebar button
+render_mobile_settings_hint()
 
 # --- settings panel (in sidebar for mobile-friendly layout) ---
 # on desktop: sidebar shows as a side panel. on mobile: auto-collapses to a
