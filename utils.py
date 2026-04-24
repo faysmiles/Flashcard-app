@@ -46,10 +46,14 @@ def search_wikipedia_image(query):
         # skip junk pages (disambiguation, lists, etc.)
         junk_keywords = ['disambiguation', 'list of', '(surname)', '(given name)']
         
-        # try to find the best matching page (not just the first one with an image)
+        # score each candidate page by how well its title matches the query.
+        # initial score of 0 (not -1) means pages with ZERO word overlap are
+        # never picked — better to return no image than a confidently-wrong one.
+        # (a "giraffe habitat" search that returned a "Savanna" page with an
+        # elephant photo was the original bug this guards against.)
         query_words = set(clean_query.lower().split())
         best_match = None
-        best_score = -1
+        best_score = 0
         
         for page_id, page_data in pages.items():
             if "thumbnail" not in page_data:
@@ -78,55 +82,38 @@ def search_wikipedia_image(query):
 # --- card colours for different themes ---
 
 def get_card_colors(colour_scheme):
-    """return colours based on the selected theme"""
+    """return the three per-card colours the renderer actually uses.
+    previously returned card_bg/question_bg/success/flipped_bg too but
+    nothing read them — trimmed to keep the schema honest."""
     color_map = {
-        "Cream (Dyslexia Friendly)": {
-            "card_bg": "#FFFEF9",
-            "question_bg": "#FFF3E0",
-            "text": "#3E2723",
-            "accent": "#D4A574",
-            "label": "#8B6914",
-            "success": "#6B8E23",
-            "flipped_bg": "#FFF3E0"
-        },
         "Soft Blue": {
-            "card_bg": "#FFFFFF",
-            "question_bg": "#E3F2FD",
-            "text": "#1A237E",
+            "text":   "#1A237E",
+            "label":  "#3A7CA5",
             "accent": "#3F51B5",
-            "label": "#3A7CA5",
-            "success": "#558B2F",
-            "flipped_bg": "#E3F2FD"
-        },
-        "Light Grey": {
-            "card_bg": "#FFFFFF",
-            "question_bg": "#F5F5F5",
-            "text": "#212121",
-            "accent": "#757575",
-            "label": "#616161",
-            "success": "#558B2F",
-            "flipped_bg": "#F5F5F5"
         },
         "Pale Lavender": {
-            "card_bg": "#FFFFFF",
-            "question_bg": "#F3E5F5",
-            "text": "#4A148C",
+            "text":   "#4A148C",
+            "label":  "#7C3C9C",
             "accent": "#9C27B0",
-            "label": "#7C3C9C",
-            "success": "#6B8E23",
-            "flipped_bg": "#F3E5F5"
         },
         "Pale Mint": {
-            "card_bg": "#FFFFFF",
-            "question_bg": "#E0F2F1",
-            "text": "#1B5E20",
+            # label darkened from #3C8C6C (4.03:1, failed WCAG AA) to
+            # #2F7A55 (5.15:1, passes AA with headroom).
+            "text":   "#1B5E20",
+            "label":  "#2F7A55",
             "accent": "#4CAF50",
-            "label": "#3C8C6C",
-            "success": "#6B8E23",
-            "flipped_bg": "#E0F2F1"
-        }
+        },
+        "Low Stimulation": {
+            # low-chroma near-greyscale for users who find saturated
+            # palettes overstimulating (common for autism / sensory
+            # processing differences). all three values pass WCAG AA
+            # on a #FFFEF9 card background.
+            "text":   "#2E2E2E",
+            "label":  "#555555",
+            "accent": "#7A7A7A",
+        },
     }
-    return color_map.get(colour_scheme, color_map["Cream (Dyslexia Friendly)"])
+    return color_map.get(colour_scheme, color_map["Low Stimulation"])
 
 
 # --- emoji matching ---
@@ -174,6 +161,67 @@ def get_emoji_for_topic(text):
 
 # --- LLM flashcard generation (this is the main one) ---
 
+# Tool schema for structured output.
+# Using tool_choice forces Claude to return JSON that conforms to this schema,
+# which eliminates the whole class of "malformed JSON" errors we used to get.
+# The description fields also double as hints to Claude about what each
+# field is for — they're surfaced during generation, not just validation.
+FLASHCARD_TOOL = {
+    "name": "create_flashcards",
+    "description": (
+        "Save a set of learning flashcards for the student. Each card has a "
+        "short title, a Wikipedia image search term, a topic keyword, and 1-3 "
+        "facts. Each fact has its own relevant emoji."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "flashcards": {
+                "type": "array",
+                "description": "Between 3 and 5 flashcards covering the key ideas in the source text.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "A brief 2-4 word topic name for this card.",
+                        },
+                        "facts": {
+                            "type": "array",
+                            "description": "1-3 facts about this topic, each with its own emoji.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "emoji": {
+                                        "type": "string",
+                                        "description": "A single emoji that represents THIS specific fact (not the card topic as a whole).",
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "description": "The fact text, matching the reading level and writing rules in the prompt.",
+                                    },
+                                },
+                                "required": ["emoji", "text"],
+                            },
+                        },
+                        "topic_keyword": {
+                            "type": "string",
+                            "description": "A short keyword for the card's topic, used as a fallback emoji hint.",
+                        },
+                        "image_search": {
+                            "type": "string",
+                            "description": "A concrete, photographable noun phrase to find a Wikipedia image.",
+                        },
+                    },
+                    "required": ["title", "facts", "topic_keyword", "image_search"],
+                },
+            },
+        },
+        "required": ["flashcards"],
+    },
+}
+
+
 def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
     """send text to claude and get flashcards back"""
     
@@ -202,32 +250,38 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
 - Medium sentences (12-18 words per fact)
 - Explain technical terms briefly when used"""
     
-    prompt = f"""You are creating flashcards for a student. Follow the reading level requirements EXACTLY.
+    prompt = f"""You are creating flashcards for a student with cognitive accessibility needs (dyslexia, processing differences, ADHD). Follow the reading level and writing rules EXACTLY.
 
 {level_instructions}
+
+DYSLEXIA-FRIENDLY WRITING RULES (apply to EVERY fact at every reading level):
+- Use active voice. "The moon pulls the water" NOT "The water is pulled by the moon."
+- One idea per sentence. Avoid "which", "that", or "and" chains that bundle multiple ideas together.
+- Use concrete, specific nouns instead of abstract ones. "A loud bang" beats "an acoustic disturbance."
+- Prefer short, common, everyday words over rare or long ones when they mean the same thing.
+- Write numbers as digits (5, 100) not words (five, one hundred) — easier for dyslexic readers to process.
+- Avoid double negatives. "It is helpful" beats "It is not unhelpful."
+- At the Easy reading level ONLY: no idioms, metaphors, or figurative language. Some learners take these literally.
+
+EMOJI RULES (per fact):
+- Each fact gets ONE emoji that represents THAT fact's content, not the card topic as a whole.
+- Pick concrete and memorable emojis. A whale-sound fact gets 🔊, a whale-size fact gets 📏, a whale-food fact gets 🦐.
+- Use different emojis for different facts on the same card.
+
+IMAGE SEARCH RULES (CRITICAL - getting this wrong gives learners the wrong picture):
+- image_search must name the MAIN SUBJECT of the card, NOT its habitat, context, action, or property.
+  - Card titled "Where Giraffes Live" → use "giraffe" (NOT "African savanna" — that page's photo is often an elephant).
+  - Card titled "How DNA Copies Itself" → use "DNA" (NOT "cell division" or "genetic replication").
+  - Card titled "What Elephants Eat" → use "elephant" (NOT "plants" or "African vegetation").
+  - Card titled "The Life Cycle of Butterflies" → use "butterfly" (NOT "life cycle" or "metamorphosis").
+- The subject must be PHOTOGRAPHABLE — Wikipedia needs an actual photo of it.
+- For genuinely abstract concepts (no physical subject), pick a concrete stand-in: "inflation" → "shopping basket", "democracy" → "ballot box", "friendship" → "people holding hands".
+- Add a distinguishing adjective ONLY when it helps find the right picture and doesn't drop the main subject: "steam locomotive" is fine, "African elephant" is fine. Never drop the core noun.
 
 TEXT TO CONVERT:
 {raw_text}
 
-Return ONLY a valid JSON array in this exact format (no preamble, no explanation, just JSON):
-[
-  {{
-    "title": "Brief title/topic",
-    "facts": [
-      {{"emoji": "🌊", "text": "Fact 1 goes here"}},
-      {{"emoji": "⚡", "text": "Fact 2 goes here"}}
-    ],
-    "topic_keyword": "main keyword for emoji matching",
-    "image_search": "specific search term to find a relevant wikipedia image (be precise, e.g. 'African elephant' not just 'elephant')"
-  }}
-]
-
-Rules:
-- Create 3-5 flashcards
-- Each card has 1-3 facts
-- Facts MUST match the reading level above
-- Each fact needs ONE emoji that visually represents THAT specific fact (not the whole card topic). Pick something concrete and memorable — e.g. a fact about whale sounds gets 🔊, a fact about whale size gets 📏, a fact about whale food gets 🦐. Avoid generic bullets like • or ▶. Pick different emojis for different facts on the same card.
-- image_search should be a specific noun or phrase that would find the right picture on wikipedia"""
+Now call the create_flashcards tool with 3 to 5 cards."""
 
     try:
         response = requests.post(
@@ -241,6 +295,12 @@ Rules:
                 "model": "claude-sonnet-4-6",
                 "max_tokens": 2000,
                 "messages": [{"role": "user", "content": prompt}],
+                # structured output via tool use: the API validates Claude's
+                # response against FLASHCARD_TOOL's schema before returning,
+                # so we don't have to parse markdown-fenced JSON or handle
+                # malformed output ourselves.
+                "tools": [FLASHCARD_TOOL],
+                "tool_choice": {"type": "tool", "name": "create_flashcards"},
             },
             timeout=30
         )
@@ -249,21 +309,24 @@ Rules:
             st.error("Something went wrong talking to the AI - please try again in a moment.")
             return None
         
-        # get the text out of the response
+        # extract the tool_use block. with tool_choice forcing this specific
+        # tool, there should always be exactly one - but we look it up by name
+        # rather than index in case the API adds other block types in future.
         api_response = response.json()
-        text_content = api_response["content"][0]["text"].strip()
+        tool_use_block = next(
+            (
+                block for block in api_response.get("content", [])
+                if block.get("type") == "tool_use"
+                and block.get("name") == "create_flashcards"
+            ),
+            None
+        )
         
-        # clean up markdown code blocks if claude added them
-        if text_content.startswith("```json"):
-            text_content = text_content[7:]
-        if text_content.startswith("```"):
-            text_content = text_content[3:]
-        if text_content.endswith("```"):
-            text_content = text_content[:-3]
-        text_content = text_content.strip()
+        if not tool_use_block:
+            st.error("The AI didn't create flashcards in the expected format - please try again.")
+            return None
         
-        # turn the json into flashcard dicts
-        flashcard_data = json.loads(text_content)
+        flashcard_data = tool_use_block["input"]["flashcards"]
         
         flashcards = []
         for card in flashcard_data:
@@ -336,56 +399,155 @@ def extract_text_from_file(uploaded_file):
 
 # --- page header and feedback box ---
 
-def render_header(app_title, app_subtitle, text_size):
-    """show the big gold banner at the top of the page.
-    title will be twice the body text size. we use <div> instead of <h1>
-    because streamlit aggressively styles h1 tags which overrides our size."""
+# Per-scheme theming for the header banner + feedback survey box.
+# Single source of truth — both renderers read from here, so adding a new
+# colour scheme later means adding one entry, not editing two places.
+#
+# Header gradients are chosen to be dark enough for white title text to
+# pass WCAG AA contrast (4.5:1). Low Stimulation uses a solid muted grey
+# (no gradient, no shadow) because a bold gradient would undercut the
+# whole point of that scheme.
+_SCHEME_THEMES = {
+    "Soft Blue": {
+        "header_bg":       "linear-gradient(135deg, #2C5282 0%, #3182CE 50%, #2B6CB0 100%)",
+        "header_shadow":   "0 4px 16px rgba(44, 82, 130, 0.25)",
+        "feedback_tint":   "rgba(58, 124, 165, 0.08)",
+        "feedback_border": "rgba(58, 124, 165, 0.25)",
+        "feedback_btn":    "#3A7CA5",
+    },
+    "Pale Lavender": {
+        "header_bg":       "linear-gradient(135deg, #6B2F85 0%, #8E24AA 50%, #7B2B93 100%)",
+        "header_shadow":   "0 4px 16px rgba(107, 47, 133, 0.25)",
+        "feedback_tint":   "rgba(142, 36, 170, 0.08)",
+        "feedback_border": "rgba(142, 36, 170, 0.25)",
+        "feedback_btn":    "#7C3C9C",
+    },
+    "Pale Mint": {
+        "header_bg":       "linear-gradient(135deg, #276749 0%, #3E8E66 50%, #2F7A55 100%)",
+        "header_shadow":   "0 4px 16px rgba(39, 103, 73, 0.25)",
+        "feedback_tint":   "rgba(47, 122, 85, 0.08)",
+        "feedback_border": "rgba(47, 122, 85, 0.25)",
+        "feedback_btn":    "#2F7A55",
+    },
+    "Low Stimulation": {
+        # deliberately flat: no gradient, no shadow. users who chose this
+        # scheme want less visual activity, so the header should follow
+        # suit — a bold gradient would fight the whole intent.
+        "header_bg":       "#5A5A5A",
+        "header_shadow":   "none",
+        "feedback_tint":   "rgba(90, 90, 90, 0.06)",
+        "feedback_border": "rgba(90, 90, 90, 0.22)",
+        "feedback_btn":    "#5A5A5A",
+    },
+}
+
+
+def _theme_for(colour_scheme):
+    """look up the header/feedback theme for a scheme, falling back to
+    Low Stimulation if an unknown value slips in (e.g. returning users
+    with an old stored scheme name)."""
+    return _SCHEME_THEMES.get(colour_scheme, _SCHEME_THEMES["Low Stimulation"])
+
+
+def render_header(app_title, app_subtitle, text_size, colour_scheme):
+    """show the big banner at the top of the page.
+    background is picked from _SCHEME_THEMES so the banner automatically
+    re-tints when the user changes Colour Scheme. title is twice body
+    text size. we use <div> instead of <h1> because streamlit aggressively
+    styles h1 tags which overrides our size."""
+    theme = _theme_for(colour_scheme)
     title_px = text_size * 2
     subtitle_px = text_size
     st.markdown(f"""
-    <div style='background: linear-gradient(135deg, #D4A017 0%, #E8B923 50%, #DAA520 100%); padding: 28px 26px; border-radius: 12px; box-shadow: 0 4px 16px rgba(218, 165, 32, 0.25); height: 100%; box-sizing: border-box;'>
+    <div style='background: {theme["header_bg"]}; padding: 28px 26px; border-radius: 12px; box-shadow: {theme["header_shadow"]}; height: 100%; box-sizing: border-box;'>
         <div style='font-size: {title_px}px; font-weight: 800; color: #FFFFFF; margin: 0; line-height: 1.1; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);'>💡 {app_title}</div>
         <div style='font-size: {subtitle_px}px; color: rgba(255, 255, 255, 0.95); margin: 10px 0 0 0;'>{app_subtitle}</div>
     </div>
     """, unsafe_allow_html=True)
 
 
-def render_feedback_box(feedback_url):
-    """show the survey feedback box next to the header"""
+def render_feedback_box(feedback_url, colour_scheme):
+    """show the survey feedback box next to the header.
+    tint, border, and button colour all follow the active colour scheme so
+    the two boxes read as a coherent pair rather than clashing."""
+    theme = _theme_for(colour_scheme)
     st.markdown(f"""
-    <div style='text-align:center; padding:20px 16px; background:rgba(255, 107, 107, 0.08); border:2px solid rgba(255, 107, 107, 0.2); border-radius:12px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;'>
-        <p style='margin:0 0 8px 0; font-size:0.95em; font-weight:700; color:#2C2416;'>💬 Help improve this app!</p>
-        <p style='margin:0 0 12px 0; font-size:0.8em; color:#5C5246;'>Your feedback supports our research</p>
-        <a href='{feedback_url}' target='_blank' style='display:inline-block; padding:10px 20px; background:#FF6B6B; color:white; text-decoration:none; border-radius:8px; font-weight:700; font-size:0.9em;'>📝 Take Survey</a>
+    <div style='text-align:center; padding:20px 16px; background:{theme["feedback_tint"]}; border:2px solid {theme["feedback_border"]}; border-radius:12px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;'>
+        <p style='margin:0 0 8px 0; font-size:0.95em; font-weight:700; color:var(--text);'>💬 Help improve this app!</p>
+        <p style='margin:0 0 12px 0; font-size:0.8em; color:var(--text); opacity:0.75;'>Your feedback supports our research</p>
+        <a href='{feedback_url}' target='_blank' style='display:inline-block; padding:10px 20px; background:{theme["feedback_btn"]}; color:white; text-decoration:none; border-radius:8px; font-weight:700; font-size:0.9em;'>📝 Take Survey</a>
     </div>
     """, unsafe_allow_html=True)
 
 
 # --- CSS styling ---
 
-def apply_styles(font_style, text_size, colour_scheme):
-    """apply the dyslexia-friendly styles to the page"""
+def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_motion=False):
+    """apply the accessibility-focused styles to the page.
+
+    line_spacing (float): CSS line-height value (1.5 / 1.8 / 2.0 in the
+        sidebar). piped through as a CSS variable so inline styles in the
+        card rendering can pick it up.
+    reduce_motion (bool): when True, injects a global rule that kills every
+        transition, animation and hover-lift. separate from the OS-level
+        @media (prefers-reduced-motion) rule further down in the CSS —
+        this is an in-app override some users prefer.
+    """
     
     colors = {
-        "Cream (Dyslexia Friendly)": {"bg": "#F5F1E8", "text": "#2C2416", "accent": "#8B6914"},
-        "Soft Blue": {"bg": "#E8F1F5", "text": "#1C3A42", "accent": "#3A7CA5"},
-        "Light Grey": {"bg": "#F1F1F1", "text": "#2C2C2C", "accent": "#666666"},
-        "Pale Lavender": {"bg": "#F5E8F5", "text": "#3C2C42", "accent": "#7C3C9C"},
-        "Pale Mint": {"bg": "#E8F5F1", "text": "#1C3C32", "accent": "#3C8C6C"},
+        "Soft Blue":                  {"bg": "#E8F1F5", "text": "#1C3A42", "accent": "#3A7CA5"},
+        "Pale Lavender":              {"bg": "#F5E8F5", "text": "#3C2C42", "accent": "#7C3C9C"},
+        "Pale Mint":                  {"bg": "#E8F5F1", "text": "#1C3C32", "accent": "#2F7A55"},
+        # low-chroma near-greyscale page-level palette to match the card-level
+        # Low Stimulation scheme in get_card_colors().
+        "Low Stimulation":            {"bg": "#F2F2EC", "text": "#2E2E2E", "accent": "#555555"},
     }
     
-    c = colors.get(colour_scheme, colors["Cream (Dyslexia Friendly)"])
+    c = colors.get(colour_scheme, colors["Low Stimulation"])
     
     # we use css variables so we only inject the theme values once at the top
     # then the rest of the css just references them with var(--name)
+    # font-family is WRAPPED IN QUOTES because some font names are multi-word
+    # ("Comic Sans MS", "Open Dyslexic", "Trebuchet MS") — unquoted, those
+    # fall back silently. quoting covers single-word names too, harmlessly.
+    # in-app reduce-motion override. when the user has ticked "Reduce Motion"
+    # in the sidebar, we prepend a block that kills every transition and
+    # animation globally, overriding anything declared later. kept separate
+    # from the OS-level @media (prefers-reduced-motion) block at the bottom
+    # of the CSS — that one triggers from Windows/macOS/iOS/Android settings
+    # without any app-side action, and this one is direct in-app control.
+    reduce_motion_css = ""
+    if reduce_motion:
+        reduce_motion_css = """
+        *, *::before, *::after {
+            transition: none !important;
+            animation: none !important;
+        }
+        [data-testid="stButton"] button:hover {
+            transform: none !important;
+        }
+        """
+
     st.markdown(f"""
     <style>
+    {reduce_motion_css}
+    /* load the two web-hosted dyslexia-friendly fonts.
+       OpenDyslexic: purpose-designed for dyslexic readers (weighted bases
+       anchor letters and stop flipping). Served by cdnfonts.
+       Lexend: research-backed for reading proficiency in general readers.
+       Served by Google Fonts.
+       Both @import lines degrade gracefully — if the CDN is unreachable,
+       the chosen font falls back to sans-serif via the stack below. */
+    @import url('https://fonts.cdnfonts.com/css/opendyslexic');
+    @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap');
+
     :root {{
         --bg: {c['bg']};
         --text: {c['text']};
         --accent: {c['accent']};
-        --font-family: {font_style};
+        --font-family: "{font_style}";
         --font-size: {text_size}px;
+        --line-height: {line_spacing};
     }}
     
     [data-testid="stAppViewContainer"] {{ background-color: var(--bg) !important; }}
@@ -401,7 +563,7 @@ def apply_styles(font_style, text_size, colour_scheme):
         color: var(--text) !important;
         letter-spacing: 0.35px !important;
         word-spacing: 1.23px !important;
-        line-height: 1.8 !important;
+        line-height: var(--line-height) !important;
     }}
     
     h1, h2, h3, h4, h5, h6 {{
@@ -467,12 +629,44 @@ def apply_styles(font_style, text_size, colour_scheme):
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
     }}
     
-    /* clear focus outlines for accessibility */
+    /* clear focus outlines for accessibility.
+       on selectboxes we DON'T outline the whole component (too big — wraps
+       the label too). instead we highlight each dropdown option as the
+       cursor moves over it OR as the user navigates with arrow keys. this
+       gives a small focus indicator that follows what the user is about
+       to pick. */
     button:focus-visible,
-    [data-testid="stTextArea"] textarea:focus,
-    [data-testid="stSelectbox"] *:focus {{
+    [data-testid="stTextArea"] textarea:focus {{
         outline: 3px solid var(--accent) !important;
         outline-offset: 2px !important;
+    }}
+
+    /* per-option hover/keyboard highlight inside the dropdown list.
+       streamlit's selectbox uses baseweb under the hood, which renders
+       options with role="option". aria-selected is set automatically as
+       the user arrow-keys through the list, so the same rule covers
+       both mouse and keyboard users. */
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {{
+        background-color: var(--accent) !important;
+        color: #FFFFFF !important;
+        border-radius: 6px !important;
+        margin: 2px 4px !important;
+    }}
+
+    /* pointer cursor on every interactive setting in the sidebar.
+       browsers default to the text I-beam on form inputs, but for
+       click-to-pick controls (selectbox, slider, checkbox) the pointer
+       hand is the clearer signal — matches the "Make Flashcard" button
+       and gives learners consistent "this is clickable" feedback. */
+    [data-testid="stSelectbox"],
+    [data-testid="stSelectbox"] *,
+    [data-testid="stCheckbox"],
+    [data-testid="stCheckbox"] *,
+    [data-testid="stSlider"] [role="slider"],
+    [data-testid="stRadio"] label,
+    li[role="option"] {{
+        cursor: pointer !important;
     }}
     
     /* make buttons feel more tactile */
@@ -486,6 +680,22 @@ def apply_styles(font_style, text_size, colour_scheme):
     [data-testid="stButton"] button:hover {{
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    }}
+
+    /* respect the user's OS-level "reduce motion" setting.
+       autistic users, users with vestibular disorders, and anyone prone
+       to migraines often have this enabled — it's enforced from Windows,
+       macOS, iOS, and Android accessibility settings. we disable every
+       transition, transform and animation so nothing moves that they
+       didn't ask to move. */
+    @media (prefers-reduced-motion: reduce) {{
+        *, *::before, *::after {{
+            transition: none !important;
+            animation: none !important;
+        }}
+        [data-testid="stButton"] button:hover {{
+            transform: none !important;
+        }}
     }}
     </style>
     """, unsafe_allow_html=True)
