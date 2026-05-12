@@ -417,7 +417,7 @@ FLASHCARD_TOOL = {
         "properties": {
             "flashcards": {
                 "type": "array",
-                "description": "Between 3 and 5 flashcards covering the key ideas in the source text.",
+                "description": "Flashcards covering the key ideas in the source text. The exact count is specified in the prompt.",
                 "items": {
                     "type": "object",
                     "properties": {
@@ -463,12 +463,23 @@ FLASHCARD_TOOL = {
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
-    """send text to claude and get flashcards back"""
+    """send text to claude and get flashcards back.
+    card count scales with input length: short texts get 3-5 cards, longer
+    texts get more so each card stays focused rather than over-compressed."""
     
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         st.error("Can't find the AI key - please check your settings.")
         return None
+    
+    # scale card count to text length - roughly 1 card per 2,000 chars
+    n_chars = len(raw_text)
+    if n_chars <= 8000:
+        min_cards, max_cards = 3, 5
+    elif n_chars <= 16000:
+        min_cards, max_cards = 5, 8
+    else:
+        min_cards, max_cards = 8, 12
     
     if reading_level == "simple":
         level_instructions = """READING LEVEL: EASY (Ages 4-11)
@@ -520,7 +531,7 @@ IMAGE SEARCH RULES (CRITICAL - getting this wrong gives learners the wrong pictu
 TEXT TO CONVERT:
 {raw_text}
 
-Now call the create_flashcards tool with 3 to 5 cards."""
+Now call the create_flashcards tool with {min_cards} to {max_cards} cards."""
 
     try:
         response = requests.post(
@@ -532,7 +543,7 @@ Now call the create_flashcards tool with 3 to 5 cards."""
             },
             json={
                 "model": "claude-haiku-4-5-20251001",
-                "max_tokens": 2000,
+                "max_tokens": 5000,
                 "messages": [{"role": "user", "content": prompt}],
                 "tools": [FLASHCARD_TOOL],
                 "tool_choice": {"type": "tool", "name": "create_flashcards"},
