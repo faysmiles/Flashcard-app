@@ -19,10 +19,10 @@ if not os.path.exists(config_file):
     os.makedirs(config_dir, exist_ok=True)
     with open(config_file, "w") as f:
         f.write("""[theme]
-primaryColor = "#FF6B6B"
-backgroundColor = "#F5F1E8"
+primaryColor = "#3A7CA5"
+backgroundColor = "#E8F1F5"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#2C2416"
+textColor = "#1C3A42"
 font = "sans serif"
 base = "light"
 
@@ -58,12 +58,11 @@ defaults = {
     "flashcards": None,
     "font_style": "Verdana",
     "text_size": DEFAULT_FONT_SIZE,
-    "colour_scheme": "Low Stimulation",
+    "colour_scheme": "Soft Blue",
     "card_flipped": {},
     "card_images": {},
     "current_card_idx": 0,
     "line_spacing": 1.8,
-    "reduce_motion": False,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -74,7 +73,6 @@ apply_styles(
     st.session_state.text_size,
     st.session_state.colour_scheme,
     st.session_state.line_spacing,
-    st.session_state.reduce_motion,
 )
 
 FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
@@ -90,13 +88,7 @@ PAGE_BG_MAP = {
 }
 
 # --- header ---
-header_left, header_right = st.columns([2, 1], gap="medium")
-
-with header_left:
-    render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_state.colour_scheme)
-
-with header_right:
-    render_feedback_box(FEEDBACK_URL, st.session_state.colour_scheme)
+render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_state.colour_scheme)
 
 st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 
@@ -141,23 +133,13 @@ with st.sidebar:
 
     colour_options = ["Soft Blue", "Pale Lavender", "Pale Mint", "Low Stimulation"]
     if st.session_state.colour_scheme not in colour_options:
-        st.session_state.colour_scheme = "Low Stimulation"
+        st.session_state.colour_scheme = "Soft Blue"
     new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox")
     if new_colour != st.session_state.colour_scheme:
         st.session_state.colour_scheme = new_colour
         st.rerun()
     
     show_images = st.checkbox("Show Images", value=True, key="show_images_check", help="Show relevant images from Wikipedia on flipped cards")
-
-    new_reduce_motion = st.checkbox(
-        "Reduce Motion",
-        value=st.session_state.reduce_motion,
-        key="reduce_motion_check",
-        help="Turns off button hover effects and transitions. Helpful for users who find motion distracting.",
-    )
-    if new_reduce_motion != st.session_state.reduce_motion:
-        st.session_state.reduce_motion = new_reduce_motion
-        st.rerun()
     
     st.markdown("---")
     st.caption("💡 These settings adjust the whole app. Change them any time - your cards won't disappear.")
@@ -452,7 +434,7 @@ f"""<div style='{outer_style}'>
             idx=idx,
             total=total_cards,
             wiki_image_bytes=wiki_bytes,
-            page_bg_hex=PAGE_BG_MAP.get(st.session_state.colour_scheme, "#F2F2EC"),
+            page_bg_hex=PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5"),
         )
         safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", card["title"]).strip("_") or "card"
         st.download_button(
@@ -509,7 +491,7 @@ f"""<div style='{outer_style}'>
         for c in flashcards
     ])
 
-    active_page_bg = PAGE_BG_MAP.get(st.session_state.colour_scheme, "#F2F2EC")
+    active_page_bg = PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5")
     zip_cache_key = (
         flashcards[0]["title"] if flashcards else "",
         len(flashcards),
@@ -542,3 +524,7 @@ f"""<div style='{outer_style}'>
             key="dl_all_text",
             use_container_width=True,
         )
+
+# --- feedback box at bottom of page ---
+st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
+render_feedback_box(FEEDBACK_URL, st.session_state.colour_scheme)
