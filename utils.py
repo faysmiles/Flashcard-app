@@ -764,16 +764,12 @@ def render_feedback_box(feedback_url, colour_scheme):
 
 # --- CSS styling ---
 
-def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_motion=False):
+def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     """apply the accessibility-focused styles to the page.
 
     line_spacing (float): CSS line-height value (1.5 / 1.8 / 2.0 in the
         sidebar). piped through as a CSS variable so inline styles in the
         card rendering can pick it up.
-    reduce_motion (bool): when True, injects a global rule that kills every
-        transition, animation and hover-lift. separate from the OS-level
-        @media (prefers-reduced-motion) rule further down in the CSS -
-        this is an in-app override some users prefer.
     """
     
     colors = {
@@ -783,23 +779,10 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8, reduce_
         "Low Stimulation":            {"bg": "#F2F2EC", "text": "#2E2E2E", "accent": "#555555"},
     }
     
-    c = colors.get(colour_scheme, colors["Low Stimulation"])
-    
-    reduce_motion_css = ""
-    if reduce_motion:
-        reduce_motion_css = """
-        *, *::before, *::after {
-            transition: none !important;
-            animation: none !important;
-        }
-        [data-testid="stButton"] button:hover {
-            transform: none !important;
-        }
-        """
+    c = colors.get(colour_scheme, colors["Soft Blue"])
 
     st.markdown(f"""
     <style>
-    {reduce_motion_css}
     /* load the two web-hosted dyslexia-friendly fonts.
        OpenDyslexic: purpose-designed for dyslexic readers (weighted bases
        anchor letters and stop flipping). Served by cdnfonts.
