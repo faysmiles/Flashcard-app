@@ -77,7 +77,7 @@ apply_styles(
 
 FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
 DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
-MAX_CHARS = 8000
+MAX_CHARS = 24000
 
 # page background hex per scheme
 PAGE_BG_MAP = {
