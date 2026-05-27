@@ -1,4 +1,4 @@
-# app.py - WITH HAND ICON INSTEAD OF KEYBOARD TEXT
+# app.py - FIXED DROPDOWN TEXT COLORS
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -23,12 +23,13 @@ READING_LEVELS = {
 
 FONT_OPTIONS = ["Poppins", "OpenDyslexic", "Lexend", "Verdana", "Arial", "Comic Sans MS"]
 
-# WCAG COMPLIANT COLOR SCHEMES
+# WCAG COMPLIANT COLOR SCHEMES - Darker dropdown text
 COLOR_SCHEMES = {
     "Blue": {
         "bg": "#E8F1F5",
         "text": "#0D2B3E",
         "sidebar_text": "#1a3a4a",
+        "dropdown_text": "#0D2B3E",  # Dark navy for dropdown
         "accent": "#2B6C9E",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #2B6C9E, #1E5A87)",
@@ -40,6 +41,7 @@ COLOR_SCHEMES = {
         "bg": "#E8F5E9",
         "text": "#0D3B15",
         "sidebar_text": "#1a4a1a",
+        "dropdown_text": "#0D3B15",  # Dark green for dropdown
         "accent": "#2E7D32",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #2E7D32, #1B5E20)",
@@ -51,6 +53,7 @@ COLOR_SCHEMES = {
         "bg": "#F5E8F5",
         "text": "#1A0D2E",
         "sidebar_text": "#2a1540",
+        "dropdown_text": "#1A0D2E",  # Dark purple for dropdown
         "accent": "#6B2D8E",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #7B2D8E, #5A1E6B)",
@@ -62,6 +65,7 @@ COLOR_SCHEMES = {
         "bg": "#F5F5F5",
         "text": "#2C2C2C",
         "sidebar_text": "#1a1a1a",
+        "dropdown_text": "#1a1a1a",  # Almost black for dropdown
         "accent": "#6B6B6B",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #6B6B6B, #555555)",
@@ -143,7 +147,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== STYLES - Replace keyboard text with hand icon ==========
+# ========== STYLES ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -167,7 +171,7 @@ st.markdown(f"""
     cursor: pointer !important;
 }}
 
-/* Add a tooltip on hover */
+/* Tooltip on hover */
 [data-testid="baseButton-headerNoPadding"]:hover::before {{
     content: "☞ Click to open settings" !important;
     font-size: 12px !important;
@@ -179,16 +183,14 @@ st.markdown(f"""
     position: absolute !important;
     top: -30px !important;
     left: 0 !important;
+    z-index: 1000 !important;
 }}
 
-/* Keep sidebar fully functional */
+/* Keep sidebar functional */
 [data-testid="stSidebar"] {{
     background-color: {colors['bg']} !important;
-    display: block !important;
-    visibility: visible !important;
 }}
 
-/* Keep the collapse button working */
 [data-testid="collapsedControl"] {{
     display: flex !important;
     visibility: visible !important;
@@ -196,6 +198,38 @@ st.markdown(f"""
     top: 0.5rem !important;
     left: 0.5rem !important;
     z-index: 100 !important;
+}}
+
+/* ===== FIX DROPDOWN TEXT COLORS - MAKE READABLE ===== */
+
+/* Selectbox dropdown text */
+[data-testid="stSelectbox"] label,
+[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+[data-testid="stSelectbox"] div[data-baseweb="select"] div,
+.stSelectbox div[role="combobox"] span {{
+    color: {colors['dropdown_text']} !important;
+    font-weight: 500 !important;
+}}
+
+/* Dropdown options menu items */
+div[data-baseweb="select"] ul li,
+div[data-baseweb="select"] ul li span,
+div[data-baseweb="select"] ul li div {{
+    color: {colors['dropdown_text']} !important;
+    background-color: white !important;
+    font-weight: 500 !important;
+}}
+
+/* Selected value in dropdown */
+div[data-baseweb="select"] div[aria-selected="true"] {{
+    background-color: {colors['accent']}20 !important;
+    color: {colors['dropdown_text']} !important;
+    font-weight: 600 !important;
+}}
+
+/* Dropdown hover state */
+div[data-baseweb="select"] ul li:hover {{
+    background-color: {colors['accent']}15 !important;
 }}
 
 /* Headers */
@@ -264,7 +298,7 @@ p, li, label, .stMarkdown, .stCaption {{
 
 [data-testid="stSidebar"] [data-baseweb="select"] span,
 [data-testid="stSidebar"] [data-baseweb="select"] div {{
-    color: {colors['sidebar_text']} !important;
+    color: {colors['dropdown_text']} !important;
     font-weight: 500 !important;
 }}
 
@@ -275,7 +309,6 @@ p, li, label, .stMarkdown, .stCaption {{
 
 /* ===== CLEAN POPPING BUTTONS ===== */
 
-/* All buttons */
 .stButton button {{
     background: {colors['gradient']} !important;
     color: white !important;
@@ -415,9 +448,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ========== SIDEBAR - FULLY FUNCTIONAL ==========
+# ========== SIDEBAR ==========
 with st.sidebar:
-    # Clear settings header
     st.markdown("# ⚙️ Settings")
     st.markdown("---")
     
