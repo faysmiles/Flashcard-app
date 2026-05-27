@@ -1,4 +1,4 @@
-# app.py - CLEAN VERSION WITH SETTINGS LABEL
+# app.py - FULLY WORKING WITH VISIBLE SETTINGS
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -143,7 +143,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== STYLES ==========
+# ========== STYLES - DOES NOT HIDE SIDEBAR ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -155,19 +155,26 @@ st.markdown(f"""
     background-color: {colors['bg']} !important;
 }}
 
-/* Only hide the hamburger menu and keyboard text, keep settings accessible */
-[data-testid="stToolbar"] {{
+/* ONLY hide the strange keyboard text - KEEP the settings button */
+[data-testid="baseButton-headerNoPadding"] span:contains("keyboard") {{
     display: none !important;
 }}
 
-/* Remove the strange keyboard text but keep the settings button */
-[data-testid="baseButton-headerNoPadding"] span {{
-    display: none !important;
-}}
-
-/* Keep the sidebar button functional */
-[data-testid="collapsedControl"] {{
+/* Keep ALL sidebar functionality */
+[data-testid="stSidebar"] {{
+    background-color: {colors['bg']} !important;
     display: block !important;
+    visibility: visible !important;
+}}
+
+/* Keep the collapse button working */
+[data-testid="collapsedControl"] {{
+    display: flex !important;
+    visibility: visible !important;
+    position: fixed !important;
+    top: 1rem !important;
+    left: 1rem !important;
+    z-index: 100 !important;
 }}
 
 /* Headers */
@@ -181,11 +188,6 @@ p, li, label, .stMarkdown, .stCaption {{
     color: {colors['text']} !important;
     font-size: {st.session_state.font_size}px !important;
     line-height: 1.5 !important;
-}}
-
-/* Sidebar styling */
-[data-testid="stSidebar"] {{
-    background-color: {colors['bg']} !important;
 }}
 
 /* Top banner emoji row */
@@ -392,9 +394,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ========== SIDEBAR - CLEAR SETTINGS LABEL ==========
+# ========== SIDEBAR - FULLY FUNCTIONAL ==========
 with st.sidebar:
-    # Clear settings header with icon
+    # Clear settings header
     st.markdown("# ⚙️ Settings")
     st.markdown("---")
     
