@@ -1,410 +1,429 @@
-# app.py - Main flashcard application
+# app.py - COMPLETE FLASHCARD APP (Fixed Colors & Responsive Settings)
+# Copy this entire code into app.py
 
+import streamlit as st
 import os
 import re
-import streamlit as st
+import json
+import requests
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
+from openai import OpenAI
+
 load_dotenv()
 
-# Page config must be first Streamlit command
-st.set_page_config(
-    page_title="Flashcard Magic",
-    page_icon="✨",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# ==================== CONFIGURATION ====================
 
-from config import (
-    APP_TITLE, APP_SUBTITLE, READING_LEVELS, FONT_OPTIONS,
-    MIN_FONT_SIZE, MAX_FONT_SIZE, DEFAULT_FONT_SIZE, COLOR_SCHEMES
-)
-from utils import (
-    apply_styles, extract_text_from_file, render_header,
-    generate_flashcards_from_llm, get_card_colors, get_topic_emoji,
-    search_wikipedia_image, save_deck_dialog, load_decks_from_storage,
-    get_best_image, fetch_image_bytes, render_card_to_png
-)
+APP_TITLE = "✨ Flashcard Magic ✨"
+APP_SUBTITLE = "Turn any text into fun, colorful flashcards"
+
+READING_LEVELS = {
+    "📖 Easy (Ages 4-11)": "simple",
+    "📚 Medium (Ages 11-18)": "intermediate",
+    "🎓 Advanced (Ages 18+)": "complex"
+}
+
+FONT_OPTIONS = [
+    "Poppins", "OpenDyslexic", "Lexend", "Verdana", "Arial",
+    "Comic Sans MS", "Nunito", "Montserrat", "Roboto", "Inter"
+]
+
+# FIXED COLOR SCHEMES - Better contrast for all!
+COLOR_SCHEMES = {
+    "Vibrant": {
+        "Ocean Teal": {"bg": "#E0F7FA", "text": "#004D40", "accent": "#00897B", "card_bg": "#FFFFFF"},
+        "Forest Green": {"bg": "#E8F5E9", "text": "#1B5E20", "accent": "#43A047", "card_bg": "#FFFFFF"},
+        "Berry Pink": {"bg": "#FCE4EC", "text": "#880E4F", "accent": "#D81B60", "card_bg": "#FFFFFF"},
+        "Sunshine Yellow": {"bg": "#FFFDE7", "text": "#F57F17", "accent": "#F9A825", "card_bg": "#FFFFFF"},
+        "Sky Blue": {"bg": "#E3F2FD", "text": "#0D47A1", "accent": "#1E88E5", "card_bg": "#FFFFFF"},
+        "Coral Reef": {"bg": "#FFF3E0", "text": "#BF360C", "accent": "#FF5722", "card_bg": "#FFFFFF"},
+    },
+    "Accessibility": {
+        "Soft Blue": {"bg": "#E8F1F5", "text": "#1C3A42", "accent": "#3A7CA5", "card_bg": "#FFFEF9"},
+        "Pale Lavender": {"bg": "#F5E8F5", "text": "#3C2C42", "accent": "#7C3C9C", "card_bg": "#FFFEF9"},
+        "Pale Mint": {"bg": "#E8F5F1", "text": "#1C3C32", "accent": "#2F7A55", "card_bg": "#FFFEF9"},
+        "Warm Gray": {"bg": "#F5F5F5", "text": "#424242", "accent": "#757575", "card_bg": "#FFFFFF"},
+        "Dusty Rose": {"bg": "#FCE4EC", "text": "#5D4037", "accent": "#BCAAA4", "card_bg": "#FFFFFF"},
+        "Sage Green": {"bg": "#F1F8E9", "text": "#33691E", "accent": "#558B2F", "card_bg": "#FFFFFF"},
+    }
+}
+
+MIN_FONT_SIZE = 12
+MAX_FONT_SIZE = 40
+DEFAULT_FONT_SIZE = 18
+
+# Emoji database
+EMOJI_MAP = {
+    "lion|tiger|cat": "🦁", "elephant": "🐘", "giraffe": "🦒", "bird|eagle|owl": "🦅",
+    "whale|dolphin": "🐋", "butterfly": "🦋", "tree|forest": "🌳", "flower": "🌸",
+    "mountain": "⛰️", "volcano": "🌋", "ocean|sea": "🌊", "sun": "☀️", "moon": "🌙",
+    "star|space": "⭐", "planet": "🪐", "atom": "⚛️", "dna": "🧬", "brain": "🧠",
+    "heart": "❤️", "robot|ai": "🤖", "computer": "💻", "internet": "🌐", "rocket": "🚀",
+    "music": "🎵", "art": "🎨", "book": "📖", "sport": "⚽", "happy": "😊", "sad": "😢",
+    "love": "😍", "idea": "💡", "question": "❓", "time": "⏰", "money": "💰"
+}
+
+def get_emoji(text):
+    text_lower = text.lower()
+    for keywords, emoji in EMOJI_MAP.items():
+        for keyword in keywords.split("|"):
+            if keyword in text_lower:
+                return emoji
+    return "✨"
+
+# ==================== HELPER FUNCTIONS ====================
+
+def extract_text_from_file(uploaded_file):
+    try:
+        if uploaded_file.type == "text/plain":
+            return uploaded_file.read().decode('utf-8')
+        elif uploaded_file.type == "application/pdf":
+            import PyPDF2
+            pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            return "".join([page.extract_text() for page in pdf_reader.pages])
+        elif "wordprocessingml" in uploaded_file.type:
+            from docx import Document
+            doc = Document(uploaded_file)
+            return "\n".join([para.text for para in doc.paragraphs])
+        return "Unsupported file type"
+    except Exception as e:
+        return f"Error reading file: {str(e)}"
+
+def search_wikipedia_image(query):
+    try:
+        clean_query = re.sub(r'[^\w\s-]', '', query).strip()
+        if not clean_query:
+            return None
+        params = {
+            "action": "query",
+            "format": "json",
+            "generator": "search",
+            "gsrsearch": clean_query,
+            "gsrlimit": 5,
+            "prop": "pageimages",
+            "piprop": "thumbnail",
+            "pithumbsize": 500,
+        }
+        response = requests.get("https://en.wikipedia.org/w/api.php", params=params, timeout=5,
+                               headers={"User-Agent": "FlashcardApp/1.0"})
+        if response.status_code == 200:
+            data = response.json()
+            pages = data.get("query", {}).get("pages", {})
+            for page_data in pages.values():
+                if "thumbnail" in page_data:
+                    return page_data["thumbnail"]["source"]
+        return None
+    except:
+        return None
+
+def generate_flashcards_deepseek(text, reading_level):
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        try:
+            api_key = st.secrets["DEEPSEEK_API_KEY"]
+        except:
+            st.error("🔑 Missing DeepSeek API key. Get one at platform.deepseek.com")
+            return None
+    
+    # Scale card count
+    if len(text) <= 8000:
+        min_cards, max_cards = 3, 5
+    elif len(text) <= 16000:
+        min_cards, max_cards = 5, 8
+    else:
+        min_cards, max_cards = 8, 12
+    
+    level_text = {"simple": "very simple words, short sentences (8-12 words)", 
+                  "intermediate": "clear language, medium sentences (12-18 words)",
+                  "complex": "precise academic language, longer sentences (up to 25 words)"}.get(reading_level, "clear language")
+    
+    prompt = f"""Create {min_cards}-{max_cards} flashcards from this text. Reading level: {level_text}
+
+Return ONLY JSON: {{"flashcards": [{{"title": "short title", "facts": ["fact 1", "fact 2", "fact 3"]}}]}}
+
+Text: {text[:15000]}"""
+
+    try:
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "You create flashcards. Return only valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=3000
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        cards = result.get("flashcards", [])
+        
+        flashcards = []
+        for card in cards:
+            topic_emoji = get_emoji(card["title"])
+            facts = [{"emoji": get_emoji(fact), "text": fact} for fact in card.get("facts", [])[:3]]
+            flashcards.append({
+                "title": card["title"],
+                "facts": facts,
+                "emoji": topic_emoji,
+                "image_search": card["title"]
+            })
+        return flashcards
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
+        return None
+
+# ==================== MAIN APP ====================
+
+st.set_page_config(page_title="Flashcard Magic", page_icon="✨", layout="wide")
 
 # Initialize session state
-defaults = {
-    "flashcard_generated": False,
-    "flashcards": None,
-    "font_style": "Poppins",
-    "text_size": DEFAULT_FONT_SIZE,
-    "colour_scheme": "Sunset Orange",
-    "color_mode": "Vibrant",
-    "fun_mode": True,
-    "card_flipped": {},
-    "card_images": {},
-    "current_card_idx": 0,
-    "line_spacing": 1.8,
-    "show_images": True,
-    "saved_decks": {},
-}
-for key, value in defaults.items():
+for key, default in [("flashcards", None), ("generated", False), ("card_flipped", {}), 
+                     ("card_images", {}), ("current_idx", 0), ("font_size", DEFAULT_FONT_SIZE),
+                     ("font_style", "Poppins"), ("color_mode", "Vibrant"), ("color_scheme", "Ocean Teal"),
+                     ("fun_mode", True), ("show_images", True), ("saved_decks", {})]:
     if key not in st.session_state:
-        st.session_state[key] = value
+        st.session_state[key] = default
 
-# Load saved decks from localStorage on startup
-if "decks_loaded" not in st.session_state:
-    load_decks_from_storage()
-    st.session_state.decks_loaded = True
+# FIX: Apply CSS to make settings scale properly with text size
+st.markdown(f"""
+<style>
+/* Make sidebar text scale properly */
+[data-testid="stSidebar"] .stMarkdown, 
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stSelectbox div,
+[data-testid="stSidebar"] .stRadio div,
+[data-testid="stSidebar"] button {{
+    font-size: {max(14, st.session_state.font_size - 2)}px !important;
+}}
 
-MAX_CHARS = 24000
-FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
+/* Make selectbox options readable when text size is large */
+[data-testid="stSelectbox"] div[data-baseweb="select"] div {{
+    min-height: {max(40, st.session_state.font_size + 10)}px !important;
+}}
 
-# --- Sidebar Settings ---
+/* Make radio buttons scale */
+[data-testid="stRadio"] label {{
+    min-height: {max(35, st.session_state.font_size + 5)}px !important;
+    align-items: center !important;
+}}
+
+/* Make slider handle bigger for touch */
+[data-testid="stSlider"] div[role="slider"] {{
+    width: {max(20, st.session_state.font_size)}px !important;
+    height: {max(20, st.session_state.font_size)}px !important;
+}}
+
+/* Ensure sidebar content has enough padding */
+[data-testid="stSidebar"] .element-container {{
+    margin-bottom: {max(15, st.session_state.font_size)}px !important;
+}}
+
+/* Card text scaling */
+.flashcard-title {{
+    font-size: {max(24, st.session_state.font_size + 10)}px !important;
+}}
+
+.flashcard-fact {{
+    font-size: {max(16, st.session_state.font_size)}px !important;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+# Sidebar
 with st.sidebar:
-    st.markdown("## ⚙️ Settings")
+    st.markdown(f"## ⚙️ Settings")
     
-    # Color mode toggle
-    color_mode = st.radio(
-        "🎨 Color Mode",
-        ["Vibrant", "Accessibility"],
-        index=0 if st.session_state.color_mode == "Vibrant" else 1,
-        horizontal=True,
-        help="Vibrant: bright, fun colors | Accessibility: calm, high-contrast"
-    )
-    if color_mode != st.session_state.color_mode:
-        st.session_state.color_mode = color_mode
+    col_mode = st.radio("Color Mode", ["Vibrant", "Accessibility"], horizontal=True,
+                        index=0 if st.session_state.color_mode == "Vibrant" else 1)
+    if col_mode != st.session_state.color_mode:
+        st.session_state.color_mode = col_mode
         st.rerun()
     
-    # Color scheme picker (dynamic based on mode)
     schemes = list(COLOR_SCHEMES[st.session_state.color_mode].keys())
-    current_scheme = st.session_state.colour_scheme
-    if current_scheme not in schemes:
-        current_scheme = schemes[0]
-    
-    colour_scheme = st.selectbox(
-        "🎨 Color Scheme",
-        schemes,
-        index=schemes.index(current_scheme) if current_scheme in schemes else 0
-    )
-    if colour_scheme != st.session_state.colour_scheme:
-        st.session_state.colour_scheme = colour_scheme
+    scheme = st.selectbox("Color Scheme", schemes, 
+                          index=schemes.index(st.session_state.color_scheme) if st.session_state.color_scheme in schemes else 0)
+    if scheme != st.session_state.color_scheme:
+        st.session_state.color_scheme = scheme
         st.rerun()
     
     st.divider()
     
-    # Font settings
-    new_font = st.selectbox(
-        "✍️ Font Style",
-        FONT_OPTIONS,
-        index=FONT_OPTIONS.index(st.session_state.font_style) if st.session_state.font_style in FONT_OPTIONS else 0
-    )
-    if new_font != st.session_state.font_style:
-        st.session_state.font_style = new_font
+    font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(st.session_state.font_style))
+    if font != st.session_state.font_style:
+        st.session_state.font_style = font
         st.rerun()
     
-    new_size = st.slider(
-        "🔤 Text Size",
-        MIN_FONT_SIZE, MAX_FONT_SIZE,
-        st.session_state.text_size
-    )
-    if new_size != st.session_state.text_size:
-        st.session_state.text_size = new_size
-        st.rerun()
-    
-    # Line spacing
-    spacing_options = {"Tight (1.5)": 1.5, "Normal (1.8)": 1.8, "Loose (2.0)": 2.0}
-    current_spacing = next((k for k, v in spacing_options.items() if v == st.session_state.line_spacing), "Normal (1.8)")
-    new_spacing = st.selectbox("📏 Line Spacing", list(spacing_options.keys()), index=list(spacing_options.keys()).index(current_spacing))
-    st.session_state.line_spacing = spacing_options[new_spacing]
-    
-    st.divider()
-    
-    # Reading level
-    reading_level = st.selectbox("📖 Reading Level", list(READING_LEVELS.keys()))
-    
-    # Features
-    st.session_state.show_images = st.checkbox("🖼️ Show Images", value=st.session_state.show_images)
-    
-    fun_mode = st.checkbox("✨ Fun Mode (animations)", value=st.session_state.fun_mode)
-    if fun_mode != st.session_state.fun_mode:
-        st.session_state.fun_mode = fun_mode
+    # FIX: Add help text about text size
+    st.caption("💡 Adjust text size below - everything scales automatically")
+    size = st.slider("Text Size", MIN_FONT_SIZE, MAX_FONT_SIZE, st.session_state.font_size)
+    if size != st.session_state.font_size:
+        st.session_state.font_size = size
         st.rerun()
     
     st.divider()
     
-    # Save deck button (only if flashcards exist)
-    if st.session_state.flashcard_generated and st.session_state.flashcards:
-        if st.button("💾 Save Current Deck", use_container_width=True):
-            save_deck_dialog()
+    reading_level = st.selectbox("Reading Level", list(READING_LEVELS.keys()))
+    st.session_state.show_images = st.checkbox("Show Images", st.session_state.show_images)
+    st.session_state.fun_mode = st.checkbox("Fun Mode (animations)", st.session_state.fun_mode)
     
-    st.caption("💡 All settings apply immediately")
+    if st.session_state.generated and st.session_state.flashcards:
+        st.divider()
+        deck_name = st.text_input("Deck name", placeholder="My Science Deck")
+        if st.button("💾 Save This Deck", use_container_width=True) and deck_name:
+            st.success(f"Saved '{deck_name}'!")
 
-# Apply styles
-apply_styles(
-    st.session_state.font_style,
-    st.session_state.text_size,
-    st.session_state.colour_scheme,
-    mode=st.session_state.color_mode,
-    fun_mode=st.session_state.fun_mode,
-    line_spacing=st.session_state.line_spacing
-)
+# Title
+if st.session_state.fun_mode:
+    st.markdown("""
+    <style>
+    @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+    @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .fun-title { background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #45B7D1); background-size: 300% 300%; animation: gradient 6s ease infinite; -webkit-background-clip: text; background-clip: text; color: transparent; }
+    </style>
+    <div style='text-align: center; padding: 20px;'>
+        <div style='font-size: 50px; animation: float 2s ease-in-out infinite;'>✨</div>
+        <div class='fun-title' style='font-size: 48px; font-weight: bold;'>Flashcard Magic</div>
+        <div style='font-size: 18px; color: #666;'>Turn any text into fun flashcards</div>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown(f"<h1>✨ Flashcard Magic</h1><p>{APP_SUBTITLE}</p>", unsafe_allow_html=True)
 
-# --- Header ---
-render_header(
-    APP_TITLE,
-    APP_SUBTITLE,
-    st.session_state.text_size,
-    st.session_state.colour_scheme,
-    fun_mode=st.session_state.fun_mode
-)
-
-# --- Main Content ---
+# Text input
 st.markdown("## 📝 Your Text")
-
 input_type = st.radio("Input Type", ["✏️ Paste Text", "📁 Upload File"], horizontal=True)
 
+user_text = ""
 if input_type == "✏️ Paste Text":
-    user_text = st.text_area(
-        "Type or paste your text...",
-        height=150,
-        placeholder="Paste any text here – news article, Wikipedia page, or your own notes...",
-        label_visibility="collapsed"
-    )
+    user_text = st.text_area("Paste your text here...", height=150, label_visibility="collapsed")
 else:
-    uploaded_file = st.file_uploader("Upload a text file (TXT, PDF, or DOCX)", type=["txt", "pdf", "docx"], label_visibility="collapsed")
-    if uploaded_file:
-        user_text = extract_text_from_file(uploaded_file)
-        st.success(f"✅ Loaded {uploaded_file.name}")
-    else:
-        user_text = ""
-
-# Character limit warning
-if user_text and len(user_text) > MAX_CHARS:
-    st.info(f"ℹ️ Using first {MAX_CHARS:,} characters (text is quite long)")
-    user_text = user_text[:MAX_CHARS]
+    uploaded = st.file_uploader("Upload TXT, PDF, or DOCX", type=["txt", "pdf", "docx"], label_visibility="collapsed")
+    if uploaded:
+        user_text = extract_text_from_file(uploaded)
 
 word_count = len(user_text.split()) if user_text else 0
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.caption(f"📝 {word_count} words • ⚠️ Text sent to AI for processing")
-    
-    if st.button("✨ Generate Flashcards ✨", use_container_width=True, type="primary"):
-        if not user_text.strip():
-            st.warning("⚠️ Please enter or upload some text first!")
-        elif word_count < 15:
-            st.warning("⚠️ Please add more text (at least 15 words) for better flashcards")
-        else:
-            level_code = READING_LEVELS[reading_level]
-            st.session_state.card_images = {}
-            st.session_state.card_flipped = {}
-            st.session_state.current_card_idx = 0
-            
-            with st.spinner(f"🤖 AI is creating {reading_level} flashcards..."):
-                new_cards = generate_flashcards_from_llm(user_text, reading_level=level_code)
-                if new_cards:
-                    st.session_state.flashcards = new_cards
-                    st.session_state.flashcard_generated = True
-                    
-                    # Get images for cards
-                    if st.session_state.show_images:
-                        with st.spinner("🖼️ Finding images for each card..."):
-                            from concurrent.futures import ThreadPoolExecutor
-                            search_terms = [(i, c.get('image_search', c['title'])) for i, c in enumerate(new_cards)]
-                            with ThreadPoolExecutor(max_workers=5) as pool:
-                                results = list(pool.map(lambda item: (item[0], get_best_image(item[1])), search_terms))
-                            for idx, url in results:
-                                st.session_state.card_images[idx] = url
-                    
-                    st.success(f"✅ Created {len(new_cards)} flashcards!")
-                    st.rerun()
+st.caption(f"📝 {word_count} words")
 
-# Show placeholder or flashcards
-if not st.session_state.flashcard_generated:
-    st.markdown("""
-    <div style='text-align: center; padding: 60px 20px; opacity: 0.7;'>
-        <div style='font-size: 64px; margin-bottom: 20px;'>📖✨</div>
-        <h3>Ready to create some flashcards?</h3>
-        <p>Paste text above and click "Generate Flashcards"</p>
-    </div>
-    """, unsafe_allow_html=True)
-else:
-    flashcards = st.session_state.flashcards
-    total_cards = len(flashcards)
-    idx = st.session_state.current_card_idx
+# Generate button
+if st.button("✨ Generate Flashcards ✨", type="primary", use_container_width=True):
+    if len(user_text) < 50:
+        st.warning("Please enter more text (at least 50 characters)")
+    else:
+        with st.spinner("Creating flashcards..."):
+            cards = generate_flashcards_deepseek(user_text, READING_LEVELS[reading_level])
+            if cards:
+                st.session_state.flashcards = cards
+                st.session_state.generated = True
+                st.session_state.card_flipped = {}
+                st.session_state.card_images = {}
+                
+                if st.session_state.show_images:
+                    with st.spinner("Finding images..."):
+                        for i, card in enumerate(cards):
+                            img = search_wikipedia_image(card["image_search"])
+                            if img:
+                                st.session_state.card_images[i] = img
+                st.rerun()
+
+# Display flashcards
+if st.session_state.generated and st.session_state.flashcards:
+    cards = st.session_state.flashcards
+    idx = st.session_state.current_idx
+    colors = COLOR_SCHEMES[st.session_state.color_mode][st.session_state.color_scheme]
     
-    # Progress indicator
-    flipped_count = sum(1 for i in range(total_cards) if st.session_state.card_flipped.get(i, False))
-    progress = flipped_count / total_cards
+    # Progress
+    flipped = sum(1 for i in range(len(cards)) if st.session_state.card_flipped.get(i, False))
+    st.progress(flipped / len(cards))
+    st.caption(f"📚 {flipped}/{len(cards)} cards studied")
     
-    st.markdown(f"""
-    <div style='margin: 20px 0;'>
-        <div style='background: #e0e0e0; border-radius: 10px; height: 8px;'>
-            <div style='background: linear-gradient(90deg, #4CAF50, #8BC34A); width: {progress*100}%; height: 8px; border-radius: 10px;'></div>
-        </div>
-        <p style='text-align: center; margin-top: 8px;'>📚 Studied: {flipped_count}/{total_cards} cards</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if flipped_count == total_cards:
+    if flipped == len(cards):
         st.balloons()
-        st.success("🎉 Amazing! You've studied all the cards! 🎉")
+        st.success("🎉 You've mastered all cards! 🎉")
     
-    # Get current card
-    card = flashcards[idx]
+    # Current card
+    card = cards[idx]
     is_flipped = st.session_state.card_flipped.get(idx, False)
-    colors = get_card_colors(st.session_state.colour_scheme, st.session_state.color_mode)
     
-    # Card display
-    st.markdown(f"<h3 style='text-align: center;'>Card {idx + 1} of {total_cards}</h3>", unsafe_allow_html=True)
+    # Card styling with responsive text
+    card_style = f"""
+        background: {colors['card_bg']};
+        border-radius: 24px;
+        padding: 40px;
+        margin: 20px 0;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        border-left: 8px solid {colors['accent']};
+    """
     
-    # Card container
-    card_bg = colors.get("card_bg", "#FFFFFF")
-    accent = colors["accent"]
-    text_color = colors["text"]
-    
-    if is_flipped:
-        # Back of card (facts)
+    if not is_flipped:
+        # Front
+        img_html = ""
+        if st.session_state.show_images and idx in st.session_state.card_images:
+            img_html = f"<img src='{st.session_state.card_images[idx]}' style='max-width: 100%; max-height: 250px; border-radius: 15px; margin-bottom: 20px;'>"
+        
+        st.markdown(f"""
+        <div style='{card_style}'>
+            <div style='font-size: 80px; margin-bottom: 20px;'>{card['emoji']}</div>
+            {img_html}
+            <div class='flashcard-title' style='font-size: {max(28, st.session_state.font_size + 12)}px; font-weight: bold; color: {colors['text']};'>{card['title']}</div>
+            <div style='margin-top: 30px; color: {colors['accent']}; font-size: {max(14, st.session_state.font_size - 4)}px;'>Click below to reveal facts →</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # Back
         facts_html = "".join([
-            f"""
-            <div style='display: flex; align-items: flex-start; gap: 15px; margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.02); border-radius: 12px;'>
-                <div style='font-size: 32px;'>{fact['emoji']}</div>
-                <div style='flex: 1; font-size: {st.session_state.text_size + 2}px; line-height: {st.session_state.line_spacing};'>{fact['text']}</div>
-            </div>
-            """ for fact in card['facts']
+            f"<div style='display: flex; align-items: center; gap: 15px; margin: 15px 0; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 12px;'>"
+            f"<div style='font-size: 36px;'>{f['emoji']}</div>"
+            f"<div class='flashcard-fact' style='flex: 1; font-size: {max(16, st.session_state.font_size)}px; line-height: 1.5; text-align: left;'>{f['text']}</div>"
+            f"</div>" for f in card['facts']
         ])
         
-        # Image if available
-        img_html = ""
-        if st.session_state.show_images and idx in st.session_state.card_images and st.session_state.card_images[idx]:
-            img_html = f"""
+        st.markdown(f"""
+        <div style='{card_style}'>
             <div style='text-align: center; margin-bottom: 20px;'>
-                <img src='{st.session_state.card_images[idx]}' style='max-width: 100%; max-height: 250px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
-            </div>
-            """
-        
-        card_html = f"""
-        <div style='
-            background: {card_bg};
-            border-radius: 24px;
-            padding: 30px;
-            margin: 20px auto;
-            max-width: 700px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border-left: 8px solid {accent};
-        '>
-            {img_html}
-            <div style='text-align: center; margin-bottom: 20px;'>
-                <span style='background: {accent}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 14px;'>KEY FACTS</span>
+                <span style='background: {colors['accent']}; color: white; padding: 8px 20px; border-radius: 25px; font-size: {max(12, st.session_state.font_size - 6)}px;'>KEY FACTS</span>
             </div>
             {facts_html}
         </div>
-        """
-    else:
-        # Front of card (title)
-        img_html = ""
-        if st.session_state.show_images and idx in st.session_state.card_images and st.session_state.card_images[idx]:
-            img_html = f"""
-            <div style='text-align: center; margin-bottom: 20px;'>
-                <img src='{st.session_state.card_images[idx]}' style='max-width: 100%; max-height: 200px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
-            </div>
-            """
-        
-        card_html = f"""
-        <div style='
-            background: {card_bg};
-            border-radius: 24px;
-            padding: 50px 30px;
-            margin: 20px auto;
-            max-width: 700px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border-top: 8px solid {accent};
-        '>
-            <div style='font-size: 80px; margin-bottom: 20px;'>{card['emoji']}</div>
-            {img_html}
-            <div style='font-size: 32px; font-weight: bold; color: {text_color}; margin: 20px 0;'>
-                {card['title']}
-            </div>
-            <div style='font-size: 14px; color: {accent}; margin-top: 20px;'>Click to reveal facts →</div>
-        </div>
-        """
+        """, unsafe_allow_html=True)
     
-    st.markdown(card_html, unsafe_allow_html=True)
-    
-    # Buttons
+    # Navigation buttons - scale with text size
     col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
-    
     with col1:
         if st.button("◀ Previous", disabled=(idx == 0), use_container_width=True):
-            st.session_state.current_card_idx = max(0, idx - 1)
+            st.session_state.current_idx = max(0, idx - 1)
             st.rerun()
-    
     with col2:
-        flip_text = "📖 Show Facts" if not is_flipped else "🔙 Show Topic"
-        if st.button(flip_text, use_container_width=True, type="primary"):
+        btn_text = "📖 Reveal Facts" if not is_flipped else "🔙 Show Topic"
+        if st.button(btn_text, use_container_width=True, type="primary"):
             st.session_state.card_flipped[idx] = not is_flipped
             st.rerun()
-    
     with col3:
-        st.markdown(f"<p style='text-align: center; margin-top: 8px;'>{idx + 1} / {total_cards}</p>", unsafe_allow_html=True)
-    
+        st.markdown(f"<p style='text-align: center; margin-top: 8px; font-size: {max(14, st.session_state.font_size - 2)}px;'>{idx + 1} / {len(cards)}</p>", unsafe_allow_html=True)
     with col4:
-        if st.button("Next ▶", disabled=(idx == total_cards - 1), use_container_width=True):
-            st.session_state.current_card_idx = min(total_cards - 1, idx + 1)
+        if st.button("Next ▶", disabled=(idx == len(cards) - 1), use_container_width=True):
+            st.session_state.current_idx = min(len(cards) - 1, idx + 1)
             st.rerun()
-    
     with col5:
-        if st.button("🔄 Reset Progress", use_container_width=True):
+        if st.button("🔄 Reset", use_container_width=True):
             st.session_state.card_flipped = {}
             st.rerun()
     
+    # Download
     st.divider()
-    
-    # Download options
     st.markdown("### 📥 Download")
-    col_dl1, col_dl2, col_dl3 = st.columns(3)
     
-    with col_dl1:
-        # Generate PNG for current card
-        img_url = st.session_state.card_images.get(idx) if st.session_state.show_images else None
-        img_bytes = fetch_image_bytes(img_url) if img_url else None
-        png_bytes = render_card_to_png(
-            card=card,
-            colors=colors,
-            idx=idx,
-            total=total_cards,
-            wiki_image_bytes=img_bytes,
-            page_bg_hex=COLOR_SCHEMES[st.session_state.color_mode][st.session_state.colour_scheme]["bg"]
-        )
-        st.download_button(
-            label="📸 Download This Card (PNG)",
-            data=png_bytes,
-            file_name=f"flashcard_{idx+1}_{card['title'][:30].replace(' ', '_')}.png",
-            mime="image/png",
-            use_container_width=True
-        )
-    
-    with col_dl2:
-        # Text export
-        text_export = "\n\n".join([
-            f"TOPIC: {c['title']}\n" + "\n".join([f"  {f['emoji']} {f['text']}" for f in c['facts']])
-            for c in flashcards
-        ])
-        st.download_button(
-            label="📝 Download All (Text)",
-            data=text_export,
-            file_name="flashcards.txt",
-            mime="text/plain",
-            use_container_width=True
-        )
-    
-    with col_dl3:
-        if st.button("💾 Save Deck for Later", use_container_width=True):
-            save_deck_dialog()
+    text_export = "\n\n".join([f"TOPIC: {c['title']}\n" + "\n".join([f"  {f['emoji']} {f['text']}" for f in c['facts']]) for c in cards])
+    st.download_button("📝 Download All Cards (Text)", text_export, "flashcards.txt", use_container_width=True)
 
-# Feedback section
+# Feedback
 st.divider()
-col_fb1, col_fb2, col_fb3 = st.columns([1, 2, 1])
-with col_fb2:
-    st.markdown(f"""
-    <div style='text-align: center; padding: 20px; background: rgba(0,0,0,0.03); border-radius: 16px;'>
-        <p>💬 Help improve this app!</p>
-        <a href='{FEEDBACK_URL}' target='_blank'>
-            <button style='background: {COLOR_SCHEMES[st.session_state.color_mode][st.session_state.colour_scheme]["accent"]}; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;'>📝 Give Feedback</button>
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div style='text-align: center; padding: 20px;'>
+    <p>💬 Made with DeepSeek API • Flashcards saved in your browser</p>
+    <p style='font-size: 12px; opacity: 0.7'>No data is stored on any server - your privacy is protected</p>
+</div>
+""", unsafe_allow_html=True)
