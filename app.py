@@ -1,4 +1,4 @@
-# app.py - FIXED (Darker Purple Text, No Strange Text)
+# app.py - FIXED SIDEBAR READABILITY
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -23,11 +23,12 @@ READING_LEVELS = {
 
 FONT_OPTIONS = ["Poppins", "OpenDyslexic", "Lexend", "Verdana", "Arial", "Comic Sans MS"]
 
-# WCAG COMPLIANT COLOR SCHEMES - Purple text now MUCH darker
+# WCAG COMPLIANT COLOR SCHEMES
 COLOR_SCHEMES = {
     "Blue": {
         "bg": "#E8F1F5",
-        "text": "#0D2B3E",  # Dark navy - great contrast
+        "text": "#0D2B3E",
+        "sidebar_text": "#1a3a4a",  # Darker for sidebar
         "accent": "#2B6C9E",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #2B6C9E, #1E5A87)",
@@ -36,7 +37,8 @@ COLOR_SCHEMES = {
     },
     "Green": {
         "bg": "#E8F5E9",
-        "text": "#0D3B15",  # Dark forest green
+        "text": "#0D3B15",
+        "sidebar_text": "#1a4a1a",  # Darker for sidebar
         "accent": "#2E7D32",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #2E7D32, #1B5E20)",
@@ -45,7 +47,8 @@ COLOR_SCHEMES = {
     },
     "Purple": {
         "bg": "#F5E8F5",
-        "text": "#1A0D2E",  # MUCH darker purple - almost black-purple (great contrast!)
+        "text": "#1A0D2E",
+        "sidebar_text": "#2a1540",  # Darker for sidebar
         "accent": "#6B2D8E",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #7B2D8E, #5A1E6B)",
@@ -54,7 +57,8 @@ COLOR_SCHEMES = {
     },
     "Gray": {
         "bg": "#F5F5F5",
-        "text": "#2C2C2C",  # Dark charcoal
+        "text": "#2C2C2C",
+        "sidebar_text": "#1a1a1a",  # Almost black for sidebar
         "accent": "#6B6B6B",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #6B6B6B, #555555)",
@@ -131,7 +135,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== CLEAN BUTTON STYLES (NO STRANGE TEXT) ==========
+# ========== STYLES WITH BETTER SIDEBAR READABILITY ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -143,18 +147,61 @@ st.markdown(f"""
     background-color: {colors['bg']} !important;
 }}
 
+/* Headers */
 h1, h2, h3, h4, h5, h6 {{
     color: {colors['accent']} !important;
     font-weight: 700 !important;
 }}
 
+/* Main content text */
 p, li, label, .stMarkdown, .stCaption {{
     color: {colors['text']} !important;
     font-size: {st.session_state.font_size}px !important;
     line-height: 1.5 !important;
 }}
 
-/* Remove any unwanted text that might appear */
+/* ===== SIDEBAR TEXT READABILITY FIXES ===== */
+
+/* Sidebar container - ensure text is dark and readable */
+[data-testid="stSidebar"] {{
+    background-color: {colors['bg']} !important;
+}}
+
+/* Sidebar headers */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] .stMarkdown h1,
+[data-testid="stSidebar"] .stMarkdown h2,
+[data-testid="stSidebar"] .stMarkdown h3 {{
+    color: {colors['accent']} !important;
+    font-weight: 700 !important;
+}}
+
+/* Sidebar labels and text - DARKER for readability */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] .stCaption,
+[data-testid="stSidebar"] div:not([class*="button"]) {{
+    color: {colors['sidebar_text']} !important;
+    font-weight: 500 !important;
+}}
+
+/* Sidebar selectbox text */
+[data-testid="stSidebar"] [data-baseweb="select"] span,
+[data-testid="stSidebar"] [data-baseweb="select"] div {{
+    color: {colors['sidebar_text']} !important;
+    font-weight: 500 !important;
+}}
+
+/* Sidebar slider labels */
+[data-testid="stSidebar"] [data-testid="stSlider"] label {{
+    color: {colors['sidebar_text']} !important;
+    font-weight: 600 !important;
+}}
+
+/* Remove any unwanted text */
 [data-testid="stDecoration"] {{
     display: none !important;
 }}
@@ -279,7 +326,7 @@ div[style*="background: white"]:hover {{
     border-color: {colors['accent']} !important;
 }}
 
-/* Focus indicators for accessibility */
+/* Focus indicators */
 button:focus-visible,
 [role="button"]:focus-visible {{
     outline: 3px solid {colors['accent']} !important;
@@ -314,14 +361,15 @@ with st.sidebar:
     
     # Font selection
     st.markdown("### Font")
-    font = st.selectbox("Choose your font", FONT_OPTIONS, index=FONT_OPTIONS.index(st.session_state.font_style))
+    font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(st.session_state.font_style))
     if font != st.session_state.font_style:
         st.session_state.font_style = font
         st.rerun()
     
     # Text size slider
     st.markdown("### Text Size")
-    size = st.slider("Adjust size", 16, 40, st.session_state.font_size)
+    st.caption("Adjust to your preference")
+    size = st.slider("Size", 16, 40, st.session_state.font_size)
     if size != st.session_state.font_size:
         st.session_state.font_size = size
         st.rerun()
@@ -330,11 +378,11 @@ with st.sidebar:
     
     # Reading level
     st.markdown("### Reading Level")
-    reading_level = st.selectbox("Select level", list(READING_LEVELS.keys()))
+    reading_level = st.selectbox("Level", list(READING_LEVELS.keys()))
     
     st.divider()
-    st.caption("✨ Clean popping buttons")
-    st.caption("📖 WCAG 2.1 compliant")
+    st.caption("✨ Clean buttons")
+    st.caption("📖 WCAG compliant")
 
 # ========== MAIN CONTENT ==========
 
@@ -359,9 +407,6 @@ else:
         try:
             if uploaded.type == "text/plain":
                 user_text = uploaded.read().decode('utf-8')
-            elif uploaded.type == "application/pdf":
-                st.info("PDF text extraction simplified for demo")
-                user_text = "Sample PDF content"
             else:
                 user_text = f"File uploaded: {uploaded.name}"
             st.success(f"Loaded {uploaded.name}")
