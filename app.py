@@ -1,4 +1,4 @@
-# app.py - COMPLETELY REMOVED KEYBOARD TEXT
+# app.py - CLEAN VERSION WITH SETTINGS LABEL
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -121,13 +121,7 @@ Text: {text[:5000]}"""
 st.set_page_config(
     page_title="Flashcard Magic", 
     page_icon="✨", 
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': None,
-        'Report a bug': None,
-        'About': None
-    }
+    layout="wide"
 )
 
 # Session state
@@ -149,7 +143,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== STYLES WITH HIDDEN MENU ==========
+# ========== STYLES ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -161,36 +155,19 @@ st.markdown(f"""
     background-color: {colors['bg']} !important;
 }}
 
-/* Remove default Streamlit padding at the top */
-[data-testid="stAppViewContainer"] > .main {{
-    padding-top: 0 !important;
-}}
-
-/* COMPLETELY HIDE the top-right menu and any keyboard text */
-[data-testid="stToolbar"],
-[data-testid="stDecoration"],
-[data-testid="stStatusWidget"],
-[data-testid="stHeader"],
-header[data-testid="stHeader"],
-.stApp header,
-#MainMenu,
-.stDeployButton,
-[data-testid="baseButton-headerNoPadding"] {{
+/* Only hide the hamburger menu and keyboard text, keep settings accessible */
+[data-testid="stToolbar"] {{
     display: none !important;
 }}
 
-/* Hide any floating elements */
-iframe[title="streamlit-header"],
-div[data-testid="stToolbar"],
-div[data-testid="stDecoration"] {{
+/* Remove the strange keyboard text but keep the settings button */
+[data-testid="baseButton-headerNoPadding"] span {{
     display: none !important;
-    visibility: hidden !important;
 }}
 
-/* Make the main content take full width */
-.main .block-container {{
-    padding-top: 0rem !important;
-    max-width: 100% !important;
+/* Keep the sidebar button functional */
+[data-testid="collapsedControl"] {{
+    display: block !important;
 }}
 
 /* Headers */
@@ -206,12 +183,9 @@ p, li, label, .stMarkdown, .stCaption {{
     line-height: 1.5 !important;
 }}
 
-/* ===== UNIFIED BANNER WITH SIDEBAR ===== */
-
 /* Sidebar styling */
 [data-testid="stSidebar"] {{
     background-color: {colors['bg']} !important;
-    padding-top: 0 !important;
 }}
 
 /* Top banner emoji row */
@@ -418,41 +392,43 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ========== SIDEBAR ==========
+# ========== SIDEBAR - CLEAR SETTINGS LABEL ==========
 with st.sidebar:
-    st.markdown("## Settings")
+    # Clear settings header with icon
+    st.markdown("# ⚙️ Settings")
+    st.markdown("---")
     
     # Color theme
-    st.markdown("### Color Theme")
+    st.markdown("### 🎨 Color Theme")
     for scheme in COLOR_SCHEMES.keys():
         if st.button(scheme, use_container_width=True):
             st.session_state.color_scheme = scheme
             st.rerun()
     
-    st.divider()
+    st.markdown("---")
     
     # Font selection
-    st.markdown("### Font")
+    st.markdown("### ✍️ Font")
     font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(st.session_state.font_style))
     if font != st.session_state.font_style:
         st.session_state.font_style = font
         st.rerun()
     
     # Text size slider
-    st.markdown("### Text Size")
+    st.markdown("### 📏 Text Size")
     st.caption("Adjust to your preference")
     size = st.slider("Size", 16, 40, st.session_state.font_size)
     if size != st.session_state.font_size:
         st.session_state.font_size = size
         st.rerun()
     
-    st.divider()
+    st.markdown("---")
     
     # Reading level
-    st.markdown("### Reading Level")
+    st.markdown("### 📚 Reading Level")
     reading_level = st.selectbox("Level", list(READING_LEVELS.keys()))
     
-    st.divider()
+    st.markdown("---")
     st.caption("✨ Clean buttons")
     st.caption("📖 WCAG compliant")
 
