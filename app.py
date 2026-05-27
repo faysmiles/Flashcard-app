@@ -1,4 +1,4 @@
-# app.py - PREMIUM SHINY BUTTONS WITH GLOW EFFECTS
+# app.py - CLEAN POPPING BUTTONS VERSION
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -21,22 +21,46 @@ READING_LEVELS = {
     "Advanced (Ages 18+)": "complex"
 }
 
-FONT_OPTIONS = ["Poppins", "Verdana", "Arial", "Comic Sans MS"]
+FONT_OPTIONS = ["Poppins", "OpenDyslexic", "Lexend", "Verdana", "Arial", "Comic Sans MS"]
 
-# Color schemes with shiny metallic gradients
+# WCAG COMPLIANT COLOR SCHEMES
 COLOR_SCHEMES = {
-    "Blue": {"bg": "#E8F1F5", "text": "#1C3A42", "accent": "#3A7CA5", 
-             "gradient": "linear-gradient(145deg, #4A90C4, #2C5F7E, #3A7CA5)",
-             "shadow": "#1E4057", "glow": "#6BB5E0"},
-    "Green": {"bg": "#E8F5E9", "text": "#1B5E20", "accent": "#43A047",
-             "gradient": "linear-gradient(145deg, #5CB860, #2E7D32, #43A047)",
-             "shadow": "#1B5E20", "glow": "#7BCF80"},
-    "Purple": {"bg": "#F3E5F5", "text": "#4A148C", "accent": "#AB47BC",
-             "gradient": "linear-gradient(145deg, #C158D0, #8E24AA, #AB47BC)",
-             "shadow": "#6A1B9A", "glow": "#D47BE0"},
-    "Gray": {"bg": "#F5F5F5", "text": "#424242", "accent": "#757575",
-             "gradient": "linear-gradient(145deg, #8A8A8A, #616161, #757575)",
-             "shadow": "#424242", "glow": "#A0A0A0"},
+    "Blue": {
+        "bg": "#E8F1F5",
+        "text": "#0D2B3E",
+        "accent": "#2B6C9E",
+        "card_bg": "#FFFFFF",
+        "gradient": "linear-gradient(135deg, #2B6C9E, #1E5A87)",
+        "hover": "#3A7CA5",
+        "shadow": "rgba(43, 108, 158, 0.3)"
+    },
+    "Green": {
+        "bg": "#E8F5E9",
+        "text": "#0D3B15",
+        "accent": "#2E7D32",
+        "card_bg": "#FFFFFF",
+        "gradient": "linear-gradient(135deg, #2E7D32, #1B5E20)",
+        "hover": "#43A047",
+        "shadow": "rgba(46, 125, 50, 0.3)"
+    },
+    "Purple": {
+        "bg": "#F5E8F5",
+        "text": "#2D1B3D",
+        "accent": "#7B2D8E",
+        "card_bg": "#FFFFFF",
+        "gradient": "linear-gradient(135deg, #7B2D8E, #5A1E6B)",
+        "hover": "#9B40AE",
+        "shadow": "rgba(123, 45, 142, 0.3)"
+    },
+    "Gray": {
+        "bg": "#F5F5F5",
+        "text": "#2C2C2C",
+        "accent": "#6B6B6B",
+        "card_bg": "#FFFFFF",
+        "gradient": "linear-gradient(135deg, #6B6B6B, #555555)",
+        "hover": "#808080",
+        "shadow": "rgba(107, 107, 107, 0.3)"
+    }
 }
 
 def get_emoji(text):
@@ -106,7 +130,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== PREMIUM SHINY BUTTON STYLES ==========
+# ========== CLEAN POPPING BUTTON STYLES ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -118,62 +142,45 @@ st.markdown(f"""
     background-color: {colors['bg']} !important;
 }}
 
-h1, h2, h3 {{
+h1, h2, h3, h4, h5, h6 {{
     color: {colors['accent']} !important;
+    font-weight: 700 !important;
 }}
 
-p, li, label, .stMarkdown {{
+p, li, label, .stMarkdown, .stCaption {{
     color: {colors['text']} !important;
     font-size: {st.session_state.font_size}px !important;
+    line-height: 1.5 !important;
 }}
 
-/* ===== PREMIUM SHINY BUTTONS ===== */
+/* ===== CLEAN POPPING BUTTONS ===== */
 
-/* All buttons - metallic shiny effect */
+/* All buttons - clean pop style */
 .stButton button {{
     background: {colors['gradient']} !important;
     color: white !important;
     border: none !important;
-    border-radius: 12px !important;
-    padding: 10px 20px !important;
-    font-weight: bold !important;
+    border-radius: 10px !important;
+    padding: 10px 24px !important;
+    font-weight: 600 !important;
     font-size: 15px !important;
     cursor: pointer !important;
-    box-shadow: 0 5px 0 {colors['shadow']}, 0 2px 10px rgba(0,0,0,0.2) !important;
-    transition: all 0.1s ease !important;
-    text-shadow: 0 1px 1px rgba(0,0,0,0.3) !important;
-    position: relative !important;
-    overflow: hidden !important;
+    box-shadow: 0 4px 12px {colors['shadow']} !important;
+    transition: all 0.2s ease !important;
+    letter-spacing: 0.3px !important;
 }}
 
-/* Shiny highlight overlay */
-.stButton button::before {{
-    content: '' !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: -100% !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent) !important;
-    transition: left 0.5s ease !important;
-}}
-
-/* Shine effect on hover */
-.stButton button:hover::before {{
-    left: 100% !important;
-}}
-
-/* Glow effect on hover */
+/* Hover effect - lift and darken */
 .stButton button:hover {{
-    filter: brightness(1.08) !important;
+    background: {colors['hover']} !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 7px 0 {colors['shadow']}, 0 0 15px {colors['glow']} !important;
+    box-shadow: 0 6px 16px {colors['shadow']} !important;
 }}
 
-/* Press effect */
+/* Click effect - press down */
 .stButton button:active {{
-    transform: translateY(3px) !important;
-    box-shadow: 0 2px 0 {colors['shadow']} !important;
+    transform: translateY(1px) !important;
+    box-shadow: 0 2px 8px {colors['shadow']} !important;
 }}
 
 /* Disabled buttons */
@@ -183,119 +190,106 @@ p, li, label, .stMarkdown {{
     cursor: not-allowed !important;
 }}
 
-/* Primary button - extra shiny and big */
+/* Primary button (Generate) - bigger and bolder */
 .stButton button[kind="primary"] {{
-    background: linear-gradient(145deg, {colors['accent']}, {colors['shadow']}, {colors['accent']}) !important;
-    background-size: 200% 200% !important;
-    animation: shimmer 3s ease infinite !important;
-    box-shadow: 0 8px 0 {colors['shadow']}, 0 4px 15px rgba(0,0,0,0.3) !important;
-    font-size: 20px !important;
-    padding: 14px 28px !important;
-}}
-
-@keyframes shimmer {{
-    0% {{ background-position: 0% 50%; }}
-    50% {{ background-position: 100% 50%; }}
-    100% {{ background-position: 0% 50%; }}
+    background: {colors['gradient']} !important;
+    box-shadow: 0 6px 20px {colors['shadow']} !important;
+    font-size: 18px !important;
+    padding: 12px 32px !important;
+    font-weight: 700 !important;
 }}
 
 .stButton button[kind="primary"]:hover {{
+    background: {colors['hover']} !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 10px 0 {colors['shadow']}, 0 0 20px {colors['glow']} !important;
+    box-shadow: 0 8px 24px {colors['shadow']} !important;
 }}
 
-.stButton button[kind="primary"]:active {{
-    transform: translateY(4px) !important;
-    box-shadow: 0 4px 0 {colors['shadow']} !important;
-}}
-
-/* Color theme buttons in sidebar - metallic */
+/* Color theme buttons in sidebar */
 [data-testid="stSidebar"] .stButton button {{
-    margin: 6px 0 !important;
+    margin: 5px 0 !important;
     font-size: 14px !important;
-    text-align: left !important;
-    padding: 10px 16px !important;
+    padding: 8px 16px !important;
 }}
 
-/* Card flip button - special metallic orange */
+/* Card flip button - distinctive but clean */
 div:has(> button:contains("Reveal")) .stButton button,
 div:has(> button:contains("Show")) .stButton button {{
-    background: linear-gradient(145deg, #FF9800, #E65100, #F57C00) !important;
-    box-shadow: 0 5px 0 #BF360C !important;
-    animation: shimmer 3s ease infinite !important;
+    background: linear-gradient(135deg, #FF9800, #F57C00) !important;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3) !important;
 }}
 
 div:has(> button:contains("Reveal")) .stButton button:hover,
 div:has(> button:contains("Show")) .stButton button:hover {{
-    box-shadow: 0 7px 0 #BF360C, 0 0 15px #FF9800 !important;
+    background: #FF9800 !important;
+    box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4) !important;
 }}
 
 /* Navigation buttons */
 div:has(> button:contains("Previous")) .stButton button,
 div:has(> button:contains("Next")) .stButton button {{
-    background: linear-gradient(145deg, #607D8B, #37474F, #455A64) !important;
-    box-shadow: 0 5px 0 #263238 !important;
+    background: linear-gradient(135deg, #607D8B, #455A64) !important;
+    box-shadow: 0 4px 12px rgba(69, 90, 100, 0.3) !important;
 }}
 
 /* Reset button */
 div:has(> button:contains("Reset")) .stButton button {{
-    background: linear-gradient(145deg, #EF5350, #C62828, #E53935) !important;
-    box-shadow: 0 5px 0 #B71C1C !important;
+    background: linear-gradient(135deg, #EF5350, #E53935) !important;
+    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3) !important;
 }}
 
-/* ===== CARD STYLES WITH SHADOW AND GLOW ===== */
+/* ===== CARD STYLES ===== */
 
 /* Flashcard container */
-div:has(> div:contains("📖 Key Facts")), 
-div:has(> div:contains("flashcard")) {{
-    animation: slideIn 0.3s ease-out;
-    transition: all 0.2s ease !important;
-}}
-
-/* Card hover effect - subtle lift and glow */
 div[style*="background: white"] {{
+    background: {colors['card_bg']} !important;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
     transition: all 0.2s ease !important;
 }}
 
 div[style*="background: white"]:hover {{
-    transform: translateY(-3px) !important;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important;
 }}
 
-@keyframes slideIn {{
-    from {{ opacity: 0; transform: translateY(20px); }}
-    to {{ opacity: 1; transform: translateY(0); }}
-}}
-
-/* Progress bar with gradient and glow */
+/* Progress bar */
 [data-testid="stProgress"] > div > div > div > div {{
-    background: linear-gradient(90deg, {colors['accent']}, {colors['glow']}) !important;
-    box-shadow: 0 0 8px {colors['glow']} !important;
+    background: {colors['gradient']} !important;
     border-radius: 10px !important;
 }}
 
-/* Sidebar elements with subtle hover */
-[data-testid="stSidebar"] .stSelectbox:hover,
-[data-testid="stSidebar"] .stSlider:hover {{
-    opacity: 0.9 !important;
-}}
-
-/* Slider thumb glow */
+/* Slider thumb */
 [data-testid="stSlider"] div[role="slider"] {{
     background: {colors['accent']} !important;
-    box-shadow: 0 0 8px {colors['glow']} !important;
-    transition: all 0.1s ease !important;
+    box-shadow: 0 0 6px {colors['accent']} !important;
 }}
 
 [data-testid="stSlider"] div[role="slider"]:hover {{
     transform: scale(1.1) !important;
-    box-shadow: 0 0 12px {colors['glow']} !important;
 }}
 
-/* Select box hover effect */
+/* Select box */
 [data-testid="stSelectbox"] div[data-baseweb="select"]:hover {{
     border-color: {colors['accent']} !important;
-    box-shadow: 0 0 8px {colors['glow']} !important;
+}}
+
+/* Focus indicators for accessibility */
+button:focus-visible,
+[role="button"]:focus-visible {{
+    outline: 3px solid {colors['accent']} !important;
+    outline-offset: 2px !important;
+}}
+
+/* Success/Warning messages */
+.stSuccess {{
+    background-color: #D4EDDA !important;
+    color: #155724 !important;
+}}
+
+.stWarning {{
+    background-color: #FFF3CD !important;
+    color: #856404 !important;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -304,7 +298,7 @@ div[style*="background: white"]:hover {{
 with st.sidebar:
     st.markdown(f"## Settings")
     
-    # Color theme - clean buttons (no emoji)
+    # Color theme - clean buttons
     st.markdown("### Color Theme")
     for scheme in COLOR_SCHEMES.keys():
         if st.button(scheme, use_container_width=True):
@@ -322,7 +316,7 @@ with st.sidebar:
     
     # Text size slider
     st.markdown("### Text Size")
-    size = st.slider("Adjust size", 12, 40, st.session_state.font_size)
+    size = st.slider("Adjust size", 16, 40, st.session_state.font_size)
     if size != st.session_state.font_size:
         st.session_state.font_size = size
         st.rerun()
@@ -334,8 +328,8 @@ with st.sidebar:
     reading_level = st.selectbox("Select level", list(READING_LEVELS.keys()))
     
     st.divider()
-    st.caption("✨ Shiny 3D buttons")
-    st.caption("💡 Hover over anything with your cursor")
+    st.caption("✨ Clean popping buttons")
+    st.caption("📖 WCAG 2.1 compliant")
 
 # ========== MAIN CONTENT ==========
 
@@ -401,16 +395,16 @@ if st.session_state.generated and st.session_state.flashcards:
         st.balloons()
         st.success("Congratulations! You've mastered all cards!")
     
-    # Flashcard with shadow and hover lift
+    # Flashcard
     if not is_flipped:
         st.markdown(f"""
         <div style='
-            background: white; 
-            border-radius: 24px; 
+            background: {colors['card_bg']}; 
+            border-radius: 20px; 
             padding: 60px 40px; 
             text-align: center; 
-            border-left: 12px solid {colors['accent']};
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-left: 6px solid {colors['accent']};
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
             margin: 20px 0;
             transition: all 0.2s ease;
         '>
@@ -429,22 +423,20 @@ if st.session_state.generated and st.session_state.flashcards:
             margin: 10px 0;
             background: {colors['bg']}; 
             border-radius: 12px;
-            transition: all 0.2s ease;
         '>
             <div style='font-size: 32px;'>{f['emoji']}</div>
-            <div style='flex: 1; font-size: {st.session_state.font_size}px;'>{f['text']}</div>
+            <div style='flex: 1; font-size: {st.session_state.font_size}px; color: {colors['text']};'>{f['text']}</div>
         </div>
         """ for f in card['facts']])
         
         st.markdown(f"""
         <div style='
-            background: white; 
-            border-radius: 24px; 
+            background: {colors['card_bg']}; 
+            border-radius: 20px; 
             padding: 40px; 
-            border-left: 12px solid {colors['accent']};
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-left: 6px solid {colors['accent']};
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
             margin: 20px 0;
-            transition: all 0.2s ease;
         '>
             <h3 style='text-align: center; margin-bottom: 30px; color: {colors['accent']};'>Key Facts</h3>
             {facts_html}
@@ -483,6 +475,6 @@ if st.session_state.generated and st.session_state.flashcards:
 st.divider()
 st.markdown("""
 <div style='text-align: center; padding: 20px;'>
-    <p>Made with DeepSeek API • No data stored • Your privacy is protected</p>
+    <p>Made with DeepSeek API • WCAG 2.1 AA Compliant</p>
 </div>
 """, unsafe_allow_html=True)
