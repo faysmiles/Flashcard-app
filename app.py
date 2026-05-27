@@ -1,4 +1,4 @@
-# app.py - FIXED SIDEBAR READABILITY
+# app.py - WITH UNIFIED BANNER AND EMOJIS
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -28,42 +28,46 @@ COLOR_SCHEMES = {
     "Blue": {
         "bg": "#E8F1F5",
         "text": "#0D2B3E",
-        "sidebar_text": "#1a3a4a",  # Darker for sidebar
+        "sidebar_text": "#1a3a4a",
         "accent": "#2B6C9E",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #2B6C9E, #1E5A87)",
         "hover": "#3A7CA5",
-        "shadow": "rgba(43, 108, 158, 0.3)"
+        "shadow": "rgba(43, 108, 158, 0.3)",
+        "emojis": ["📚", "✨", "💡", "🎓", "📖", "⭐"]
     },
     "Green": {
         "bg": "#E8F5E9",
         "text": "#0D3B15",
-        "sidebar_text": "#1a4a1a",  # Darker for sidebar
+        "sidebar_text": "#1a4a1a",
         "accent": "#2E7D32",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #2E7D32, #1B5E20)",
         "hover": "#43A047",
-        "shadow": "rgba(46, 125, 50, 0.3)"
+        "shadow": "rgba(46, 125, 50, 0.3)",
+        "emojis": ["🌿", "✨", "🍃", "📗", "🌱", "💚"]
     },
     "Purple": {
         "bg": "#F5E8F5",
         "text": "#1A0D2E",
-        "sidebar_text": "#2a1540",  # Darker for sidebar
+        "sidebar_text": "#2a1540",
         "accent": "#6B2D8E",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #7B2D8E, #5A1E6B)",
         "hover": "#8B3DAE",
-        "shadow": "rgba(107, 45, 142, 0.3)"
+        "shadow": "rgba(107, 45, 142, 0.3)",
+        "emojis": ["🦄", "✨", "🔮", "💜", "🎨", "🌟"]
     },
     "Gray": {
         "bg": "#F5F5F5",
         "text": "#2C2C2C",
-        "sidebar_text": "#1a1a1a",  # Almost black for sidebar
+        "sidebar_text": "#1a1a1a",
         "accent": "#6B6B6B",
         "card_bg": "#FFFFFF",
         "gradient": "linear-gradient(135deg, #6B6B6B, #555555)",
         "hover": "#808080",
-        "shadow": "rgba(107, 107, 107, 0.3)"
+        "shadow": "rgba(107, 107, 107, 0.3)",
+        "emojis": ["⚡", "✨", "🎯", "📘", "💪", "🎓"]
     }
 }
 
@@ -135,7 +139,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== STYLES WITH BETTER SIDEBAR READABILITY ==========
+# ========== STYLES WITH UNIFIED BANNER ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -145,6 +149,11 @@ st.markdown(f"""
 
 [data-testid="stAppViewContainer"] {{
     background-color: {colors['bg']} !important;
+}}
+
+/* Remove default Streamlit padding at the top */
+[data-testid="stAppViewContainer"] > .main {{
+    padding-top: 0 !important;
 }}
 
 /* Headers */
@@ -160,14 +169,52 @@ p, li, label, .stMarkdown, .stCaption {{
     line-height: 1.5 !important;
 }}
 
-/* ===== SIDEBAR TEXT READABILITY FIXES ===== */
+/* ===== UNIFIED BANNER WITH SIDEBAR ===== */
 
-/* Sidebar container - ensure text is dark and readable */
+/* Make sidebar and main content share the same top banner */
 [data-testid="stSidebar"] {{
     background-color: {colors['bg']} !important;
+    padding-top: 0 !important;
 }}
 
-/* Sidebar headers */
+/* Remove the default Streamlit header/menu */
+header {{
+    background-color: transparent !important;
+}}
+
+/* Top banner emoji row - spans across top */
+.top-banner {{
+    background: linear-gradient(135deg, {colors['accent']}15, {colors['accent']}05);
+    padding: 15px 20px;
+    border-radius: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid {colors['accent']}30;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}}
+
+.top-banner span {{
+    font-size: 28px;
+    animation: float 3s ease-in-out infinite;
+    display: inline-block;
+}}
+
+@keyframes float {{
+    0%, 100% {{ transform: translateY(0px); }}
+    50% {{ transform: translateY(-5px); }}
+}}
+
+/* Make each emoji float with different delays */
+.top-banner span:nth-child(1) {{ animation-delay: 0s; }}
+.top-banner span:nth-child(2) {{ animation-delay: 0.5s; }}
+.top-banner span:nth-child(3) {{ animation-delay: 1s; }}
+.top-banner span:nth-child(4) {{ animation-delay: 1.5s; }}
+.top-banner span:nth-child(5) {{ animation-delay: 2s; }}
+.top-banner span:nth-child(6) {{ animation-delay: 2.5s; }}
+
+/* Sidebar text readability */
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3,
@@ -178,7 +225,6 @@ p, li, label, .stMarkdown, .stCaption {{
     font-weight: 700 !important;
 }}
 
-/* Sidebar labels and text - DARKER for readability */
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] .stMarkdown,
@@ -188,14 +234,12 @@ p, li, label, .stMarkdown, .stCaption {{
     font-weight: 500 !important;
 }}
 
-/* Sidebar selectbox text */
 [data-testid="stSidebar"] [data-baseweb="select"] span,
 [data-testid="stSidebar"] [data-baseweb="select"] div {{
     color: {colors['sidebar_text']} !important;
     font-weight: 500 !important;
 }}
 
-/* Sidebar slider labels */
 [data-testid="stSidebar"] [data-testid="stSlider"] label {{
     color: {colors['sidebar_text']} !important;
     font-weight: 600 !important;
@@ -222,27 +266,23 @@ p, li, label, .stMarkdown, .stCaption {{
     transition: all 0.2s ease !important;
 }}
 
-/* Hover effect */
 .stButton button:hover {{
     background: {colors['hover']} !important;
     transform: translateY(-2px) !important;
     box-shadow: 0 6px 16px {colors['shadow']} !important;
 }}
 
-/* Click effect */
 .stButton button:active {{
     transform: translateY(1px) !important;
     box-shadow: 0 2px 8px {colors['shadow']} !important;
 }}
 
-/* Disabled buttons */
 .stButton button:disabled {{
     opacity: 0.5 !important;
     transform: none !important;
     cursor: not-allowed !important;
 }}
 
-/* Primary button (Generate) */
 .stButton button[kind="primary"] {{
     background: {colors['gradient']} !important;
     box-shadow: 0 6px 20px {colors['shadow']} !important;
@@ -257,7 +297,6 @@ p, li, label, .stMarkdown, .stCaption {{
     box-shadow: 0 8px 24px {colors['shadow']} !important;
 }}
 
-/* Sidebar buttons */
 [data-testid="stSidebar"] .stButton button {{
     margin: 5px 0 !important;
     font-size: 14px !important;
@@ -292,7 +331,6 @@ div:has(> button:contains("Reset")) .stButton button {{
 
 /* ===== CARD STYLES ===== */
 
-/* Flashcard container */
 div[style*="background: white"] {{
     background: {colors['card_bg']} !important;
     border-radius: 20px !important;
@@ -346,6 +384,14 @@ button:focus-visible,
 </style>
 """, unsafe_allow_html=True)
 
+# ========== TOP BANNER WITH FLOATING EMOJIS ==========
+emoji_row = "".join([f"<span>{e}</span>" for e in colors['emojis']])
+st.markdown(f"""
+<div class="top-banner">
+    {emoji_row}
+</div>
+""", unsafe_allow_html=True)
+
 # ========== SIDEBAR ==========
 with st.sidebar:
     st.markdown("## Settings")
@@ -388,9 +434,9 @@ with st.sidebar:
 
 # Title
 st.markdown(f"""
-<div style='text-align: center; padding: 20px;'>
-    <h1 style='font-size: 48px; margin: 10px 0;'>{APP_TITLE}</h1>
-    <p style='font-size: 18px; opacity: 0.8;'>Turn any text into fun flashcards</p>
+<div style='text-align: center; padding: 10px 20px 20px 20px;'>
+    <h1 style='font-size: 48px; margin: 0;'>{APP_TITLE}</h1>
+    <p style='font-size: 18px; opacity: 0.8; margin-top: 5px;'>Turn any text into fun flashcards</p>
 </div>
 """, unsafe_allow_html=True)
 
