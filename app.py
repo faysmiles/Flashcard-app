@@ -1,4 +1,4 @@
-# app.py - COMPLETE FLASHCARD APP (Fixed Keyboard Shortcuts)
+# app.py - COMPLETE FLASHCARD APP (All Issues Fixed)
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -25,10 +25,19 @@ READING_LEVELS = {
     "🎓 Advanced (Ages 18+)": "complex"
 }
 
-FONT_OPTIONS = [
-    "Poppins", "OpenDyslexic", "Lexend", "Verdana", "Arial",
-    "Comic Sans MS", "Nunito", "Montserrat", "Roboto", "Inter"
-]
+# Font options with their actual names for preview
+FONT_OPTIONS = {
+    "Poppins": "Poppins",
+    "OpenDyslexic": "OpenDyslexic", 
+    "Lexend": "Lexend",
+    "Verdana": "Verdana",
+    "Arial": "Arial",
+    "Comic Sans MS": "Comic Sans MS",
+    "Nunito": "Nunito",
+    "Montserrat": "Montserrat",
+    "Roboto": "Roboto",
+    "Inter": "Inter"
+}
 
 # THREE COLOR MODES with proper schemes
 COLOR_SCHEMES = {
@@ -57,7 +66,7 @@ MIN_FONT_SIZE = 12
 MAX_FONT_SIZE = 40
 DEFAULT_FONT_SIZE = 18
 
-# Emoji database (disabled in Low Sensory mode)
+# Emoji database
 EMOJI_MAP = {
     "lion|tiger|cat": "🦁", "elephant": "🐘", "giraffe": "🦒", "bird|eagle|owl": "🦅",
     "whale|dolphin": "🐋", "butterfly": "🦋", "tree|forest": "🌳", "flower": "🌸",
@@ -69,9 +78,8 @@ EMOJI_MAP = {
 }
 
 def get_emoji(text, mode="Vibrant"):
-    """Return emoji only if not in Low Sensory mode"""
     if mode == "Low Sensory":
-        return "•"  # Plain bullet point instead of emoji
+        return "•"
     text_lower = text.lower()
     for keywords, emoji in EMOJI_MAP.items():
         for keyword in keywords.split("|"):
@@ -130,10 +138,9 @@ def generate_flashcards_deepseek(text, reading_level, mode="Vibrant"):
         try:
             api_key = st.secrets["DEEPSEEK_API_KEY"]
         except:
-            st.error("🔑 Missing DeepSeek API key. Get one at platform.deepseek.com")
+            st.error("🔑 Missing DeepSeek API key")
             return None
     
-    # Scale card count
     if len(text) <= 8000:
         min_cards, max_cards = 3, 5
     elif len(text) <= 16000:
@@ -145,7 +152,6 @@ def generate_flashcards_deepseek(text, reading_level, mode="Vibrant"):
                   "intermediate": "clear language, medium sentences (12-18 words)",
                   "complex": "precise academic language, longer sentences (up to 25 words)"}.get(reading_level, "clear language")
     
-    # In Low Sensory mode, request no emojis
     emoji_instruction = "Do not use any emojis - use plain text only." if mode == "Low Sensory" else "Use relevant emojis for each fact."
     
     prompt = f"""Create {min_cards}-{max_cards} flashcards from this text. Reading level: {level_text}
@@ -194,7 +200,7 @@ Text: {text[:15000]}"""
 
 st.set_page_config(page_title="Flashcard Magic", page_icon="✨", layout="wide")
 
-# Initialize session state
+# Initialize session state - preserve cards when settings change
 for key, default in [("flashcards", None), ("generated", False), ("card_flipped", {}), 
                      ("card_images", {}), ("current_idx", 0), ("font_size", DEFAULT_FONT_SIZE),
                      ("font_style", "Poppins"), ("color_mode", "Vibrant"), ("color_scheme", "Ocean Teal"),
@@ -202,114 +208,85 @@ for key, default in [("flashcards", None), ("generated", False), ("card_flipped"
     if key not in st.session_state:
         st.session_state[key] = default
 
-# Get current mode for conditional styling
+# Get current mode
 current_mode = st.session_state.color_mode
 is_low_sensory = (current_mode == "Low Sensory")
 
-# ========== FIXED KEYBOARD NAVIGATION JAVASCRIPT ==========
-# This uses a safer approach that doesn't interfere with Streamlit
+# ========== SIMPLE KEYBOARD SHORTCUTS ==========
 st.markdown("""
 <script>
 (function() {
-    // Only run if we're in the main document
-    if (window.self !== window.top) return;
-    
-    function simulateClick(buttonText) {
+    function findAndClick(buttonTexts) {
         const buttons = document.querySelectorAll('button');
         for (let btn of buttons) {
-            if (btn.innerText.includes(buttonText)) {
-                btn.click();
-                return true;
+            for (let text of buttonTexts) {
+                if (btn.innerText.includes(text)) {
+                    btn.click();
+                    return true;
+                }
             }
         }
         return false;
     }
     
-    function handleKeydown(e) {
-        // Don't interfere with typing in text inputs
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-            return;
-        }
+    document.addEventListener('keydown', function(e) {
+        // Don't interfere with typing
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
         
-        // Left arrow - previous card
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
-            simulateClick('Previous');
-        }
-        // Right arrow - next card
-        else if (e.key === 'ArrowRight') {
+            findAndClick(['Previous']);
+        } else if (e.key === 'ArrowRight') {
             e.preventDefault();
-            simulateClick('Next');
-        }
-        // Space or Enter - flip card
-        else if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
+            findAndClick(['Next']);
+        } else if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
-            simulateClick('Reveal') || simulateClick('Show Topic') || simulateClick('Facts');
-        }
-        // 'r' or 'R' - reset progress
-        else if (e.key === 'r' || e.key === 'R') {
+            findAndClick(['Reveal', 'Show Topic']);
+        } else if (e.key === 'r' || e.key === 'R') {
             e.preventDefault();
-            simulateClick('Reset');
+            findAndClick(['Reset']);
         }
-    }
-    
-    document.addEventListener('keydown', handleKeydown);
+    });
 })();
 </script>
-
-<style>
-.keyboard-hint {
-    background: #f5f5f5;
-    padding: 10px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    margin-top: 15px;
-    border-left: 3px solid #888;
-}
-.keyboard-hint kbd {
-    background: #333;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 11px;
-    margin: 0 2px;
-    display: inline-block;
-}
-.keyboard-hint .shortcut-row {
-    margin: 5px 0;
-}
-</style>
 """, unsafe_allow_html=True)
 
-# Apply CSS based on mode
+# Apply styles
 st.markdown(f"""
 <style>
-/* Base scaling styles */
+/* Font preview in selectbox */
+[data-testid="stSelectbox"] option {{
+    font-family: var(--font-display) !important;
+}}
+
+/* Make color mode buttons look better */
+[data-testid="stRadio"] > div {{
+    gap: 12px !important;
+}}
+[data-testid="stRadio"] label {{
+    background: #f5f5f5;
+    padding: 10px 16px !important;
+    border-radius: 12px !important;
+    border: 2px solid transparent !important;
+    transition: all 0.2s ease !important;
+}}
+[data-testid="stRadio"] label:hover {{
+    background: #e8e8e8 !important;
+}}
+[data-testid="stRadio"] label[data-baseweb="radio"] {{
+    background: transparent !important;
+}}
+
+/* Base scaling */
 [data-testid="stSidebar"] .stMarkdown, 
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stSelectbox div,
-[data-testid="stSidebar"] .stRadio div,
 [data-testid="stSidebar"] button {{
     font-size: {max(14, st.session_state.font_size - 2)}px !important;
 }}
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] div {{
     min-height: {max(40, st.session_state.font_size + 10)}px !important;
-}}
-
-[data-testid="stRadio"] label {{
-    min-height: {max(35, st.session_state.font_size + 5)}px !important;
-    align-items: center !important;
-}}
-
-[data-testid="stSlider"] div[role="slider"] {{
-    width: {max(20, st.session_state.font_size)}px !important;
-    height: {max(20, st.session_state.font_size)}px !important;
-}}
-
-[data-testid="stSidebar"] .element-container {{
-    margin-bottom: {max(15, st.session_state.font_size)}px !important;
 }}
 
 .flashcard-title {{
@@ -320,110 +297,146 @@ st.markdown(f"""
     font-size: {max(16, st.session_state.font_size)}px !important;
 }}
 
-/* Low Sensory Mode - remove all animations and extra styling */
+/* Remove animations for Low Sensory */
 {'* { animation: none !important; transition: none !important; }' if is_low_sensory else ''}
 {'button:hover { transform: none !important; }' if is_low_sensory else ''}
-{'[data-testid="stButton"] button { transition: none !important; }' if is_low_sensory else ''}
 
-/* Focus ring for keyboard navigation */
-button:focus-visible, [role="button"]:focus-visible {{
-    outline: 3px solid #FF6B6B !important;
-    outline-offset: 2px !important;
+/* Simple keyboard hint styling */
+.simple-hint {{
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-top: 16px;
+    border: 1px solid #e0e0e0;
+}}
+.simple-hint kbd {{
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    margin: 0 2px;
 }}
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar
+# ==================== SIDEBAR ====================
 with st.sidebar:
-    st.markdown(f"## ⚙️ Settings")
+    st.markdown("## ⚙️ Settings")
     
-    # THREE color mode options
-    color_mode_options = ["Vibrant", "Accessibility", "Low Sensory"]
-    color_mode_labels = {
-        "Vibrant": "🎨 Vibrant (Colorful, fun)",
-        "Accessibility": "♿ Accessibility (High contrast, calm)",
-        "Low Sensory": "🌙 Low Sensory (No animations, plain gray)"
-    }
-    
-    selected_label = st.radio(
-        "Color Mode",
-        options=color_mode_options,
-        format_func=lambda x: color_mode_labels[x],
-        index=color_mode_options.index(st.session_state.color_mode)
-    )
-    
-    if selected_label != st.session_state.color_mode:
-        st.session_state.color_mode = selected_label
-        # Reset to default scheme for the mode
-        if selected_label == "Low Sensory":
-            st.session_state.color_scheme = "Grey Scale"
-        else:
-            st.session_state.color_scheme = list(COLOR_SCHEMES[selected_label].keys())[0]
-        st.rerun()
-    
-    # Color scheme picker (only show if not Low Sensory)
-    if current_mode != "Low Sensory":
-        schemes = list(COLOR_SCHEMES[current_mode].keys())
-        scheme = st.selectbox("Color Scheme", schemes, 
-                              index=schemes.index(st.session_state.color_scheme) if st.session_state.color_scheme in schemes else 0)
-        if scheme != st.session_state.color_scheme:
-            st.session_state.color_scheme = scheme
+    # Color Mode - nicer layout
+    st.markdown("### 🎨 Color Mode")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("🎨 Vibrant", use_container_width=True, 
+                    type="primary" if current_mode == "Vibrant" else "secondary"):
+            st.session_state.color_mode = "Vibrant"
+            st.session_state.color_scheme = "Ocean Teal"
             st.rerun()
-    else:
-        # In Low Sensory mode, just show the gray scheme name
-        st.info("🌙 Low Sensory Mode active - using plain gray scheme with no animations")
-        st.session_state.color_scheme = "Grey Scale"
+    with col2:
+        if st.button("♿ Accessibility", use_container_width=True,
+                    type="primary" if current_mode == "Accessibility" else "secondary"):
+            st.session_state.color_mode = "Accessibility"
+            st.session_state.color_scheme = "Soft Blue"
+            st.rerun()
+    with col3:
+        if st.button("🌙 Low Sensory", use_container_width=True,
+                    type="primary" if current_mode == "Low Sensory" else "secondary"):
+            st.session_state.color_mode = "Low Sensory"
+            st.session_state.color_scheme = "Grey Scale"
+            st.rerun()
+    
+    # Color Scheme (only if not Low Sensory)
+    if current_mode != "Low Sensory":
+        st.markdown("### 🎨 Color Scheme")
+        schemes = list(COLOR_SCHEMES[current_mode].keys())
+        # Create colored buttons for each scheme
+        scheme_cols = st.columns(2)
+        for i, scheme in enumerate(schemes):
+            with scheme_cols[i % 2]:
+                colors = COLOR_SCHEMES[current_mode][scheme]
+                if st.button(f"● {scheme}", use_container_width=True,
+                            type="primary" if scheme == st.session_state.color_scheme else "secondary"):
+                    st.session_state.color_scheme = scheme
+                    st.rerun()
     
     st.divider()
     
-    font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(st.session_state.font_style))
-    if font != st.session_state.font_style:
-        st.session_state.font_style = font
+    # Font Style with preview
+    st.markdown("### ✍️ Font Style")
+    # Create font preview options
+    font_display_names = {font: font for font in FONT_OPTIONS.keys()}
+    selected_font_display = st.selectbox(
+        "Font Style",
+        options=list(FONT_OPTIONS.keys()),
+        format_func=lambda x: f"{x}",
+        index=list(FONT_OPTIONS.keys()).index(st.session_state.font_style) if st.session_state.font_style in FONT_OPTIONS else 0,
+        key="font_select"
+    )
+    
+    # Apply font preview using CSS
+    st.markdown(f"""
+    <style>
+    [data-testid="stSelectbox"] label {{
+        font-family: {selected_font_display}, sans-serif !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    if selected_font_display != st.session_state.font_style:
+        st.session_state.font_style = selected_font_display
         st.rerun()
     
-    st.caption("💡 Adjust text size below - everything scales automatically")
-    size = st.slider("Text Size", MIN_FONT_SIZE, MAX_FONT_SIZE, st.session_state.font_size)
+    # Text Size
+    st.markdown("### 🔤 Text Size")
+    size = st.slider("Adjust text size", MIN_FONT_SIZE, MAX_FONT_SIZE, st.session_state.font_size)
     if size != st.session_state.font_size:
         st.session_state.font_size = size
         st.rerun()
     
     st.divider()
     
-    reading_level = st.selectbox("Reading Level", list(READING_LEVELS.keys()))
-    st.session_state.show_images = st.checkbox("Show Images", st.session_state.show_images)
+    # Reading Level
+    st.markdown("### 📖 Reading Level")
+    reading_level = st.selectbox("Reading Level", list(READING_LEVELS.keys()), key="reading_level")
     
+    # Show Images
+    st.session_state.show_images = st.checkbox("🖼️ Show Images", st.session_state.show_images)
+    
+    # Save deck button
     if st.session_state.generated and st.session_state.flashcards:
         st.divider()
-        deck_name = st.text_input("Deck name", placeholder="My Science Deck")
+        deck_name = st.text_input("Deck name", placeholder="My Science Deck", key="deck_name_input")
         if st.button("💾 Save This Deck", use_container_width=True) and deck_name:
             st.success(f"Saved '{deck_name}'!")
     
-    # ========== KEYBOARD SHORTCUTS AT BOTTOM OF SETTINGS ==========
+    # Simple keyboard instructions at bottom
     st.divider()
     st.markdown("""
-    <div class="keyboard-hint">
-        <strong>⌨️ Keyboard Shortcuts</strong>
-        <div class="shortcut-row"><kbd>←</kbd> Previous Card &nbsp;&nbsp; <kbd>→</kbd> Next Card</div>
-        <div class="shortcut-row"><kbd>Space</kbd> or <kbd>Enter</kbd> Flip Card</div>
-        <div class="shortcut-row"><kbd>R</kbd> Reset Progress</div>
-        <div style="font-size: 10px; margin-top: 6px; opacity: 0.7;">(Works when not typing in text boxes)</div>
+    <div class="simple-hint">
+        <strong>⌨️ Keyboard Shortcuts</strong><br>
+        <kbd>←</kbd> <kbd>→</kbd> Navigate &nbsp;|&nbsp; 
+        <kbd>Space</kbd> Flip Card &nbsp;|&nbsp;
+        <kbd>R</kbd> Reset
     </div>
     """, unsafe_allow_html=True)
 
-# Title - simplified for Low Sensory mode
+# ==================== MAIN CONTENT ====================
+
+# Title
 if current_mode == "Low Sensory":
     st.markdown(f"""
-    <div style='text-align: center; padding: 20px; border-bottom: 2px solid #ccc;'>
+    <div style='text-align: center; padding: 20px;'>
         <div style='font-size: {max(32, st.session_state.font_size + 14)}px; font-weight: bold;'>Flashcard Magic</div>
         <div style='font-size: {max(16, st.session_state.font_size - 2)}px; color: #555;'>{APP_SUBTITLE}</div>
     </div>
     """, unsafe_allow_html=True)
 else:
-    # Fun title for Vibrant/Accessibility modes
     st.markdown(f"""
     <div style='text-align: center; padding: 20px;'>
-        <div style='font-size: 50px;'>{'✨' if not is_low_sensory else ''}</div>
-        <div style='font-size: {max(32, st.session_state.font_size + 14)}px; font-weight: bold; background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #45B7D1); background-size: 300% 300%; -webkit-background-clip: text; background-clip: text; color: transparent;'>{APP_TITLE}</div>
+        <div style='font-size: 50px;'>✨</div>
+        <div style='font-size: {max(32, st.session_state.font_size + 14)}px; font-weight: bold; background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #45B7D1); -webkit-background-clip: text; background-clip: text; color: transparent;'>{APP_TITLE}</div>
         <div style='font-size: {max(16, st.session_state.font_size - 2)}px; color: #666;'>{APP_SUBTITLE}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -464,7 +477,7 @@ if st.button("✨ Generate Flashcards ✨", type="primary", use_container_width=
                                 st.session_state.card_images[i] = img
                 st.rerun()
 
-# Display flashcards
+# ==================== DISPLAY FLASHCARDS ====================
 if st.session_state.generated and st.session_state.flashcards:
     cards = st.session_state.flashcards
     idx = st.session_state.current_idx
@@ -474,6 +487,15 @@ if st.session_state.generated and st.session_state.flashcards:
         colors = COLOR_SCHEMES["Low Sensory"]["Grey Scale"]
     else:
         colors = COLOR_SCHEMES[current_mode][st.session_state.color_scheme]
+    
+    # Apply current font to entire app
+    st.markdown(f"""
+    <style>
+    * {{
+        font-family: '{st.session_state.font_style}', sans-serif !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
     
     # Progress
     flipped = sum(1 for i in range(len(cards)) if st.session_state.card_flipped.get(i, False))
@@ -501,7 +523,6 @@ if st.session_state.generated and st.session_state.flashcards:
     """
     
     if not is_flipped:
-        # Front
         img_html = ""
         if st.session_state.show_images and idx in st.session_state.card_images:
             img_html = f"<img src='{st.session_state.card_images[idx]}' style='max-width: 100%; max-height: 250px; border-radius: {'8px' if is_low_sensory else '15px'}; margin-bottom: 20px;'>"
@@ -510,23 +531,21 @@ if st.session_state.generated and st.session_state.flashcards:
         <div style='{card_style}'>
             <div style='font-size: {'40px' if is_low_sensory else '80px'}; margin-bottom: 20px;'>{card['emoji'] if not is_low_sensory else '📄'}</div>
             {img_html}
-            <div class='flashcard-title' style='font-size: {max(24, st.session_state.font_size + 10)}px; font-weight: bold; color: {colors['text']};'>{card['title']}</div>
-            <div style='margin-top: 30px; color: {colors['accent']}; font-size: {max(14, st.session_state.font_size - 4)}px;'>Press <kbd style="background:#333;color:white;padding:2px 6px;border-radius:4px;">Space</kbd> or <kbd style="background:#333;color:white;padding:2px 6px;border-radius:4px;">Enter</kbd> to reveal facts →</div>
+            <div class='flashcard-title' style='font-weight: bold; color: {colors['text']};'>{card['title']}</div>
         </div>
         """, unsafe_allow_html=True)
     else:
-        # Back
         facts_html = "".join([
             f"<div style='display: flex; align-items: center; gap: 15px; margin: 15px 0; padding: {8 if is_low_sensory else 12}px; background: rgba(0,0,0,0.03); border-radius: {8 if is_low_sensory else 12}px;'>"
             f"<div style='font-size: {24 if is_low_sensory else 36}px;'>{f['emoji']}</div>"
-            f"<div class='flashcard-fact' style='flex: 1; font-size: {max(16, st.session_state.font_size)}px; line-height: 1.5; text-align: left;'>{f['text']}</div>"
+            f"<div class='flashcard-fact' style='flex: 1; text-align: left;'>{f['text']}</div>"
             f"</div>" for f in card['facts']
         ])
         
         st.markdown(f"""
         <div style='{card_style}'>
             <div style='text-align: center; margin-bottom: 20px;'>
-                <span style='background: {colors['accent']}; color: white; padding: 6px 16px; border-radius: {15 if not is_low_sensory else 8}px; font-size: {max(12, st.session_state.font_size - 6)}px;'>KEY FACTS</span>
+                <span style='background: {colors['accent']}; color: white; padding: 6px 16px; border-radius: {15 if not is_low_sensory else 8}px;'>KEY FACTS</span>
             </div>
             {facts_html}
         </div>
@@ -544,20 +563,19 @@ if st.session_state.generated and st.session_state.flashcards:
             st.session_state.card_flipped[idx] = not is_flipped
             st.rerun()
     with col3:
-        st.markdown(f"<p style='text-align: center; margin-top: 8px; font-size: {max(14, st.session_state.font_size - 2)}px;'>{idx + 1} / {len(cards)}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; margin-top: 8px;'>{idx + 1} / {len(cards)}</p>", unsafe_allow_html=True)
     with col4:
         if st.button("Next ▶", key="next_btn", disabled=(idx == len(cards) - 1), use_container_width=True):
             st.session_state.current_idx = min(len(cards) - 1, idx + 1)
             st.rerun()
     with col5:
-        if st.button("🔄 Reset Progress", key="reset_btn", use_container_width=True):
+        if st.button("🔄 Reset", key="reset_btn", use_container_width=True):
             st.session_state.card_flipped = {}
             st.rerun()
     
     # Download
     st.divider()
     st.markdown("### 📥 Download")
-    
     text_export = "\n\n".join([f"TOPIC: {c['title']}\n" + "\n".join([f"  {f['emoji']} {f['text']}" for f in c['facts']]) for c in cards])
     st.download_button("📝 Download All Cards (Text)", text_export, "flashcards.txt", use_container_width=True)
 
@@ -565,7 +583,6 @@ if st.session_state.generated and st.session_state.flashcards:
 st.divider()
 st.markdown("""
 <div style='text-align: center; padding: 20px;'>
-    <p>💬 Made with DeepSeek API • Flashcards saved in your browser</p>
-    <p style='font-size: 12px; opacity: 0.7'>No data is stored on any server - your privacy is protected</p>
+    <p>💬 Made with DeepSeek API • No data stored</p>
 </div>
 """, unsafe_allow_html=True)
