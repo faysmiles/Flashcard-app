@@ -1,4 +1,4 @@
-# app.py - COMPLETE FLASHCARD APP (With Keyboard Navigation)
+# app.py - COMPLETE FLASHCARD APP (Fixed Keyboard Shortcuts)
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -206,69 +206,65 @@ for key, default in [("flashcards", None), ("generated", False), ("card_flipped"
 current_mode = st.session_state.color_mode
 is_low_sensory = (current_mode == "Low Sensory")
 
-# ========== KEYBOARD NAVIGATION JAVASCRIPT ==========
-# This captures left/right arrow keys and space/enter for flipping
+# ========== FIXED KEYBOARD NAVIGATION JAVASCRIPT ==========
+# This uses a safer approach that doesn't interfere with Streamlit
 st.markdown("""
 <script>
-document.addEventListener('keydown', function(e) {
-    // Left arrow key (previous card)
-    if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        const prevButton = document.querySelector('button[kind="secondary"]:contains("◀")');
+(function() {
+    // Only run if we're in the main document
+    if (window.self !== window.top) return;
+    
+    function simulateClick(buttonText) {
         const buttons = document.querySelectorAll('button');
         for (let btn of buttons) {
-            if (btn.innerText.includes('◀') || btn.innerText.includes('Previous')) {
+            if (btn.innerText.includes(buttonText)) {
                 btn.click();
-                break;
+                return true;
             }
         }
+        return false;
     }
-    // Right arrow key (next card)
-    else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        const buttons = document.querySelectorAll('button');
-        for (let btn of buttons) {
-            if (btn.innerText.includes('▶') || btn.innerText.includes('Next')) {
-                btn.click();
-                break;
-            }
+    
+    function handleKeydown(e) {
+        // Don't interfere with typing in text inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            return;
+        }
+        
+        // Left arrow - previous card
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            simulateClick('Previous');
+        }
+        // Right arrow - next card
+        else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            simulateClick('Next');
+        }
+        // Space or Enter - flip card
+        else if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
+            e.preventDefault();
+            simulateClick('Reveal') || simulateClick('Show Topic') || simulateClick('Facts');
+        }
+        // 'r' or 'R' - reset progress
+        else if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            simulateClick('Reset');
         }
     }
-    // Space or Enter key (flip card)
-    else if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
-        e.preventDefault();
-        const buttons = document.querySelectorAll('button');
-        for (let btn of buttons) {
-            if (btn.innerText.includes('Reveal') || btn.innerText.includes('Show Topic') || 
-                btn.innerText.includes('Facts') || btn.innerText.includes('flip')) {
-                btn.click();
-                break;
-            }
-        }
-    }
-    // 'R' key - reset progress
-    else if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        const buttons = document.querySelectorAll('button');
-        for (let btn of buttons) {
-            if (btn.innerText.includes('Reset')) {
-                btn.click();
-                break;
-            }
-        }
-    }
-});
+    
+    document.addEventListener('keydown', handleKeydown);
+})();
 </script>
 
 <style>
-/* Show keyboard shortcut hint in sidebar */
 .keyboard-hint {
-    background: #f0f0f0;
-    padding: 10px;
+    background: #f5f5f5;
+    padding: 10px 12px;
     border-radius: 8px;
     font-size: 12px;
-    margin-top: 10px;
-    text-align: center;
+    margin-top: 15px;
+    border-left: 3px solid #888;
 }
 .keyboard-hint kbd {
     background: #333;
@@ -278,6 +274,10 @@ document.addEventListener('keydown', function(e) {
     font-family: monospace;
     font-size: 11px;
     margin: 0 2px;
+    display: inline-block;
+}
+.keyboard-hint .shortcut-row {
+    margin: 5px 0;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -325,7 +325,7 @@ st.markdown(f"""
 {'button:hover { transform: none !important; }' if is_low_sensory else ''}
 {'[data-testid="stButton"] button { transition: none !important; }' if is_low_sensory else ''}
 
-/* Focus ring for keyboard navigation - important for accessibility */
+/* Focus ring for keyboard navigation */
 button:focus-visible, [role="button"]:focus-visible {{
     outline: 3px solid #FF6B6B !important;
     outline-offset: 2px !important;
@@ -336,18 +336,6 @@ button:focus-visible, [role="button"]:focus-visible {{
 # Sidebar
 with st.sidebar:
     st.markdown(f"## ⚙️ Settings")
-    
-    # Keyboard shortcuts hint
-    st.markdown("""
-    <div class="keyboard-hint">
-        ⌨️ <strong>Keyboard Shortcuts</strong><br>
-        <kbd>←</kbd> Previous Card &nbsp;|&nbsp; <kbd>→</kbd> Next Card<br>
-        <kbd>Space</kbd> or <kbd>Enter</kbd> Flip Card<br>
-        <kbd>R</kbd> Reset Progress
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.divider()
     
     # THREE color mode options
     color_mode_options = ["Vibrant", "Accessibility", "Low Sensory"]
@@ -409,6 +397,18 @@ with st.sidebar:
         deck_name = st.text_input("Deck name", placeholder="My Science Deck")
         if st.button("💾 Save This Deck", use_container_width=True) and deck_name:
             st.success(f"Saved '{deck_name}'!")
+    
+    # ========== KEYBOARD SHORTCUTS AT BOTTOM OF SETTINGS ==========
+    st.divider()
+    st.markdown("""
+    <div class="keyboard-hint">
+        <strong>⌨️ Keyboard Shortcuts</strong>
+        <div class="shortcut-row"><kbd>←</kbd> Previous Card &nbsp;&nbsp; <kbd>→</kbd> Next Card</div>
+        <div class="shortcut-row"><kbd>Space</kbd> or <kbd>Enter</kbd> Flip Card</div>
+        <div class="shortcut-row"><kbd>R</kbd> Reset Progress</div>
+        <div style="font-size: 10px; margin-top: 6px; opacity: 0.7;">(Works when not typing in text boxes)</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Title - simplified for Low Sensory mode
 if current_mode == "Low Sensory":
@@ -511,7 +511,7 @@ if st.session_state.generated and st.session_state.flashcards:
             <div style='font-size: {'40px' if is_low_sensory else '80px'}; margin-bottom: 20px;'>{card['emoji'] if not is_low_sensory else '📄'}</div>
             {img_html}
             <div class='flashcard-title' style='font-size: {max(24, st.session_state.font_size + 10)}px; font-weight: bold; color: {colors['text']};'>{card['title']}</div>
-            <div style='margin-top: 30px; color: {colors['accent']}; font-size: {max(14, st.session_state.font_size - 4)}px;'>Press Space or Enter to reveal facts →</div>
+            <div style='margin-top: 30px; color: {colors['accent']}; font-size: {max(14, st.session_state.font_size - 4)}px;'>Press <kbd style="background:#333;color:white;padding:2px 6px;border-radius:4px;">Space</kbd> or <kbd style="background:#333;color:white;padding:2px 6px;border-radius:4px;">Enter</kbd> to reveal facts →</div>
         </div>
         """, unsafe_allow_html=True)
     else:
