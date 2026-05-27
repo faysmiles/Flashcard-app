@@ -1,4 +1,4 @@
-# app.py - FULLY WORKING WITH VISIBLE SETTINGS
+# app.py - WITH HAND ICON INSTEAD OF KEYBOARD TEXT
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -143,7 +143,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== STYLES - DOES NOT HIDE SIDEBAR ==========
+# ========== STYLES - Replace keyboard text with hand icon ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -155,12 +155,33 @@ st.markdown(f"""
     background-color: {colors['bg']} !important;
 }}
 
-/* ONLY hide the strange keyboard text - KEEP the settings button */
-[data-testid="baseButton-headerNoPadding"] span:contains("keyboard") {{
+/* Replace the keyboard text with a hand icon */
+[data-testid="baseButton-headerNoPadding"] span {{
     display: none !important;
 }}
 
-/* Keep ALL sidebar functionality */
+[data-testid="baseButton-headerNoPadding"]::before {{
+    content: "☞" !important;
+    font-size: 20px !important;
+    display: inline-block !important;
+    cursor: pointer !important;
+}}
+
+/* Add a tooltip on hover */
+[data-testid="baseButton-headerNoPadding"]:hover::before {{
+    content: "☞ Click to open settings" !important;
+    font-size: 12px !important;
+    background: {colors['accent']} !important;
+    color: white !important;
+    padding: 4px 8px !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    position: absolute !important;
+    top: -30px !important;
+    left: 0 !important;
+}}
+
+/* Keep sidebar fully functional */
 [data-testid="stSidebar"] {{
     background-color: {colors['bg']} !important;
     display: block !important;
@@ -172,8 +193,8 @@ st.markdown(f"""
     display: flex !important;
     visibility: visible !important;
     position: fixed !important;
-    top: 1rem !important;
-    left: 1rem !important;
+    top: 0.5rem !important;
+    left: 0.5rem !important;
     z-index: 100 !important;
 }}
 
