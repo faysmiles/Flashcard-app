@@ -1,4 +1,4 @@
-# app.py - WITH UNIFIED BANNER AND EMOJIS
+# app.py - COMPLETELY REMOVED KEYBOARD TEXT
 # Copy this entire code into app.py
 
 import streamlit as st
@@ -118,7 +118,17 @@ Text: {text[:5000]}"""
 
 # ==================== MAIN APP ====================
 
-st.set_page_config(page_title="Flashcard Magic", page_icon="✨", layout="wide")
+st.set_page_config(
+    page_title="Flashcard Magic", 
+    page_icon="✨", 
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': None
+    }
+)
 
 # Session state
 if "flashcards" not in st.session_state:
@@ -139,7 +149,7 @@ if "color_scheme" not in st.session_state:
 # Get current colors
 colors = COLOR_SCHEMES[st.session_state.color_scheme]
 
-# ========== STYLES WITH UNIFIED BANNER ==========
+# ========== STYLES WITH HIDDEN MENU ==========
 st.markdown(f"""
 <style>
 /* Global styles */
@@ -154,6 +164,33 @@ st.markdown(f"""
 /* Remove default Streamlit padding at the top */
 [data-testid="stAppViewContainer"] > .main {{
     padding-top: 0 !important;
+}}
+
+/* COMPLETELY HIDE the top-right menu and any keyboard text */
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+[data-testid="stHeader"],
+header[data-testid="stHeader"],
+.stApp header,
+#MainMenu,
+.stDeployButton,
+[data-testid="baseButton-headerNoPadding"] {{
+    display: none !important;
+}}
+
+/* Hide any floating elements */
+iframe[title="streamlit-header"],
+div[data-testid="stToolbar"],
+div[data-testid="stDecoration"] {{
+    display: none !important;
+    visibility: hidden !important;
+}}
+
+/* Make the main content take full width */
+.main .block-container {{
+    padding-top: 0rem !important;
+    max-width: 100% !important;
 }}
 
 /* Headers */
@@ -171,21 +208,16 @@ p, li, label, .stMarkdown, .stCaption {{
 
 /* ===== UNIFIED BANNER WITH SIDEBAR ===== */
 
-/* Make sidebar and main content share the same top banner */
+/* Sidebar styling */
 [data-testid="stSidebar"] {{
     background-color: {colors['bg']} !important;
     padding-top: 0 !important;
 }}
 
-/* Remove the default Streamlit header/menu */
-header {{
-    background-color: transparent !important;
-}}
-
-/* Top banner emoji row - spans across top */
+/* Top banner emoji row */
 .top-banner {{
     background: linear-gradient(135deg, {colors['accent']}15, {colors['accent']}05);
-    padding: 15px 20px;
+    padding: 12px 20px;
     border-radius: 0;
     margin-bottom: 20px;
     border-bottom: 2px solid {colors['accent']}30;
@@ -196,7 +228,7 @@ header {{
 }}
 
 .top-banner span {{
-    font-size: 28px;
+    font-size: 26px;
     animation: float 3s ease-in-out infinite;
     display: inline-block;
 }}
@@ -206,7 +238,6 @@ header {{
     50% {{ transform: translateY(-5px); }}
 }}
 
-/* Make each emoji float with different delays */
 .top-banner span:nth-child(1) {{ animation-delay: 0s; }}
 .top-banner span:nth-child(2) {{ animation-delay: 0.5s; }}
 .top-banner span:nth-child(3) {{ animation-delay: 1s; }}
@@ -243,11 +274,6 @@ header {{
 [data-testid="stSidebar"] [data-testid="stSlider"] label {{
     color: {colors['sidebar_text']} !important;
     font-weight: 600 !important;
-}}
-
-/* Remove any unwanted text */
-[data-testid="stDecoration"] {{
-    display: none !important;
 }}
 
 /* ===== CLEAN POPPING BUTTONS ===== */
