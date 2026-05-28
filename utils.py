@@ -791,6 +791,37 @@ def _star_color(colour_scheme):
     return _mix(accent, "#000000", 0.42)  # lighter banner -> deeper shade pops
 
 
+def _cute_star_svg_markup():
+    """Option A kawaii star: gold body, sparkly eyes, smile, rosy cheeks."""
+    return (
+        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='-72 -72 144 144'>"
+        "<polygon points='0,-60 15.3,-21 57.1,-18.5 24.7,8 35.3,48.5 0,26 "
+        "-35.3,48.5 -24.7,8 -57.1,-18.5 -15.3,-21' fill='#FFD93B' "
+        "stroke='#F0B400' stroke-width='9' stroke-linejoin='round'/>"
+        "<ellipse cx='-15' cy='-8' rx='6.5' ry='9' fill='#3A2E2E'/>"
+        "<ellipse cx='15' cy='-8' rx='6.5' ry='9' fill='#3A2E2E'/>"
+        "<circle cx='-12.5' cy='-11' r='2.4' fill='#ffffff'/>"
+        "<circle cx='17.5' cy='-11' r='2.4' fill='#ffffff'/>"
+        "<path d='M -12 6 Q 0 20 12 6' fill='none' stroke='#3A2E2E' "
+        "stroke-width='3.5' stroke-linecap='round'/>"
+        "<ellipse cx='-27' cy='6' rx='7' ry='4.5' fill='#FF9EB5'/>"
+        "<ellipse cx='27' cy='6' rx='7' ry='4.5' fill='#FF9EB5'/>"
+        "</svg>"
+    )
+
+
+def _cute_star_img(size="1em", cls=""):
+    """Render the kawaii star as an <img> (data-URI SVG) so it always shows in
+    Streamlit. The element itself is animated by CSS in apply_styles()."""
+    import urllib.parse
+    uri = "data:image/svg+xml;utf8," + urllib.parse.quote(_cute_star_svg_markup())
+    return (
+        f"<img class='fcm-star-svg {cls}' src=\"{uri}\" alt='' aria-hidden='true' "
+        f"style='height:{size}; width:{size}; vertical-align:-0.15em; "
+        f"display:inline-block;' />"
+    )
+
+
 def render_header(app_title, app_subtitle, text_size, colour_scheme):
     """Header banner tinted to match the active scheme's accent colour.
 
@@ -808,18 +839,17 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
     which stays clean to reduce visual clutter for sensory-sensitive users.
     """
     accent, grad_end, title_color, subtitle_color = _header_colors(colour_scheme)
-    star_color = _star_color(colour_scheme)
 
     if colour_scheme == "Low Stimulation":
         left_stars = right_stars = ""
     else:
         left_stars = (
-            f"<span class='fcm-star fcm-star-sm' style='color:{star_color};'>✦</span>"
-            f"<span class='fcm-star' style='color:{star_color};'>★</span> "
+            _cute_star_img("0.7em", "fcm-star-b")
+            + _cute_star_img("1.05em", "fcm-star-a") + " "
         )
         right_stars = (
-            f" <span class='fcm-star' style='color:{star_color};'>★</span>"
-            f"<span class='fcm-star fcm-star-sm' style='color:{star_color};'>✦</span>"
+            " " + _cute_star_img("1.05em", "fcm-star-a")
+            + _cute_star_img("0.7em", "fcm-star-b")
         )
 
     st.markdown(f"""
@@ -1066,6 +1096,24 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         font-size: 0.6em;
         vertical-align: 0.25em;
         opacity: 0.9;
+    }}
+    /* Cute star gentle bob + wiggle. Disabled automatically when the user   */
+    /* has asked their device for reduced motion (sensory-friendly).         */
+    @keyframes fcmStarBob {{
+        0%, 100% {{ transform: translateY(0) rotate(0deg); }}
+        30%      {{ transform: translateY(-3px) rotate(-7deg); }}
+        60%      {{ transform: translateY(-1px) rotate(7deg); }}
+    }}
+    .stApp .fcm-header .fcm-star-svg {{
+        animation: fcmStarBob 2.6s ease-in-out infinite;
+        transform-origin: 50% 60%;
+    }}
+    .stApp .fcm-header .fcm-star-b {{
+        animation-duration: 3.2s;
+        animation-delay: 0.5s;
+    }}
+    @media (prefers-reduced-motion: reduce) {{
+        .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
     }}
     </style>
     """, unsafe_allow_html=True)
