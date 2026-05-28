@@ -215,6 +215,65 @@ def _looks_like_emoji(s):
             return True
     return False
 
+# ==================== TWEMOJI: CRISP, IDENTICAL EMOJIS EVERYWHERE ====================
+# Converts emoji characters in a string into <img> tags pointing at the Twemoji
+# SVG set (served via jsDelivr). This makes every emoji render identically and
+# sharply on all devices, instead of using each device's own system font.
+# The original emoji is kept in the img alt, so it still degrades gracefully.
+
+_TWEMOJI_CDN = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg"
+
+# Matches single emoji, skin-tone modifiers, variation selectors, flags, keycaps
+# and ZWJ sequences (e.g. family emoji) as one unit.
+_EMOJI_RE = re.compile(
+    "(?:"
+    "[#*0-9]\uFE0F?\u20E3"
+    "|[\U0001F1E6-\U0001F1FF]{2}"
+    "|[\U0001F300-\U0001FAFF"
+    "\U00002600-\U000027BF"
+    "\U00002B00-\U00002BFF"
+    "\U00002190-\U000021FF"
+    "\U00002300-\U000023FF"
+    "\u2122\u2139\u3030\u303D\u3297\u3299\u00A9\u00AE]"
+    "[\U0001F3FB-\U0001F3FF]?"
+    "\uFE0F?"
+    "(?:\u200D"
+    "[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF]"
+    "[\U0001F3FB-\U0001F3FF]?\uFE0F?)*"
+    ")"
+)
+
+
+def _twemoji_codepoint(emoji):
+    """Build the Twemoji filename codepoint for an emoji cluster.
+    Mirrors Twemoji's own rule: strip the variation selector (FE0F) unless the
+    cluster contains a zero-width joiner (ZWJ), then join codepoints with '-'.
+    """
+    if "\u200d" not in emoji:
+        emoji = emoji.replace("\ufe0f", "")
+    return "-".join(f"{ord(c):x}" for c in emoji)
+
+
+def twemojify(text, size="1em"):
+    """Replace emoji in text with Twemoji <img> tags. size sets the rendered
+    height/width (defaults to 1em so it scales with the surrounding font size).
+    """
+    if not text:
+        return text
+
+    def _replace(match):
+        emoji = match.group(0)
+        code = _twemoji_codepoint(emoji)
+        src = f"{_TWEMOJI_CDN}/{code}.svg"
+        return (
+            f"<img class='twemoji' src='{src}' alt='{emoji}' draggable='false' "
+            f"style='height:{size}; width:{size}; margin:0 .08em; "
+            f"vertical-align:-0.15em; display:inline-block;' loading='lazy' />"
+        )
+
+    return _EMOJI_RE.sub(_replace, text)
+
+
 def _get_pollinations_key():
     try:
         return st.secrets.get("POLLINATIONS_API_KEY") or os.getenv("POLLINATIONS_API_KEY")
