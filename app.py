@@ -86,7 +86,7 @@ apply_styles(
 
 FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
 DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
-MAX_CHARS = 24000
+MAX_CHARS = 48000
 
 # Derive scheme metadata from the central COLOR_SCHEMES table.
 # ALL_SCHEME_NAMES: flat list in the order they appear in config (preserves grouping).
