@@ -166,11 +166,13 @@ st.markdown(f"""
     border: 1px solid {colors['accent']}40 !important;
 }}
 
-[data-testid="stSelectbox"] div[data-baseweb="select"] div[aria-selected="true"],
-[data-testid="stSelectbox"] div[data-baseweb="select"] div[role="combobox"],
-[data-testid="stSelectbox"] div[data-baseweb="select"] div[role="combobox"] *,
+/* Force ALL text inside the selectbox trigger to be readable, no exceptions */
+[data-testid="stSelectbox"] div[data-baseweb="select"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] div,
 [data-testid="stSelectbox"] div[data-baseweb="select"] span,
-[data-testid="stSelectbox"] div[data-baseweb="select"] input {{
+[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+[data-testid="stSelectbox"] div[data-baseweb="select"] [class*="ValueContainer"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] [class*="SingleValue"] {{
     color: {colors['dropdown_text']} !important;
     -webkit-text-fill-color: {colors['dropdown_text']} !important;
     opacity: 1 !important;
@@ -204,40 +206,46 @@ div[role="listbox"] {{
     background-color: {colors['dropdown_bg']} !important;
 }}
 
+/* EVERY option in the open dropdown — light bg, dark text, no exceptions */
 li[role="option"],
-div[role="option"] {{
+li[role="option"] div,
+li[role="option"] span,
+div[role="option"],
+div[role="option"] div,
+div[role="option"] span {{
     background-color: {colors['dropdown_bg']} !important;
+    background: {colors['dropdown_bg']} !important;
     color: {colors['dropdown_text']} !important;
+    -webkit-text-fill-color: {colors['dropdown_text']} !important;
+    opacity: 1 !important;
     font-weight: 500 !important;
     padding: 10px 16px !important;
     transition: background-color 0.15s ease, color 0.15s ease !important;
 }}
 
-li[role="option"] *,
-div[role="option"] * {{
-    color: {colors['dropdown_text']} !important;
-}}
-
+/* Hover state — accent background, white text */
 li[role="option"]:hover,
+li[role="option"]:hover div,
+li[role="option"]:hover span,
 div[role="option"]:hover,
-li[role="option"][aria-selected="true"]:hover,
-div[role="option"][aria-selected="true"]:hover {{
+div[role="option"]:hover div,
+div[role="option"]:hover span {{
     background-color: {colors['dropdown_hover_bg']} !important;
+    background: {colors['dropdown_hover_bg']} !important;
     color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
     cursor: pointer !important;
 }}
 
-li[role="option"]:hover *,
-div[role="option"]:hover * {{
-    color: #FFFFFF !important;
-}}
-
+/* Currently-selected option — keep it readable (same bg/text as others), use bold + border to indicate */
 li[role="option"][aria-selected="true"],
 div[role="option"][aria-selected="true"],
 li[role="option"][data-highlighted="true"],
 div[role="option"][data-highlighted="true"] {{
-    background-color: {colors['accent']}25 !important;
+    background-color: {colors['dropdown_bg']} !important;
+    background: {colors['dropdown_bg']} !important;
     color: {colors['dropdown_text']} !important;
+    -webkit-text-fill-color: {colors['dropdown_text']} !important;
     font-weight: 700 !important;
     border-left: 3px solid {colors['accent']} !important;
 }}
@@ -247,6 +255,8 @@ div[role="option"][aria-selected="true"] *,
 li[role="option"][data-highlighted="true"] *,
 div[role="option"][data-highlighted="true"] * {{
     color: {colors['dropdown_text']} !important;
+    -webkit-text-fill-color: {colors['dropdown_text']} !important;
+    background-color: transparent !important;
 }}
 
 /* ===== TOP BANNER ===== */
