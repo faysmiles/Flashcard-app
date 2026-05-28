@@ -383,108 +383,51 @@ def pick_fact_emoji(fact_text, fallback='✨'):
     return fallback
 
 
-# ==================== BETTER IMAGE SEARCH WITH WIKIPEDIA BACKUP ====================
+# ==================== AI IMAGE GENERATION VIA POLLINATIONS ====================
+
+def _get_pollinations_key():
+    try:
+        return st.secrets.get("POLLINATIONS_API_KEY") or os.getenv("POLLINATIONS_API_KEY")
+    except Exception:
+        return os.getenv("POLLINATIONS_API_KEY")
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_wikipedia_image(query):
-    """Search Wikipedia for images - MULTIPLE FALLBACKS"""
+    """Generate an image via Pollinations.ai for the given topic query.
+    Kept the original function name so app.py needs no changes.
+    Falls back to None if the key is missing or the request fails.
+    """
     if not query:
         return None
-    
+
+    api_key = _get_pollinations_key()
+    if not api_key:
+        return None
+
     clean_query = re.sub(r'[^\w\s-]', '', query).strip()
     if not clean_query:
         return None
-    
-    # List of API endpoints to try (multiple fallbacks)
-    search_terms = [
-        clean_query,
-        clean_query.split()[0] if len(clean_query.split()) > 1 else clean_query,
-        clean_query + " species" if "dog" in clean_query.lower() or "cat" in clean_query.lower() else clean_query,
-    ]
-    
-    for term in search_terms[:3]:  # Try up to 3 variations
-        try:
-            # Try direct page first
-            params = {
-                "action": "query",
-                "format": "json",
-                "titles": term,
-                "prop": "pageimages",
-                "piprop": "thumbnail",
-                "pithumbsize": 500,
-            }
-            
-            response = requests.get(
-                "https://en.wikipedia.org/w/api.php",
-                params=params,
-                timeout=8,
-                headers={"User-Agent": "FlashcardMagic/1.0 (educational; contact@example.com)"}
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                pages = data.get("query", {}).get("pages", {})
-                for page_id, page_data in pages.items():
-                    if "thumbnail" in page_data and int(page_id) > 0:
-                        img_url = page_data["thumbnail"]["source"]
-                        if img_url and not any(x in page_data.get("title", "").lower() for x in ['disambiguation', 'list of']):
-                            return img_url
-            
-            # Try search if direct failed
-            params = {
-                "action": "query",
-                "format": "json",
-                "generator": "search",
-                "gsrsearch": term,
-                "gsrlimit": 10,
-                "prop": "pageimages",
-                "piprop": "thumbnail",
-                "pithumbsize": 500,
-            }
-            
-            response = requests.get(
-                "https://en.wikipedia.org/w/api.php",
-                params=params,
-                timeout=8,
-                headers={"User-Agent": "FlashcardMagic/1.0"}
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                pages = data.get("query", {}).get("pages", {})
-                
-                # Sort by relevance (page ID positive)
-                valid_pages = []
-                for page_id, page_data in pages.items():
-                    if "thumbnail" in page_data and int(page_id) > 0:
-                        title = page_data.get("title", "").lower()
-                        # Skip disambiguation pages
-                        if not any(bad in title for bad in ['disambiguation', 'list of', '(disambiguation)']):
-                            valid_pages.append(page_data)
-                
-                # Return the best match (first one)
-                for page_data in valid_pages:
-                    if "thumbnail" in page_data:
-                        return page_data["thumbnail"]["source"]
-        
-        except Exception as e:
-            print(f"Wikipedia search error for '{term}': {str(e)}")
-            continue
-    
-    # Special fallback for common animals - use direct known image URLs
-    animal_fallbacks = {
-        'dog': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Golden_Retriever_Dukedog_Clipping.jpg/500px-Golden_Retriever_Dukedog_Clipping.jpg',
-        'cat': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/500px-Cat03.jpg',
-        'lion': 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Lion_waiting_in_Namibia.jpg/500px-Lion_waiting_in_Namibia.jpg',
-        'elephant': 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/African_Bush_Elephant.jpg/500px-African_Bush_Elephant.jpg',
-        'giraffe': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Giraffe_Mikumi_National_Park.jpg/500px-Giraffe_Mikumi_National_Park.jpg',
-        'butterfly': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Monarch_Butterfly_Danaus_plexippus.jpg/500px-Monarch_Butterfly_Danaus_plexippus.jpg',
-    }
-    
-    for key, url in animal_fallbacks.items():
-        if key in clean_query.lower():
-            return url
-    
+
+    prompt = (
+        f"clean educational illustration of {clean_query}, "
+        "simple background, suitable for children and students, "
+        "bright clear colours, no text"
+    )
+
+    try:
+        import urllib.parse
+        encoded = urllib.parse.quote(prompt)
+        url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
+        response = requests.get(url, timeout=30)
+        if response.ok and response.headers.get("content-type", "").startswith("image"):
+            # Cache the image via a data URL so the caller can use it like any URL
+            import base64
+            b64 = base64.b64encode(response.content).decode()
+            mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
+            return f"data:{mime};base64,{b64}"
+    except Exception as e:
+        print(f"Pollinations error for '{clean_query}': {e}")
+
     return None
 
 
@@ -669,6 +612,10 @@ def fetch_image_bytes(url):
     if not url:
         return None
     try:
+        if url.startswith("data:"):
+            import base64
+            header, data = url.split(",", 1)
+            return base64.b64decode(data)
         r = requests.get(url, headers={"User-Agent": "FlashcardMagic/1.0"}, timeout=10)
         if r.ok:
             return r.content
