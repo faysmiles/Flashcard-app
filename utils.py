@@ -496,7 +496,7 @@ Example format (note how emoji_hint differs per fact):
 }}
 
 TEXT:
-{raw_text[:15000]}"""
+{raw_text[:30000]}"""
 
     try:
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
@@ -507,7 +507,7 @@ TEXT:
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=4000
+            max_tokens=8000
         )
         content = response.choices[0].message.content
         content = re.sub(r'```json\s*', '', content)
