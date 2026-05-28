@@ -51,12 +51,12 @@ from utils import (
     generate_flashcards_from_llm, get_card_colors,
     search_wikipedia_image, render_header, render_feedback_box,
     render_card_to_png, fetch_image_bytes, build_cards_zip,
-    render_mobile_settings_hint,
+    render_mobile_settings_hint, twemojify,
 )
 
 st.set_page_config(
     page_title=APP_TITLE,
-    page_icon="🧠",
+    page_icon="💡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -169,7 +169,7 @@ with st.sidebar:
         st.session_state.colour_scheme = new_colour
         st.rerun()
     
-    show_images = st.checkbox("Show Images", value=True, key="show_images_check", help="Show relevant images from Wikipedia on flipped cards")
+    show_images = st.checkbox("Show Images", value=True, key="show_images_check", help="Show a picture on each card")
     
     st.markdown("---")
     st.caption("💡 These settings adjust the whole app. Change them any time - your cards won't disappear.")
@@ -212,14 +212,15 @@ with btn:
             st.session_state.card_flipped = {}
             st.session_state.current_card_idx = 0
             
-            with st.spinner(f"🤖 AI is creating {reading_level.split('(')[0].strip()} flashcards using DeepSeek..."):
+            with st.spinner("✨ Creating your flashcards..."):
                 new_cards = generate_flashcards_from_llm(user_text, reading_level=level_code)
                 if new_cards:
                     st.session_state.flashcards = new_cards
                     st.session_state.flashcard_generated = True
-            
-            if new_cards and show_images:
-                with st.spinner("🖼️ Finding pictures for each card from Wikipedia..."):
+
+                # Generate images as part of the same step - no separate
+                # status messages, so the user just sees finished cards.
+                if new_cards and show_images:
                     from concurrent.futures import ThreadPoolExecutor
                     search_terms = [
                         (i, c.get('image_search', c['title']))
@@ -232,10 +233,6 @@ with btn:
                         ))
                     for idx, url in results:
                         st.session_state.card_images[idx] = url
-                        if url:
-                            st.success(f"✅ Found image for card {idx + 1}")
-                        else:
-                            st.info(f"ℹ️ No image found for card {idx + 1}")
 
 if not st.session_state.flashcard_generated:
     st.markdown(
@@ -332,7 +329,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     img_url = st.session_state.card_images.get(idx) if has_image else None
 
     if show_images and idx not in st.session_state.card_images:
-        with st.spinner(f"🖼️ Finding picture for card {idx + 1}..."):
+        with st.spinner("✨ Preparing..."):
             search_term = card.get('image_search', card['title'])
             st.session_state.card_images[idx] = search_wikipedia_image(search_term)
             has_image = st.session_state.card_images[idx] is not None
@@ -350,7 +347,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
             f"justify-content:center; font-size:24px; line-height:1; "
             f"border:3px solid {card_bg_color}; "
             f"box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2;' "
-            f"aria-hidden='true'>{emoji}</div>"
+            f"aria-hidden='true'>{twemojify(emoji)}</div>"
         )
         image_frame_style = (
             f"box-shadow:0 0 0 4px {accent_color}, "
@@ -373,7 +370,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
                 f"<div style='display:flex; align-items:flex-start; gap:14px; "
                 f"margin:12px 0; padding-left:4px;'>"
                 f"<span style='flex:0 0 auto; width:2em; font-size:1.2em; "
-                f"line-height:var(--line-height); text-align:center;' aria-hidden='true'>{fact_emoji}</span>"
+                f"line-height:var(--line-height); text-align:center;' aria-hidden='true'>{twemojify(fact_emoji)}</span>"
                 f"<span style='flex:1 1 auto; color:{text_color}; "
                 f'font-family:"{st.session_state.font_style}", sans-serif; '
                 f"font-size:{st.session_state.text_size}px; line-height:var(--line-height); "
@@ -428,7 +425,7 @@ f"""<div style='{outer_style}'>
         else:
             anchor_block = (
                 f"<div style='font-size:100px; line-height:1; margin-bottom:20px;' "
-                f"role='img' aria-label='{img_alt}'>{emoji}</div>"
+                f"role='img' aria-label='{img_alt}'>{twemojify(emoji)}</div>"
             )
 
         st.markdown(
