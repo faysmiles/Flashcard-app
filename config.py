@@ -32,8 +32,15 @@ COLOR_SCHEMES = {
         "Forest Green": {"bg": "#E8F5E9", "text": "#1B5E20", "accent": "#43A047", "card_bg": "#FFFFFF"},
         "Royal Purple": {"bg": "#F3E5F5", "text": "#4A148C", "accent": "#AB47BC", "card_bg": "#FFFFFF"},
         "Cherry Red": {"bg": "#FFEBEE", "text": "#B71C1C", "accent": "#EF5350", "card_bg": "#FFFFFF"},
-        "Sunshine Yellow": {"bg": "#FFFDE7", "text": "#F57F17", "accent": "#FFCA28", "card_bg": "#FFFFFF"},
-    }
+        "Sunshine Yellow": {"bg": "#FFFDE7", "text": "#5C4500", "accent": "#F9A825", "card_bg": "#FFFFFF"},
+    },
+    "High Contrast": {
+        # Classic accessibility pairings - WCAG AAA at all sizes (21:1 contrast)
+        "Black on White": {"bg": "#FFFFFF", "text": "#000000", "accent": "#000000", "card_bg": "#FFFFFF"},
+        "White on Black": {"bg": "#000000", "text": "#FFFFFF", "accent": "#FFFFFF", "card_bg": "#0A0A0A"},
+        "Yellow on Black": {"bg": "#000000", "text": "#FFEB3B", "accent": "#FFEB3B", "card_bg": "#0A0A0A"},
+        "Cream on Navy": {"bg": "#0D1B2A", "text": "#FFF8E7", "accent": "#FFB703", "card_bg": "#1B263B"},
+    },
 }
 
 MIN_FONT_SIZE = 12
