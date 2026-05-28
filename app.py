@@ -167,9 +167,12 @@ st.markdown(f"""
 }}
 
 [data-testid="stSelectbox"] div[data-baseweb="select"] div[aria-selected="true"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] div[role="combobox"],
+[data-testid="stSelectbox"] div[data-baseweb="select"] div[role="combobox"] *,
 [data-testid="stSelectbox"] div[data-baseweb="select"] span,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input {{
     color: {colors['dropdown_text']} !important;
+    opacity: 1 !important;
     font-weight: 600 !important;
     font-size: 15px !important;
 }}
@@ -229,11 +232,20 @@ div[role="option"]:hover * {{
 }}
 
 li[role="option"][aria-selected="true"],
-div[role="option"][aria-selected="true"] {{
+div[role="option"][aria-selected="true"],
+li[role="option"][data-highlighted="true"],
+div[role="option"][data-highlighted="true"] {{
     background-color: {colors['accent']}25 !important;
     color: {colors['dropdown_text']} !important;
     font-weight: 700 !important;
     border-left: 3px solid {colors['accent']} !important;
+}}
+
+li[role="option"][aria-selected="true"] *,
+div[role="option"][aria-selected="true"] *,
+li[role="option"][data-highlighted="true"] *,
+div[role="option"][data-highlighted="true"] * {{
+    color: {colors['dropdown_text']} !important;
 }}
 
 /* ===== TOP BANNER ===== */
