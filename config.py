@@ -1,7 +1,7 @@
 # config.py - Complete app configuration
 
-APP_TITLE = "✨ Flashcard Magic ✨"
-APP_SUBTITLE = "Turn any text into fun, colorful flashcards"
+APP_TITLE = "Iconic Flashcard app"
+APP_SUBTITLE = "Turn your pages of notes into visual flashcards for easier, faster learning"
 
 # Reading levels
 READING_LEVELS = {
