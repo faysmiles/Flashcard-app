@@ -90,7 +90,8 @@ def generate_flashcards(text, reading_level):
             return None
 
     prompt = f"""Create 3 flashcards from this text. Reading level: {reading_level}
-Return ONLY JSON: {{"flashcards": [{{"title": "short title", "facts": ["fact1", "fact2"]}}]}}
+Return ONLY a JSON object in this exact format, no markdown fences, no preamble:
+{{"flashcards": [{{"title": "short title", "facts": ["fact1", "fact2"]}}]}}
 
 Text: {text[:5000]}"""
 
@@ -100,16 +101,38 @@ Text: {text[:5000]}"""
             model="deepseek-chat",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
-            max_tokens=2000
+            max_tokens=2000,
+            response_format={"type": "json_object"},
         )
-        result = json.loads(response.choices[0].message.content)
+
+        raw = (response.choices[0].message.content or "").strip()
+
+        # Strip markdown fences defensively
+        if raw.startswith("```"):
+            raw = raw.strip("`")
+            if raw.lower().startswith("json"):
+                raw = raw[4:].lstrip()
+            raw = raw.strip("`").strip()
+
+        try:
+            result = json.loads(raw)
+        except json.JSONDecodeError:
+            st.error(f"Couldn't parse the model's response as JSON. First 300 chars returned:\n\n{raw[:300]!r}")
+            return None
+
         cards = result.get("flashcards", [])
+        if not cards:
+            st.warning("No flashcards in the response. Try a different chunk of text.")
+            return None
+
         flashcards = []
         for card in cards:
+            title = card.get("title", "Untitled")
+            facts = card.get("facts", [])
             flashcards.append({
-                "title": card["title"],
-                "facts": [{"emoji": get_emoji(fact), "text": fact} for fact in card.get("facts", [])],
-                "emoji": get_emoji(card["title"])
+                "title": title,
+                "facts": [{"emoji": get_emoji(fact), "text": fact} for fact in facts],
+                "emoji": get_emoji(title)
             })
         return flashcards
     except Exception as e:
