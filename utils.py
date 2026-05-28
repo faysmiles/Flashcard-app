@@ -746,6 +746,9 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
 
     st.markdown(f"""
     <style>
+    /* ---- Hide anchor link icons Streamlit adds to headings ---- */
+    h1 a, h2 a, h3 a {{ display: none !important; }}
+
     /* ---- Override Streamlit's theme variables at the root ---- */
     :root, .stApp {{
         --background-color: {bg} !important;
