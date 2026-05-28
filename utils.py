@@ -56,299 +56,106 @@ _FACT_EMOJI_PATTERNS = [
     (["body language"], "🗣️"),
     (["sign language"], "🤟"),
     (["sense of smell"], "👃"),
-    (["world war", "civil war"], "⚔️"),
+    (["world war"], "⚔️"),
     (["solar system"], "🪐"),
     (["climate change", "global warming"], "🌡️"),
     (["food chain"], "🔗"),
     (["life cycle"], "🔄"),
-    (["blood pressure"], "🩺"),
-    (["blood vessel", "blood vessels"], "🫀"),
-    (["nerve cell", "nerve cells", "nerve ending"], "🧠"),
-    (["bone marrow"], "🦴"),
-    (["immune system"], "🛡️"),
-    (["digestive system", "digestive tract"], "🫃"),
-    (["respiratory system", "respiratory tract"], "🫁"),
-    (["nervous system"], "🧠"),
-    (["carbon dioxide", "co2"], "💨"),
-    (["natural selection"], "🧬"),
-    (["tectonic plate", "tectonic plates"], "🌍"),
-    (["periodic table"], "⚗️"),
-    (["black hole"], "🕳️"),
-    (["big bang"], "💥"),
-    (["north pole", "south pole"], "🧭"),
-    (["speed of light"], "⚡"),
-    (["gravitational pull", "gravitational force"], "🌍"),
-    (["water cycle"], "💧"),
-    (["rock cycle"], "🪨"),
-    (["carbon cycle"], "🔄"),
-    (["nitrogen cycle"], "🌿"),
-    (["photosynthesis"], "🌱"),
-    (["cell division", "cell membrane"], "🔬"),
-    (["endangered species", "endangered animal"], "⚠️"),
-    (["apex predator"], "🏹"),
 
-    # --- Senses ---
+    # --- Communication & social ---
     (["communicate", "communication", "language", "speak", "speech", "talk", "talking", "conversation"], "💬"),
-    (["bark", "barking", "howl", "growl", "meow", "roar", "hiss", "chirp", "screech"], "🔊"),
-    (["sound", "noise", "vibration", "frequency", "echo", "ultrasound"], "🔊"),
-    (["listen", "hearing", "ear", "ears"], "👂"),
-    (["smell", "scent", "odor", "odour", "nose", "sniff", "sniffing"], "👃"),
-    (["see", "sight", "vision", "eye", "eyes", "watch", "observe", "look"], "👀"),
-    (["taste", "tongue", "flavour", "flavor", "bitter", "sweet", "sour", "salty"], "👅"),
-    (["touch", "feel", "feeling", "texture", "sensitive", "sensitivity"], "✋"),
+    (["bark", "barking", "howl", "growl", "meow", "roar", "sound", "noise"], "🔊"),
+    (["listen", "hearing", "ear"], "👂"),
+    (["smell", "scent", "odor", "odour", "nose"], "👃"),
+    (["see", "sight", "vision", "eye", "eyes", "watch"], "👀"),
+    (["taste", "tongue", "flavour", "flavor"], "👅"),
+    (["touch", "feel", "feeling"], "✋"),
 
-    # --- Relationships & social ---
-    (["friend", "friendship", "companion", "buddy", "bond", "bonding"], "🤝"),
-    (["family", "parent", "mother", "father", "offspring", "young"], "👨\u200d👩\u200d👧"),
-    (["child", "children", "baby", "infant", "juvenile", "cub", "pup", "calf", "foal", "chick", "kit", "lamb", "fawn", "kitten"], "🍼"),
-    (["love", "affection", "romance", "mate", "mating", "partner"], "❤️"),
-    (["enemy", "fight", "fighting", "attack", "war", "battle", "combat", "conflict", "clash"], "⚔️"),
-    (["pack", "group", "herd", "flock", "swarm", "colony", "pod", "pride", "troop", "school"], "👥"),
-    (["lead", "leader", "dominant", "alpha", "hierarchy"], "👑"),
-    (["cooperate", "cooperation", "teamwork", "together", "help", "helping"], "🤜"),
-    (["compete", "competition", "rival", "rivalry"], "🏆"),
+    # --- Relationships ---
+    (["friend", "friendship", "companion", "buddy"], "🤝"),
+    (["family", "parent", "mother", "father", "child", "children"], "👨\u200d👩\u200d👧"),
+    (["love", "affection", "romance"], "❤️"),
+    (["enemy", "fight", "fighting", "attack", "war", "battle"], "⚔️"),
+    (["pack", "group", "herd", "flock", "swarm"], "👥"),
 
-    # --- Animal behaviour ---
-    (["migrate", "migration", "migrating", "hibernate", "hibernation"], "🧭"),
-    (["camouflage", "disguise", "blend", "blending", "hide", "hiding"], "🎭"),
-    (["venom", "poison", "toxic", "sting", "stinging", "venomous"], "☠️"),
-    (["mark", "marking", "territory", "territorial", "claim"], "🚩"),
-    (["hunt", "hunting", "predator", "prey", "stalk", "ambush", "chase"], "🏹"),
-    (["scavenge", "scavenger", "carrion", "decompose", "decomposer"], "🦴"),
-    (["pollinate", "pollination", "pollinator", "pollen", "nectar"], "🌸"),
-    (["shed", "shedding", "moult", "moulting", "molt"], "🍂"),
+    # --- Behaviour / actions ---
+    (["mark", "marking", "territory", "claim"], "🚩"),
+    (["hunt", "hunting", "predator", "prey"], "🏹"),
+    (["sleep", "sleeping", "rest", "nap", "dream"], "😴"),
+    (["eat", "eating", "food", "meal", "diet", "feed"], "🍽️"),
+    (["drink", "drinking", "thirst"], "🥤"),
+    (["urinate", "urinating", "urine", "pee", "waste"], "💧"),
+    (["run", "running", "race", "sprint"], "🏃"),
+    (["jump", "leap", "hop"], "🦘"),
+    (["swim", "swimming", "dive"], "🏊"),
+    (["fly", "flying", "flight"], "🕊️"),
+    (["climb", "climbing"], "🧗"),
+    (["play", "playing", "fun", "game"], "🎮"),
+    (["learn", "learning", "study", "school", "education"], "🎓"),
+    (["work", "working", "job", "labour", "labor"], "💼"),
+    (["build", "building", "construct"], "🏗️"),
+    (["protect", "protection", "guard", "defend", "defense", "defence"], "🛡️"),
 
-    # --- General actions ---
-    (["sleep", "sleeping", "rest", "resting", "nap", "dream", "dormant"], "😴"),
-    (["eat", "eating", "food", "meal", "diet", "feed", "feeding", "consume", "digest"], "🍽️"),
-    (["drink", "drinking", "thirst", "swallow"], "🥤"),
-    (["urinate", "urinating", "urine", "excrete", "excretion", "waste", "defecate"], "💧"),
-    (["breathe", "breathing", "breath", "inhale", "exhale", "lung", "lungs"], "🫁"),
-    (["run", "running", "race", "sprint", "gallop"], "🏃"),
-    (["jump", "leap", "hop", "bounce", "spring", "pounce"], "🦘"),
-    (["swim", "swimming", "dive", "diving", "float", "aquatic"], "🏊"),
-    (["fly", "flying", "flight", "soar", "glide", "hover"], "🕊️"),
-    (["climb", "climbing", "scale", "scaling"], "🧗"),
-    (["dig", "digging", "burrow", "burrowing", "tunnel"], "⛏️"),
-    (["play", "playing", "fun", "game", "frolic", "playful"], "🎮"),
-    (["learn", "learning", "study", "school", "education", "intelligence", "smart"], "🎓"),
-    (["work", "working", "job", "labour", "labor", "task"], "💼"),
-    (["build", "building", "construct", "construction", "create", "make"], "🏗️"),
-    (["protect", "protection", "guard", "defend", "defense", "defence", "shield"], "🛡️"),
-    (["grow", "growing", "growth", "develop", "development", "mature", "maturity"], "📈"),
-    (["reproduce", "reproduction", "breed", "breeding", "spawn", "lay eggs", "give birth"], "🥚"),
-    (["produce", "secrete", "secretion", "release"], "🏭"),
-
-    # --- Body: animal-specific ---
+    # --- Body parts ---
     (["tail", "wag", "wagging"], "〰️"),
-    (["paw", "paws", "claw", "claws", "talon", "talons", "hoof", "hooves"], "🐾"),
+    (["paw", "paws", "claw", "claws"], "🐾"),
     (["fur", "coat", "fleece", "wool", "pelage"], "🐑"),
     (["hair", "mane", "bristle"], "💇"),
-    (["teeth", "tooth", "fang", "fangs", "bite", "tusk", "tusks", "beak", "bill"], "🦷"),
-    (["wing", "wings", "feather", "feathers", "plumage"], "🪶"),
-    (["scale", "scales", "scaly", "shell", "carapace", "exoskeleton"], "🐢"),
-    (["horn", "horns", "antler", "antlers", "spine", "spines", "quill", "quills"], "🦌"),
-    (["gland", "glands", "organ", "organs"], "🫀"),
-    (["muscle", "muscles", "muscular", "strength", "strong"], "💪"),
-    (["skeleton", "skeletal", "vertebrate", "invertebrate"], "🦴"),
+    (["teeth", "tooth", "fang", "fangs", "bite"], "🦷"),
+    (["wing", "wings", "feather", "feathers"], "🪶"),
 
-    # --- Human body ---
-    (["heart", "cardiac", "cardiovascular", "pulse"], "🫀"),
-    (["brain", "neuron", "neurons", "neural", "cortex", "cerebral", "cognitive"], "🧠"),
-    (["blood", "vein", "veins", "artery", "arteries", "plasma"], "🩸"),
-    (["bone", "bones", "skull", "spine", "rib", "femur"], "🦴"),
-    (["skin", "dermis", "epidermis", "sweat", "pore", "pores"], "🧑"),
-    (["kidney", "kidneys", "liver", "stomach", "intestine", "gut", "bowel"], "🫃"),
-    (["eye", "eyes", "retina", "cornea", "pupil", "iris"], "👁️"),
-    (["ear", "ears", "eardrum", "cochlea"], "👂"),
-    (["throat", "trachea", "windpipe", "larynx", "vocal"], "🗣️"),
-    (["cell", "cells", "nucleus", "mitochondria", "chromosome", "dna", "gene", "genes", "genetic"], "🧬"),
-    (["hormone", "hormones", "adrenaline", "insulin"], "⚗️"),
-    (["antibody", "antibodies", "immune", "immunity", "vaccination", "vaccine"], "💉"),
+    # --- Numbers, size, time ---
+    (["million", "billion", "thousand", "many", "lots"], "🔢"),
+    (["big", "large", "huge", "giant", "enormous"], "📏"),
+    (["small", "tiny", "little", "miniature"], "🔍"),
+    (["fast", "quick", "speed", "rapid"], "⚡"),
+    (["slow", "slowly"], "🐢"),
+    (["old", "ancient", "history", "historical", "past"], "📜"),
+    (["new", "modern", "recent", "today"], "✨"),
+    (["year", "years", "century", "decade", "day", "days", "month", "months", "week", "weeks", "hour", "hours", "minute", "minutes", "second", "seconds"], "📅"),
 
-    # --- Plants ---
-    (["root", "roots", "stem", "stems", "leaf", "leaves", "branch", "branches"], "🌿"),
-    (["seed", "seeds", "germinate", "germination", "sprout", "sprouting"], "🌱"),
-    (["flower", "flowers", "bloom", "blossom", "petal", "petals"], "🌸"),
-    (["fruit", "fruits", "berry", "berries"], "🍎"),
-    (["bark", "trunk", "wood", "timber", "ring", "rings"], "🪵"),
-    (["algae", "moss", "lichen", "fern", "fungi", "mushroom", "spore"], "🍄"),
-    (["chlorophyll", "chloroplast"], "☀️"),
-
-    # --- Geology & earth science ---
-    (["rock", "rocks", "mineral", "minerals", "crystal", "crystals", "gem", "gemstone"], "🪨"),
-    (["volcano", "volcanic", "lava", "magma", "eruption", "erupt"], "🌋"),
-    (["earthquake", "seismic", "tremor", "fault line"], "📳"),
-    (["fossil", "fossils", "fossilised", "fossilized", "prehistoric"], "🦕"),
-    (["glacier", "glacial", "iceberg", "ice sheet", "ice cap"], "🧊"),
-    (["erosion", "erode", "sediment", "sedimentary", "weathering"], "🏜️"),
-    (["soil", "dirt", "compost", "humus", "clay"], "🌱"),
-    (["cave", "cavern", "stalagmite", "stalactite"], "🕳️"),
-    (["atmosphere", "ozone", "stratosphere", "troposphere"], "🌍"),
-
-    # --- Space ---
-    (["star", "stars", "stellar", "supernova", "nebula", "galaxy", "galaxies"], "⭐"),
-    (["moon", "lunar", "crater", "craters"], "🌙"),
-    (["planet", "planets", "orbit", "orbits", "orbiting", "revolve", "rotation"], "🪐"),
-    (["sun", "solar", "sunlight", "photon"], "☀️"),
-    (["comet", "asteroid", "meteor", "meteorite"], "☄️"),
-    (["gravity", "gravitational", "mass", "weight"], "🌍"),
-    (["telescope", "observatory", "astronomy", "astronomer"], "🔭"),
-    (["rocket", "spacecraft", "satellite", "astronaut", "nasa"], "🚀"),
-    (["universe", "cosmos", "cosmic", "space", "infinite"], "🌌"),
-
-    # --- Chemistry & physics ---
-    (["atom", "atoms", "atomic", "electron", "proton", "neutron"], "⚛️"),
-    (["molecule", "molecules", "molecular", "compound", "compounds"], "🔬"),
-    (["element", "elements", "periodic", "carbon", "hydrogen", "nitrogen"], "⚗️"),
-    (["acid", "acidic", "alkaline", "ph", "base"], "🧪"),
-    (["reaction", "chemical reaction", "catalyst", "combustion", "oxidation"], "🧪"),
-    (["temperature", "heat", "thermal", "boiling", "melting", "evaporation"], "🌡️"),
-    (["pressure", "atmospheric pressure", "force", "newton"], "📐"),
-    (["magnet", "magnetic", "magnetism", "electromagnetic"], "🧲"),
-    (["wave", "waves", "wavelength", "amplitude"], "〰️"),
-    (["radiation", "radioactive", "nuclear", "fission", "fusion"], "☢️"),
-
-    # --- History & society ---
-    (["empire", "emperor", "empress", "kingdom", "dynasty", "reign"], "👑"),
-    (["revolution", "revolt", "rebellion", "uprising", "overthrow"], "✊"),
-    (["trade", "trading", "merchant", "commerce", "economy", "silk road"], "💰"),
-    (["slave", "slavery", "enslaved", "abolition", "abolitionist"], "⛓️"),
-    (["vote", "voting", "election", "democracy", "parliament", "government"], "🗳️"),
-    (["law", "laws", "legal", "court", "justice", "judge", "punishment"], "⚖️"),
-    (["religion", "religious", "god", "gods", "worship", "temple", "church", "mosque", "prayer"], "🙏"),
-    (["coloni", "imperialism", "conquer", "conquest"], "🌍"),
-    (["invention", "inventor", "invent", "patent", "innovate"], "💡"),
-    (["publish", "published", "printing", "press", "library"], "📚"),
-    (["art", "artist", "painting", "sculpture", "museum"], "🎨"),
-    (["music", "musician", "instrument", "compose", "composer", "symphony"], "🎵"),
-    (["explore", "explorer", "expedition", "voyage", "navigation"], "🧭"),
-    (["treaty", "agreement", "alliance", "negotiate", "diplomacy"], "🤝"),
-    (["plague", "epidemic", "pandemic", "famine", "drought", "flood"], "⚠️"),
-
-    # --- Technology ---
-    (["computer", "computing", "software", "hardware", "code", "program", "algorithm"], "💻"),
-    (["internet", "online", "network", "wifi", "digital", "cyber"], "🌐"),
-    (["robot", "robotics", "artificial intelligence", "machine learning"], "🤖"),
-    (["phone", "smartphone", "telephone", "mobile"], "📱"),
-    (["electricity", "circuit", "battery", "current", "voltage", "wire"], "⚡"),
-    (["engine", "motor", "machine", "mechanical", "gear"], "⚙️"),
-    (["vehicle", "car", "train", "plane", "ship", "boat", "transport"], "🚗"),
-    (["camera", "photograph", "image", "lens", "film"], "📷"),
-    (["satellite", "gps", "signal", "radar"], "📡"),
-
-    # --- Numbers, size, scale ---
-    (["million", "billion", "trillion", "thousand", "many", "numerous", "vast"], "🔢"),
-    (["percent", "percentage", "ratio", "proportion"], "📊"),
-    (["big", "large", "huge", "giant", "enormous", "massive", "colossal"], "📏"),
-    (["small", "tiny", "little", "miniature", "microscopic", "minuscule"], "🔍"),
-    (["fast", "quick", "speed", "rapid", "swift", "velocity"], "⚡"),
-    (["slow", "slowly", "gradual", "gradually"], "🐢"),
-    (["heavy", "weight", "weigh"], "⚖️"),
-
-    # --- Time ---
-    (["old", "ancient", "historic", "historical", "past", "ago", "prehistoric"], "📜"),
-    (["new", "modern", "recent", "today", "contemporary", "current"], "✨"),
-    (["year", "years", "decade", "decades", "century", "centuries", "millennium"], "📅"),
-    (["day", "days", "week", "weeks", "month", "months", "hour", "hours", "minute", "minutes", "second", "seconds"], "⏰"),
-    (["dawn", "sunrise", "morning", "noon", "afternoon", "dusk", "sunset", "evening", "night", "midnight"], "🌅"),
-    (["season", "seasons", "spring", "summer", "autumn", "fall", "winter"], "🍂"),
-
-    # --- Direction & motion ---
-    (["north", "south", "east", "west", "compass"], "🧭"),
-    (["walk", "walked", "walking", "step", "stride", "pace"], "🚶"),
-    (["travel", "travels", "journey", "voyage", "trip"], "✈️"),
+    # --- Space / motion ---
+    (["orbit", "orbits", "orbiting", "revolve", "rotate", "rotation"], "🔄"),
+    (["walk", "walked", "walking", "step"], "🚶"),
+    (["travel", "travels", "journey", "voyage"], "🧭"),
     (["reflect", "reflects", "reflection", "mirror"], "🪞"),
-    (["discover", "discovered", "discovery", "found", "finding"], "🔭"),
-    (["map", "mapping", "chart", "charting", "survey"], "🗺️"),
+    (["discover", "discovered", "discovery", "explore"], "🔭"),
 
     # --- Habitat / environment ---
-    (["rainforest", "tropical", "tropics", "canopy"], "🌴"),
-    (["forest", "wood", "woods", "jungle", "woodland", "taiga"], "🌳"),
-    (["grassland", "savanna", "savannah", "prairie", "meadow"], "🌾"),
-    (["desert", "sand", "dune", "arid"], "🏜️"),
-    (["arctic", "polar", "tundra", "frozen", "antarctica"], "🧊"),
-    (["wetland", "swamp", "marsh", "bog", "estuary"], "🌿"),
-    (["reef", "coral", "ocean", "sea", "marine", "underwater"], "🌊"),
-    (["river", "stream", "lake", "pond", "freshwater"], "🏞️"),
-    (["mountain", "hill", "highland", "alpine", "peak", "summit"], "⛰️"),
-    (["sky", "cloud", "clouds", "air"], "☁️"),
-    (["island", "coast", "coastal", "beach", "shore", "bay"], "🏖️"),
-    (["home", "house", "shelter", "den", "nest", "burrow", "lair", "dam"], "🏠"),
-    (["city", "urban", "town", "metropolis", "suburb"], "🏙️"),
-    (["farm", "rural", "countryside", "agriculture", "crop", "harvest"], "🚜"),
-
-    # --- Weather & climate ---
-    (["rain", "rainfall", "raining", "shower", "flooding"], "🌧️"),
-    (["snow", "snowfall", "blizzard", "hail", "sleet"], "❄️"),
-    (["wind", "windy", "gust", "breeze", "tornado", "typhoon", "cyclone", "hurricane"], "🌪️"),
-    (["storm", "thunder", "thunderstorm", "lightning"], "⛈️"),
-    (["fog", "mist", "humid", "humidity", "dew"], "🌫️"),
+    (["forest", "wood", "woods", "jungle"], "🌳"),
+    (["desert", "sand", "dune"], "🏜️"),
+    (["arctic", "polar", "ice", "frozen"], "🧊"),
+    (["sea", "ocean", "marine"], "🌊"),
+    (["mountain", "hill"], "⛰️"),
+    (["sky", "cloud", "clouds"], "☁️"),
+    (["home", "house", "shelter", "den", "nest"], "🏠"),
+    (["city", "urban", "town"], "🏙️"),
+    (["farm", "rural", "countryside"], "🚜"),
 
     # --- Science / abstract ---
-    (["energy", "power", "nuclear", "kinetic", "potential"], "⚡"),
-    (["water", "liquid", "fluid", "wet", "moisture"], "💧"),
-    (["fire", "flame", "burn", "burning", "combustion", "ignite", "hot"], "🔥"),
-    (["ice", "cold", "freeze", "freezing", "frost"], "❄️"),
-    (["light", "bright", "shine", "glow", "luminous", "bioluminescent"], "💡"),
-    (["dark", "darkness", "shadow", "night", "nocturnal"], "🌑"),
-    (["health", "healthy", "medicine", "medical", "doctor", "treatment", "therapy"], "🩺"),
-    (["disease", "illness", "sick", "infection", "virus", "bacteria", "pathogen"], "🦠"),
-    (["danger", "dangerous", "risk", "warning", "hazard", "threat"], "⚠️"),
-    (["safe", "safety", "secure", "protection"], "🛡️"),
-    (["money", "cost", "price", "wealth", "poor", "rich"], "💰"),
-    (["important", "essential", "key", "critical", "vital", "significant"], "⭐"),
-    (["idea", "thought", "concept", "theory", "hypothesis", "model"], "💡"),
-    (["question", "ask", "wonder", "curious", "curiosity", "mystery"], "❓"),
-    (["answer", "solve", "solution", "result", "conclusion", "proof"], "✅"),
-    (["change", "changes", "transform", "transformation", "evolve", "evolution"], "🔄"),
-    (["balance", "balanced", "equilibrium", "stable", "stability"], "⚖️"),
-    (["measure", "measurement", "calculate", "calculation", "estimate"], "📐"),
-    (["record", "records", "data", "statistic", "statistics", "evidence"], "📊"),
-    (["experiment", "test", "testing", "trial", "laboratory", "lab"], "🧪"),
-    (["observe", "observation", "observing", "monitor", "monitoring"], "🔬"),
+    (["energy", "power", "electric", "electricity"], "⚡"),
+    (["water", "liquid", "wet"], "💧"),
+    (["fire", "flame", "burn", "hot"], "🔥"),
+    (["cold", "freeze", "freezing"], "❄️"),
+    (["light", "bright", "shine"], "💡"),
+    (["dark", "darkness", "shadow", "night"], "🌑"),
+    (["health", "healthy", "medicine", "medical", "doctor"], "🩺"),
+    (["disease", "illness", "sick", "infection", "virus", "bacteria"], "🦠"),
+    (["danger", "dangerous", "risk", "warning"], "⚠️"),
+    (["safe", "safety", "secure"], "🛡️"),
+    (["money", "cost", "price", "economy", "trade"], "💰"),
+    (["important", "essential", "key", "main"], "⭐"),
+    (["idea", "thought", "concept", "theory"], "💡"),
+    (["question", "ask", "wonder"], "❓"),
+    (["answer", "solve", "solution"], "✅"),
 
-    # --- Generic animal catch-all (keep at bottom) ---
-    (["dog", "dogs", "puppy", "puppies", "canine"], "🐕"),
-    (["cat", "cats", "kitten", "kittens", "feline"], "🐈"),
-    (["horse", "horses", "pony", "equine"], "🐴"),
-    (["cow", "cows", "bull", "cattle", "bovine"], "🐄"),
-    (["pig", "pigs", "boar", "porcine"], "🐷"),
-    (["sheep", "lamb", "lambs", "ovine"], "🐑"),
-    (["rabbit", "rabbits", "bunny", "hare"], "🐰"),
-    (["bear", "bears", "grizzly", "polar bear"], "🐻"),
-    (["wolf", "wolves", "coyote", "jackal"], "🐺"),
-    (["fox", "foxes"], "🦊"),
-    (["deer", "stag", "doe", "fawn", "moose", "elk", "reindeer"], "🦌"),
-    (["elephant", "elephants", "mammoth"], "🐘"),
-    (["giraffe", "giraffes"], "🦒"),
-    (["zebra", "zebras"], "🦓"),
-    (["lion", "lions", "lioness", "cheetah", "leopard", "panther"], "🦁"),
-    (["tiger", "tigers"], "🐅"),
-    (["monkey", "monkeys", "ape", "gorilla", "chimpanzee", "baboon"], "🐒"),
-    (["hippo", "hippopotamus", "rhino", "rhinoceros"], "🦛"),
-    (["crocodile", "alligator", "reptile"], "🐊"),
-    (["turtle", "tortoise"], "🐢"),
-    (["frog", "frogs", "toad", "amphibian"], "🐸"),
-    (["snake", "snakes", "viper", "cobra", "python"], "🐍"),
-    (["shark", "sharks"], "🦈"),
-    (["whale", "whales", "dolphin", "dolphins", "porpoise", "orca"], "🐋"),
-    (["octopus", "squid", "jellyfish", "crab", "lobster", "shrimp", "prawn"], "🐙"),
-    (["eagle", "hawk", "falcon", "kite", "buzzard", "raptor"], "🦅"),
-    (["penguin", "penguins"], "🐧"),
-    (["parrot", "parrots", "macaw", "cockatoo"], "🦜"),
-    (["owl", "owls"], "🦉"),
-    (["bee", "bees", "wasp", "hornet", "bumblebee"], "🐝"),
-    (["butterfly", "butterflies", "moth", "moths"], "🦋"),
-    (["spider", "spiders", "scorpion"], "🕷️"),
-    (["ant", "ants", "termite", "termites"], "🐜"),
-    (["human", "humans", "people", "person", "man", "woman", "homo sapien"], "🧑"),
-    (["plant", "plants"], "🌿"),
-    (["tree", "trees"], "🌳"),
-    (["flower", "flowers"], "🌸"),
-    (["bird", "birds"], "🐦"),
-    (["fish", "fishes"], "🐟"),
-    (["insect", "insects", "bug", "bugs"], "🐛"),
+    # --- Generic entities (catch-all, comes after concepts) ---
+    (["dog", "puppy", "canine"], "🐕"),
+    (["cat", "kitten", "feline"], "🐈"),
+    (["human", "people", "person", "man", "woman"], "🧑"),
+    (["plant", "tree", "flower"], "🌿"),
+    (["bird"], "🐦"),
+    (["fish"], "🐟"),
 ]
 
 
@@ -416,12 +223,11 @@ def search_wikipedia_image(query):
 
     try:
         import urllib.parse
+        import base64
         encoded = urllib.parse.quote(prompt)
         url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
         response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
-            # Cache the image via a data URL so the caller can use it like any URL
-            import base64
             b64 = base64.b64encode(response.content).decode()
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
             return f"data:{mime};base64,{b64}"
@@ -449,53 +255,76 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
             st.info("Add your key to .env or Streamlit secrets")
             return None
 
-    # Scale card count
+    # Scale card count to text length
     n_chars = len(raw_text)
-    if n_chars <= 8000:
+    if n_chars <= 5000:
         min_cards, max_cards = 3, 5
-    elif n_chars <= 16000:
-        min_cards, max_cards = 5, 8
+    elif n_chars <= 12000:
+        min_cards, max_cards = 5, 10
+    elif n_chars <= 20000:
+        min_cards, max_cards = 8, 15
     else:
-        min_cards, max_cards = 8, 12
+        min_cards, max_cards = 12, 20
 
     # Reading level instructions
     if reading_level == "simple":
-        level_text = "VERY SIMPLE: Use short words, short sentences (8-12 words max)"
+        level_text = (
+            "EASY (Ages 4-11): Use very short, common words only. "
+            "One idea per sentence. Maximum 10 words per sentence. "
+            "Active voice always. Use digits for numbers (e.g. 3 not three). "
+            "No jargon — if a technical word is essential, explain it in the same sentence."
+        )
     elif reading_level == "complex":
-        level_text = "ADVANCED: Use precise academic language, longer sentences (up to 25 words)"
+        level_text = (
+            "ADVANCED (Ages 18+): Use precise academic vocabulary. "
+            "Sentences up to 25 words. Include technical terms where appropriate. "
+            "Active voice preferred. Digits for numbers. No double negatives."
+        )
     else:
-        level_text = "MEDIUM: Clear everyday language, medium sentences (12-18 words)"
+        level_text = (
+            "MEDIUM (Ages 11-18): Clear everyday language. "
+            "One idea per sentence, 12-18 words max. Active voice. "
+            "Digits for numbers. Avoid jargon unless explained."
+        )
 
-    # Updated prompt: ask the LLM for a UNIQUE keyword per fact reflecting that
-    # fact's content (not the card topic). Example shows varied hints.
-    prompt = f"""Create {min_cards}-{max_cards} flashcards from this text.
+    prompt = f"""You are creating educational flashcards for students with dyslexia, ADHD, and other learning differences.
 
 READING LEVEL: {level_text}
 
-IMPORTANT RULES:
-- Each fact must have an "emoji_hint" which is ONE keyword describing what THAT
-  specific fact is about (an action, concept, or object from the sentence).
-- Do NOT just repeat the card topic in every emoji_hint - vary it per fact.
-- For dog-related content, use 🐕; for cats use 🐈.
-- Return ONLY valid JSON.
+YOUR GOAL: Convert ALL key information from the text into {min_cards}-{max_cards} flashcards.
+- Group related ideas into clearly themed cards (e.g. "How Dogs Communicate", "What Dogs Eat").
+- Every distinct topic or concept in the text must appear on at least one card — do not skip anything.
+- Each card should have 3-5 facts. Each fact is one clear, standalone sentence.
 
-Example format (note how emoji_hint differs per fact):
+WRITING RULES (follow strictly):
+- Active voice: write "Dogs use smell to communicate." NOT "Smell is used by dogs."
+- One idea per sentence — never join 2 facts with "and" or "but".
+- Use digits for numbers: "3 types" not "three types".
+- No double negatives.
+- No vague openers like "It is important to note..." — start with the subject.
+- Each fact must make sense on its own without reading the others.
+
+EMOJI HINTS:
+- Each fact needs an "emoji_hint": ONE keyword for what that specific fact is about.
+- Vary the hint per fact — do not use the card title as the hint for every fact.
+
+Return ONLY valid JSON in this exact format, no commentary:
 {{
   "flashcards": [
     {{
-      "title": "Dogs as Pets",
+      "title": "How Dogs Communicate",
       "topic_keyword": "dog",
-      "image_search": "dog",
+      "image_search": "dog communication",
       "facts": [
-        {{"text": "Dogs mark their territory by urinating.", "emoji_hint": "territory"}},
-        {{"text": "Dogs use body language to communicate.", "emoji_hint": "communicate"}},
-        {{"text": "Dogs are known as man's best friend.", "emoji_hint": "best friend"}}
+        {{"text": "Dogs use body language to show how they feel.", "emoji_hint": "body language"}},
+        {{"text": "A wagging tail usually means a dog is happy.", "emoji_hint": "tail"}},
+        {{"text": "Dogs growl to warn others to stay away.", "emoji_hint": "growl"}}
       ]
     }}
   ]
 }}
 
-TEXT:
+TEXT TO CONVERT:
 {raw_text[:30000]}"""
 
     try:
@@ -543,7 +372,7 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
         topic_emoji = get_emoji_for_topic(topic_keyword or topic)
 
         facts = []
-        for fact in card.get("facts", [])[:4]:
+        for fact in card.get("facts", [])[:5]:
             if isinstance(fact, dict):
                 fact_text = fact.get("text", "")
                 emoji_hint = fact.get("emoji_hint", "")
