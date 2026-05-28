@@ -567,9 +567,32 @@ def _is_dark(hex_color):
     return _relative_luminance(hex_color) < 0.4
 
 
+def _contrast_ratio(fg_hex, bg_hex):
+    """WCAG contrast ratio between two colours (1 = none, 21 = max)."""
+    l1 = _relative_luminance(fg_hex)
+    l2 = _relative_luminance(bg_hex)
+    hi, lo = max(l1, l2), min(l1, l2)
+    return (hi + 0.05) / (lo + 0.05)
+
+
 def _on_color(bg_hex):
-    """Return black or white - whichever has the better contrast on bg_hex."""
-    return "#000000" if _relative_luminance(bg_hex) > 0.45 else "#FFFFFF"
+    """Return black or white - whichever has the HIGHER contrast on bg_hex.
+
+    Uses true contrast ratios, not a luminance threshold, so mid-tone colours
+    (orange, teal, yellow) correctly get black text instead of low-contrast white.
+    """
+    return "#000000" if _contrast_ratio("#000000", bg_hex) >= _contrast_ratio("#FFFFFF", bg_hex) else "#FFFFFF"
+
+
+def _best_text_color(*bg_hexes):
+    """Pick black or white maximising the WORST-CASE contrast across all bgs.
+
+    For a gradient banner, pass both gradient stops so the chosen text colour
+    stays readable along the entire banner, not just at one end.
+    """
+    black_min = min(_contrast_ratio("#000000", bg) for bg in bg_hexes)
+    white_min = min(_contrast_ratio("#FFFFFF", bg) for bg in bg_hexes)
+    return "#000000" if black_min >= white_min else "#FFFFFF"
 
 
 def _mix(hex_color, target_hex, amount):
@@ -583,20 +606,35 @@ def _mix(hex_color, target_hex, amount):
 
 
 def render_header(app_title, app_subtitle, text_size, colour_scheme):
-    """Header banner tinted to match the active scheme's accent colour."""
+    """Header banner tinted to match the active scheme's accent colour.
+
+    The title/subtitle colours use inline !important so they beat the global
+    `.stApp h1/p` colour rules from apply_styles (an external !important rule
+    would otherwise repaint them in the body-text colour and kill contrast).
+    Contrast is computed against the DARKER end of the gradient (worst case)
+    so light accents like Sunshine Yellow stay readable along the whole banner.
+    """
     palette = _get_scheme_palette(colour_scheme)
     accent = palette["accent"]
-    # Gradient: accent -> a slightly darker accent, so it reads as one banner.
-    grad_end = _mix(accent, "#000000", 0.25)
+    # Pick the best text colour for the base accent, then build the gradient by
+    # shading AWAY from that text colour (lighten for black text, darken for
+    # white text). This keeps contrast high along the entire banner.
     on_accent = _on_color(accent)
-    subtitle_col = "rgba(255,255,255,0.92)" if on_accent == "#FFFFFF" else "rgba(0,0,0,0.7)"
+    if on_accent == "#000000":
+        grad_end = _mix(accent, "#FFFFFF", 0.14)   # lighten -> black text stays dark-on-light
+    else:
+        grad_end = _mix(accent, "#000000", 0.22)   # darken  -> white text stays light-on-dark
+    subtitle_col = ("rgba(255,255,255,0.92)" if on_accent == "#FFFFFF"
+                    else "rgba(0,0,0,0.82)")
 
     st.markdown(f"""
     <div style='text-align:center; padding:24px 20px;
                 background:linear-gradient(135deg, {accent}, {grad_end});
                 border-radius:14px; margin-bottom:20px;'>
-        <h1 style='color:{on_accent}; margin:0; font-size:{text_size * 2}px;'>💡 {app_title}</h1>
-        <p style='color:{subtitle_col}; margin:10px 0 0 0; font-size:{text_size}px;'>{app_subtitle}</p>
+        <h1 style='color:{on_accent} !important; margin:0;
+                   font-size:{text_size * 2}px;'>💡 {app_title}</h1>
+        <p style='color:{subtitle_col} !important; margin:10px 0 0 0;
+                  font-size:{text_size}px;'>{app_subtitle}</p>
     </div>
     """, unsafe_allow_html=True)
 
