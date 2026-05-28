@@ -625,28 +625,55 @@ def _header_colors(colour_scheme):
     return accent, grad_end, title_color, subtitle_color
 
 
+def _star_color(colour_scheme):
+    """A colourful star tone that 'suits' the scheme: a lightness-shifted tint
+    of the scheme's own accent (same hue family). Paired with a title-colour
+    outline in CSS so it stays visible on any banner. Low Stimulation gets none.
+    """
+    accent, _grad_end, title_color, _sub = _header_colors(colour_scheme)
+    if title_color == "#FFFFFF":          # dark/saturated banner -> light tint pops
+        return _mix(accent, "#FFFFFF", 0.55)
+    return _mix(accent, "#000000", 0.42)  # lighter banner -> deeper shade pops
+
+
 def render_header(app_title, app_subtitle, text_size, colour_scheme):
     """Header banner tinted to match the active scheme's accent colour.
 
-    NOTE: the title/subtitle text colours are NOT set reliably here. Streamlit's
-    HTML sanitizer strips `!important` from inline style attributes, so an inline
-    colour loses to the global `.stApp h1 { color: text !important }` rule - which
-    paints the title in the body-text colour. On the High Contrast schemes that
-    colour equals the banner background, making the title invisible. The real
-    colour is therefore applied by apply_styles() via a `.fcm-header` class
-    selector inside a <style> block (where !important IS preserved) with higher
+    NOTE: the title/subtitle/star colours are NOT set reliably inline here.
+    Streamlit's HTML sanitizer strips `!important` from inline style attributes,
+    so an inline colour loses to the global `.stApp h1 { color: text !important }`
+    rule - which paints the title in the body-text colour. On the High Contrast
+    schemes that colour equals the banner background, making the title invisible.
+    The real colours are applied by apply_styles() via `.fcm-header` class
+    selectors inside a <style> block (where !important IS preserved) with higher
     specificity than the blanket rule. The inline colours below are a harmless
     fallback for the brief moment before the stylesheet loads.
+
+    Decorative stars flank the title on every scheme EXCEPT Low Stimulation,
+    which stays clean to reduce visual clutter for sensory-sensitive users.
     """
     accent, grad_end, title_color, subtitle_color = _header_colors(colour_scheme)
+    star_color = _star_color(colour_scheme)
+
+    if colour_scheme == "Low Stimulation":
+        left_stars = right_stars = ""
+    else:
+        left_stars = (
+            f"<span class='fcm-star fcm-star-sm' style='color:{star_color};'>✦</span>"
+            f"<span class='fcm-star' style='color:{star_color};'>★</span> "
+        )
+        right_stars = (
+            f" <span class='fcm-star' style='color:{star_color};'>★</span>"
+            f"<span class='fcm-star fcm-star-sm' style='color:{star_color};'>✦</span>"
+        )
 
     st.markdown(f"""
     <div class="fcm-header" style='text-align:center; padding:24px 20px;
                 background:linear-gradient(135deg, {accent}, {grad_end});
                 border-radius:14px; margin-bottom:20px;'>
         <h1 style='color:{title_color}; margin:0;
-                   font-size:{text_size * 2}px;'>💡 {app_title}</h1>
-        <p style='color:{subtitle_color}; margin:10px 0 0 0;
+                   font-size:{text_size * 2}px;'>{left_stars}{app_title}{right_stars}</h1>
+        <p style='color:{subtitle_color}; margin:12px 0 0 0;
                   font-size:{text_size}px;'>{app_subtitle}</p>
     </div>
     """, unsafe_allow_html=True)
@@ -715,6 +742,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
 
     # Header banner colours (shared source of truth with render_header).
     _, _, header_title_col, header_subtitle_col = _header_colors(colour_scheme)
+    star_col = _star_color(colour_scheme)
 
     st.markdown(f"""
     <style>
@@ -866,6 +894,20 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     }}
     .stApp .fcm-header h1 * {{
         color: {header_title_col} !important;
+    }}
+    /* Decorative stars: themed colour + a crisp 1px outline in the title    */
+    /* colour so they pop on any banner. Higher specificity (0,3,0) than the  */
+    /* `.fcm-header h1 *` rule (0,2,1) so the star colour wins.               */
+    .stApp .fcm-header .fcm-star {{
+        color: {star_col} !important;
+        display: inline-block;
+        text-shadow: -1px -1px 0 {header_title_col}, 1px -1px 0 {header_title_col},
+                     -1px 1px 0 {header_title_col}, 1px 1px 0 {header_title_col};
+    }}
+    .stApp .fcm-header .fcm-star-sm {{
+        font-size: 0.6em;
+        vertical-align: 0.25em;
+        opacity: 0.9;
     }}
     </style>
     """, unsafe_allow_html=True)
