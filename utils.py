@@ -9,70 +9,184 @@ from PIL import Image, ImageDraw, ImageFont
 from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 
-# ==================== EMOJI FIX - PROPER DOG EMOJI ====================
+# ==================== EMOJI PICKERS ====================
+
+# Topic emojis: matched against a single keyword (the LLM-provided topic_keyword
+# or the card title). Order doesn't matter much here since titles are short.
+_TOPIC_EMOJI_MAP = {
+    'dog': '🐕', 'dogs': '🐕', 'puppy': '🐕', 'puppies': '🐕', 'canine': '🐕',
+    'cat': '🐈', 'cats': '🐈', 'kitten': '🐈', 'feline': '🐈',
+    'lion': '🦁', 'lioness': '🦁', 'tiger': '🐅',
+    'elephant': '🐘', 'elephants': '🐘',
+    'giraffe': '🦒', 'giraffes': '🦒',
+    'whale': '🐋', 'whales': '🐋', 'dolphin': '🐬', 'dolphins': '🐬',
+    'bird': '🐦', 'birds': '🐦', 'eagle': '🦅', 'owl': '🦉',
+    'butterfly': '🦋', 'butterflies': '🦋',
+    'bee': '🐝', 'bees': '🐝',
+    'fish': '🐟', 'fishes': '🐟', 'shark': '🦈',
+    'snake': '🐍', 'snakes': '🐍',
+    'frog': '🐸', 'frogs': '🐸',
+    'rabbit': '🐰', 'rabbits': '🐰', 'bunny': '🐰',
+    'horse': '🐴', 'horses': '🐴', 'pony': '🐴',
+    'cow': '🐄', 'cows': '🐄', 'bull': '🐂',
+    'pig': '🐷', 'pigs': '🐷',
+    'sheep': '🐑', 'lambs': '🐑',
+    'goat': '🐐', 'goats': '🐐',
+    'monkey': '🐒', 'monkeys': '🐒', 'ape': '🦍',
+    'bear': '🐻', 'bears': '🐻',
+    'panda': '🐼', 'pandas': '🐼',
+    'kangaroo': '🦘', 'koala': '🐨',
+    'fox': '🦊', 'deer': '🦌', 'moose': '🦌',
+    'zebra': '🦓', 'hippo': '🦛', 'rhino': '🦏',
+    'moon': '🌙', 'planet': '🪐', 'star': '⭐', 'sun': '☀️',
+    'atom': '⚛️', 'molecule': '🧪', 'dna': '🧬', 'cell': '🔬',
+    'brain': '🧠', 'heart': '❤️', 'bone': '🦴',
+    'tree': '🌳', 'flower': '🌸', 'leaf': '🌿', 'plant': '🌱',
+    'mountain': '⛰️', 'volcano': '🌋', 'ocean': '🌊', 'river': '🏞️',
+    'rain': '🌧️', 'snow': '❄️', 'lightning': '⚡',
+}
+
+
+# Fact emojis: ORDERED list of (keyword-list, emoji) tuples. The picker scans
+# the FULL fact text and the first match wins, so put multi-word phrases and
+# more specific concepts at the top.
+_FACT_EMOJI_PATTERNS = [
+    # --- Multi-word phrases (must come first to beat single-word matches) ---
+    (["best friend", "best friends", "man's best friend"], "🤝"),
+    (["body language"], "🗣️"),
+    (["sign language"], "🤟"),
+    (["sense of smell"], "👃"),
+    (["world war"], "⚔️"),
+    (["solar system"], "🪐"),
+    (["climate change", "global warming"], "🌡️"),
+    (["food chain"], "🔗"),
+    (["life cycle"], "🔄"),
+
+    # --- Communication & social ---
+    (["communicate", "communication", "language", "speak", "speech", "talk", "talking", "conversation"], "💬"),
+    (["bark", "barking", "howl", "growl", "meow", "roar", "sound", "noise"], "🔊"),
+    (["listen", "hearing", "ear"], "👂"),
+    (["smell", "scent", "odor", "odour", "nose"], "👃"),
+    (["see", "sight", "vision", "eye", "eyes", "watch"], "👀"),
+    (["taste", "tongue", "flavour", "flavor"], "👅"),
+    (["touch", "feel", "feeling"], "✋"),
+
+    # --- Relationships ---
+    (["friend", "friendship", "companion", "buddy"], "🤝"),
+    (["family", "parent", "mother", "father", "child", "children"], "👨\u200d👩\u200d👧"),
+    (["love", "affection", "romance"], "❤️"),
+    (["enemy", "fight", "fighting", "attack", "war", "battle"], "⚔️"),
+    (["pack", "group", "herd", "flock", "swarm"], "👥"),
+
+    # --- Behaviour / actions ---
+    (["mark", "marking", "territory", "claim"], "🚩"),
+    (["hunt", "hunting", "predator", "prey"], "🏹"),
+    (["sleep", "sleeping", "rest", "nap", "dream"], "😴"),
+    (["eat", "eating", "food", "meal", "diet", "feed"], "🍽️"),
+    (["drink", "drinking", "thirst"], "🥤"),
+    (["urinate", "urinating", "urine", "pee", "waste"], "💧"),
+    (["run", "running", "race", "sprint"], "🏃"),
+    (["jump", "leap", "hop"], "🦘"),
+    (["swim", "swimming", "dive"], "🏊"),
+    (["fly", "flying", "flight"], "🕊️"),
+    (["climb", "climbing"], "🧗"),
+    (["play", "playing", "fun", "game"], "🎮"),
+    (["learn", "learning", "study", "school", "education"], "🎓"),
+    (["work", "working", "job", "labour", "labor"], "💼"),
+    (["build", "building", "construct"], "🏗️"),
+    (["protect", "protection", "guard", "defend", "defense", "defence"], "🛡️"),
+
+    # --- Body parts ---
+    (["tail", "wag", "wagging"], "〰️"),
+    (["paw", "paws", "claw", "claws"], "🐾"),
+    (["fur", "coat", "hair"], "🧴"),
+    (["teeth", "tooth", "fang", "fangs", "bite"], "🦷"),
+    (["wing", "wings", "feather", "feathers"], "🪶"),
+
+    # --- Numbers, size, time ---
+    (["million", "billion", "thousand", "many", "lots"], "🔢"),
+    (["big", "large", "huge", "giant", "enormous"], "📏"),
+    (["small", "tiny", "little", "miniature"], "🔍"),
+    (["fast", "quick", "speed", "rapid"], "⚡"),
+    (["slow", "slowly"], "🐢"),
+    (["old", "ancient", "history", "historical", "past"], "📜"),
+    (["new", "modern", "recent", "today"], "✨"),
+    (["year", "years", "century", "decade", "day", "days", "month", "months", "week", "weeks", "hour", "hours", "minute", "minutes", "second", "seconds"], "📅"),
+
+    # --- Space / motion ---
+    (["orbit", "orbits", "orbiting", "revolve", "rotate", "rotation"], "🔄"),
+    (["walk", "walked", "walking", "step"], "🚶"),
+    (["travel", "travels", "journey", "voyage"], "🧭"),
+    (["reflect", "reflects", "reflection", "mirror"], "🪞"),
+    (["discover", "discovered", "discovery", "explore"], "🔭"),
+
+    # --- Habitat / environment ---
+    (["forest", "wood", "woods", "jungle"], "🌳"),
+    (["desert", "sand", "dune"], "🏜️"),
+    (["arctic", "polar", "ice", "frozen"], "🧊"),
+    (["sea", "ocean", "marine"], "🌊"),
+    (["mountain", "hill"], "⛰️"),
+    (["sky", "cloud", "clouds"], "☁️"),
+    (["home", "house", "shelter", "den", "nest"], "🏠"),
+    (["city", "urban", "town"], "🏙️"),
+    (["farm", "rural", "countryside"], "🚜"),
+
+    # --- Science / abstract ---
+    (["energy", "power", "electric", "electricity"], "⚡"),
+    (["water", "liquid", "wet"], "💧"),
+    (["fire", "flame", "burn", "hot"], "🔥"),
+    (["cold", "freeze", "freezing"], "❄️"),
+    (["light", "bright", "shine"], "💡"),
+    (["dark", "darkness", "shadow", "night"], "🌑"),
+    (["health", "healthy", "medicine", "medical", "doctor"], "🩺"),
+    (["disease", "illness", "sick", "infection", "virus", "bacteria"], "🦠"),
+    (["danger", "dangerous", "risk", "warning"], "⚠️"),
+    (["safe", "safety", "secure"], "🛡️"),
+    (["money", "cost", "price", "economy", "trade"], "💰"),
+    (["important", "essential", "key", "main"], "⭐"),
+    (["idea", "thought", "concept", "theory"], "💡"),
+    (["question", "ask", "wonder"], "❓"),
+    (["answer", "solve", "solution"], "✅"),
+
+    # --- Generic entities (catch-all, comes after concepts) ---
+    (["dog", "puppy", "canine"], "🐕"),
+    (["cat", "kitten", "feline"], "🐈"),
+    (["human", "people", "person", "man", "woman"], "🧑"),
+    (["plant", "tree", "flower"], "🌿"),
+    (["bird"], "🐦"),
+    (["fish"], "🐟"),
+]
+
 
 def get_emoji_for_topic(text):
-    """Get correct emoji based on topic - FIXED for dogs!"""
+    """Pick an emoji for a card TOPIC (short string like 'Dogs as Pets')."""
+    if not text:
+        return '📚'
     text_lower = text.lower()
-    
-    # Specific animal mappings
-    animal_map = {
-        'dog': '🐕', 'dogs': '🐕', 'puppy': '🐕', 'puppies': '🐕', 'canine': '🐕',
-        'cat': '🐈', 'cats': '🐈', 'kitten': '🐈', 'feline': '🐈',
-        'lion': '🦁', 'lioness': '🦁', 'tiger': '🐅', 'tiger cub': '🐅',
-        'elephant': '🐘', 'elephants': '🐘',
-        'giraffe': '🦒', 'giraffes': '🦒',
-        'whale': '🐋', 'whales': '🐋', 'dolphin': '🐬', 'dolphins': '🐬',
-        'bird': '🐦', 'birds': '🐦', 'eagle': '🦅', 'owl': '🦉',
-        'butterfly': '🦋', 'butterflies': '🦋',
-        'bee': '🐝', 'bees': '🐝',
-        'fish': '🐟', 'fishes': '🐟', 'shark': '🦈',
-        'snake': '🐍', 'snakes': '🐍',
-        'frog': '🐸', 'frogs': '🐸',
-        'rabbit': '🐰', 'rabbits': '🐰', 'bunny': '🐰',
-        'horse': '🐴', 'horses': '🐴', 'pony': '🐴',
-        'cow': '🐄', 'cows': '🐄', 'bull': '🐂',
-        'pig': '🐷', 'pigs': '🐷',
-        'sheep': '🐑', 'lambs': '🐑',
-        'goat': '🐐', 'goats': '🐐',
-        'monkey': '🐒', 'monkeys': '🐒', 'ape': '🦍',
-        'bear': '🐻', 'bears': '🐻', 'polar bear': '🐻‍❄️',
-        'panda': '🐼', 'pandas': '🐼',
-        'kangaroo': '🦘', 'koala': '🐨',
-        'fox': '🦊', 'deer': '🦌', 'moose': '🦌',
-        'zebra': '🦓', 'hippo': '🦛', 'rhino': '🦏',
-    }
-    
-    # Check for animal keywords
-    for keyword, emoji in animal_map.items():
+    for keyword, emoji in _TOPIC_EMOJI_MAP.items():
         if keyword in text_lower:
             return emoji
-    
-    # Science and nature
-    science_map = {
-        'moon': '🌙', 'planet': '🪐', 'star': '⭐', 'sun': '☀️',
-        'atom': '⚛️', 'molecule': '🧪', 'dna': '🧬', 'cell': '🔬',
-        'brain': '🧠', 'heart': '❤️', 'bone': '🦴',
-        'tree': '🌳', 'flower': '🌸', 'leaf': '🌿', 'plant': '🌱',
-        'mountain': '⛰️', 'volcano': '🌋', 'ocean': '🌊', 'river': '🏞️',
-        'rain': '🌧️', 'snow': '❄️', 'lightning': '⚡',
-    }
-    
-    for keyword, emoji in science_map.items():
-        if keyword in text_lower:
-            return emoji
-    
-    # Default emojis by first letter (fun fallback)
-    letter_emoji = {
-        'a': '🅰️', 'b': '🅱️', 'c': '©️', 'd': '🐕', 'e': '📧',
-        'f': '🎏', 'g': '🅶', 'h': '♓', 'i': 'ℹ️', 'j': '🇯',
-        'k': '🇰', 'l': '🇱', 'm': 'Ⓜ️', 'n': '🇳', 'o': '🅾️',
-        'p': '🅿️', 'q': '🇶', 'r': '🇷', 's': '💲', 't': '🌮',
-        'u': '🇺', 'v': '🇻', 'w': '🇼', 'x': '❌', 'y': '🇾', 'z': '🇿'
-    }
-    
-    first_char = text_lower[0] if text_lower else ''
-    return letter_emoji.get(first_char, '📚')
+    return '📚'
+
+
+def pick_fact_emoji(fact_text, fallback='✨'):
+    """Pick an emoji based on KEYWORDS inside the fact text itself.
+
+    Scans the full sentence for concept words (mark, communicate, friend, etc.)
+    so each fact on a card gets a distinct, content-relevant icon instead of
+    all sharing the topic emoji. Uses word-boundary matching so short keywords
+    like 'ear' don't match inside 'Earth'.
+    """
+    if not fact_text:
+        return fallback
+    text_lower = fact_text.lower()
+    for keywords, emoji in _FACT_EMOJI_PATTERNS:
+        for kw in keywords:
+            # Word-boundary match; supports multi-word phrases.
+            pattern = r"\b" + re.escape(kw) + r"\b"
+            if re.search(pattern, text_lower):
+                return emoji
+    return fallback
 
 
 # ==================== BETTER IMAGE SEARCH WITH WIKIPEDIA BACKUP ====================
@@ -183,19 +297,21 @@ def search_wikipedia_image(query):
 # ==================== DEEPSEEK FLASHCARD GENERATION ====================
 
 @st.cache_data(show_spinner=False, ttl=3600)
-def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
-    """Generate flashcards using DeepSeek API"""
-    
-    # Get DeepSeek API key
+def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
+    """Call DeepSeek and return the raw parsed flashcard list (cached).
+
+    Kept separate from enrichment so changing the emoji map doesn't require
+    a cache flush - only the API call itself is memoised.
+    """
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
         try:
             api_key = st.secrets["DEEPSEEK_API_KEY"]
-        except:
+        except Exception:
             st.error("🔑 Missing DeepSeek API key")
             st.info("Add your key to .env or Streamlit secrets")
             return None
-    
+
     # Scale card count
     n_chars = len(raw_text)
     if n_chars <= 8000:
@@ -204,7 +320,7 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
         min_cards, max_cards = 5, 8
     else:
         min_cards, max_cards = 8, 12
-    
+
     # Reading level instructions
     if reading_level == "simple":
         level_text = "VERY SIMPLE: Use short words, short sentences (8-12 words max)"
@@ -212,18 +328,21 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
         level_text = "ADVANCED: Use precise academic language, longer sentences (up to 25 words)"
     else:
         level_text = "MEDIUM: Clear everyday language, medium sentences (12-18 words)"
-    
+
+    # Updated prompt: ask the LLM for a UNIQUE keyword per fact reflecting that
+    # fact's content (not the card topic). Example shows varied hints.
     prompt = f"""Create {min_cards}-{max_cards} flashcards from this text.
 
 READING LEVEL: {level_text}
 
 IMPORTANT RULES:
-- For dog-related content, use 🐕 emoji (NOT 🦁)
-- For cat-related content, use 🐈 emoji
-- Each fact should have a RELEVANT emoji that matches the content
-- Return ONLY valid JSON
+- Each fact must have an "emoji_hint" which is ONE keyword describing what THAT
+  specific fact is about (an action, concept, or object from the sentence).
+- Do NOT just repeat the card topic in every emoji_hint - vary it per fact.
+- For dog-related content, use 🐕; for cats use 🐈.
+- Return ONLY valid JSON.
 
-Example format:
+Example format (note how emoji_hint differs per fact):
 {{
   "flashcards": [
     {{
@@ -231,8 +350,9 @@ Example format:
       "topic_keyword": "dog",
       "image_search": "dog",
       "facts": [
-        {{"text": "There are 700 million to 1 billion dogs worldwide.", "emoji_hint": "dog"}},
-        {{"text": "Dogs are the most popular pet in the US.", "emoji_hint": "dog"}}
+        {{"text": "Dogs mark their territory by urinating.", "emoji_hint": "territory"}},
+        {{"text": "Dogs use body language to communicate.", "emoji_hint": "communicate"}},
+        {{"text": "Dogs are known as man's best friend.", "emoji_hint": "best friend"}}
       ]
     }}
   ]
@@ -246,52 +366,18 @@ TEXT:
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "You create flashcards. Use correct emojis (🐕 for dogs, not 🦁). Return only valid JSON."},
+                {"role": "system", "content": "You create flashcards. Each fact's emoji_hint is a unique keyword reflecting that fact's specific content - never just the topic. Return only valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
             max_tokens=4000
         )
-        
-        # Parse response
         content = response.choices[0].message.content
-        # Clean up any markdown code blocks
         content = re.sub(r'```json\s*', '', content)
         content = re.sub(r'```\s*', '', content)
-        
         result = json.loads(content)
-        flashcard_data = result.get("flashcards", [])
-        
-        if not flashcard_data:
-            st.error("No flashcards generated")
-            return None
-        
-        # Process flashcards with correct emojis
-        flashcards = []
-        for card in flashcard_data:
-            topic = card.get("title", "")
-            topic_keyword = card.get("topic_keyword", topic)
-            topic_emoji = get_emoji_for_topic(topic_keyword or topic)
-            
-            facts = []
-            for fact in card.get("facts", [])[:4]:  # Max 4 facts per card
-                if isinstance(fact, dict):
-                    fact_text = fact.get("text", "")
-                    emoji_hint = fact.get("emoji_hint", fact_text[:20])
-                    fact_emoji = get_emoji_for_topic(emoji_hint)
-                    facts.append({"emoji": fact_emoji, "text": fact_text})
-                elif isinstance(fact, str):
-                    facts.append({"emoji": topic_emoji, "text": fact})
-            
-            flashcards.append({
-                'title': topic,
-                'facts': facts,
-                'emoji': topic_emoji,
-                'image_search': card.get('image_search', topic_keyword),
-            })
-        
-        return flashcards
-    
+        return result.get("flashcards", [])
+
     except json.JSONDecodeError as e:
         st.error(f"JSON parsing error: {str(e)}")
         return None
@@ -300,16 +386,68 @@ TEXT:
         return None
 
 
+def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
+    """Generate flashcards: cached LLM call + fresh emoji enrichment per fact.
+
+    The emoji for each fact is picked from the FACT TEXT (not just the LLM's
+    hint), so each bullet on a card reflects its own content.
+    """
+    raw_data = _fetch_flashcard_data_from_llm(raw_text, reading_level)
+    if not raw_data:
+        if raw_data is None:
+            return None
+        st.error("No flashcards generated")
+        return None
+
+    flashcards = []
+    for card in raw_data:
+        topic = card.get("title", "")
+        topic_keyword = card.get("topic_keyword", topic)
+        topic_emoji = get_emoji_for_topic(topic_keyword or topic)
+
+        facts = []
+        for fact in card.get("facts", [])[:4]:
+            if isinstance(fact, dict):
+                fact_text = fact.get("text", "")
+                emoji_hint = fact.get("emoji_hint", "")
+                # 1) Try the fact text itself (most accurate - matches concept words).
+                # 2) Try the LLM's hint if the text didn't match.
+                # 3) Fall back to the topic emoji (always relevant, never just '📚').
+                fact_emoji = pick_fact_emoji(fact_text, fallback=None)
+                if fact_emoji is None and emoji_hint:
+                    fact_emoji = pick_fact_emoji(emoji_hint, fallback=None)
+                if fact_emoji is None:
+                    fact_emoji = topic_emoji
+                facts.append({"emoji": fact_emoji, "text": fact_text})
+            elif isinstance(fact, str):
+                fact_emoji = pick_fact_emoji(fact, fallback=topic_emoji)
+                facts.append({"emoji": fact_emoji, "text": fact})
+
+        flashcards.append({
+            'title': topic,
+            'facts': facts,
+            'emoji': topic_emoji,
+            'image_search': card.get('image_search', topic_keyword),
+        })
+
+    return flashcards
+
+
 # ==================== EXISTING HELPER FUNCTIONS (keep these) ====================
 
 def get_card_colors(colour_scheme):
-    color_map = {
-        "Soft Blue": {"text": "#1A237E", "label": "#3A7CA5", "accent": "#3F51B5"},
-        "Pale Lavender": {"text": "#4A148C", "label": "#7C3C9C", "accent": "#9C27B0"},
-        "Pale Mint": {"text": "#1B5E20", "label": "#2F7A55", "accent": "#4CAF50"},
-        "Low Stimulation": {"text": "#2E2E2E", "label": "#555555", "accent": "#7A7A7A"},
+    """Derive card colours (text/label/accent) from the shared COLOR_SCHEMES table.
+
+    Single source of truth: config.COLOR_SCHEMES. Adding a new scheme there
+    automatically makes it work here.
+    """
+    palette = _get_scheme_palette(colour_scheme)
+    return {
+        "text": palette["text"],
+        "label": palette["accent"],
+        "accent": palette["accent"],
+        "card_bg": palette["card_bg"],
     }
-    return color_map.get(colour_scheme, color_map["Low Stimulation"])
 
 
 def extract_text_from_file(uploaded_file):
@@ -346,15 +484,17 @@ def fetch_image_bytes(url):
 
 
 def render_card_to_png(card, colors, idx, total, wiki_image_bytes=None, page_bg_hex="#F5F1E8"):
-    """Simple PNG render"""
+    """Simple PNG render that respects the chosen colour scheme."""
     W = 700
     MARGIN = 30
-    
+
+    card_bg = colors.get("card_bg", "#FFFFFF")
+
     img = Image.new("RGB", (W, 500), page_bg_hex)
     draw = ImageDraw.Draw(img)
-    
-    # Card background
-    draw.rectangle([MARGIN, MARGIN, W-MARGIN, 470], fill="#FFFFFF", outline=colors['accent'], width=3)
+
+    # Card background (respects dark/high-contrast schemes)
+    draw.rectangle([MARGIN, MARGIN, W-MARGIN, 470], fill=card_bg, outline=colors['accent'], width=3)
     
     # Title
     try:
@@ -419,20 +559,123 @@ def render_mobile_settings_hint():
     """, unsafe_allow_html=True)
 
 
+def _get_scheme_palette(colour_scheme):
+    """Look up a scheme by name across all groups in COLOR_SCHEMES."""
+    from config import COLOR_SCHEMES
+    for group in COLOR_SCHEMES.values():
+        if colour_scheme in group:
+            return group[colour_scheme]
+    # Fallback - Soft Blue
+    return COLOR_SCHEMES["Accessibility"]["Soft Blue"]
+
+
 def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
+    """Inject CSS for the chosen scheme - paints page bg, sidebar, text, inputs.
+
+    Streamlit's config.toml sets the initial theme once at boot; this function
+    overrides it at runtime so changing the dropdown actually re-paints.
+    """
+    palette = _get_scheme_palette(colour_scheme)
+    bg = palette["bg"]
+    text = palette["text"]
+    accent = palette["accent"]
+    card_bg = palette["card_bg"]
+
+    # Sidebar: a slightly different shade so it reads as a separate panel.
+    # Use card_bg for dark schemes, white-ish for light schemes.
+    is_dark = bg.lower() in ("#000000", "#0d1b2a", "#0a0a0a")
+    sidebar_bg = card_bg if is_dark else "#FFFFFF"
+    input_bg = card_bg if is_dark else "#FFFFFF"
+    border_col = accent if is_dark else "rgba(0,0,0,0.12)"
+
     st.markdown(f"""
     <style>
-    * {{
+    /* Font + base sizing */
+    html, body, [class*="css"] {{
         font-family: '{font_style}', sans-serif !important;
     }}
-    p, li, label {{
+    p, li, label, .stMarkdown {{
         font-size: {text_size}px !important;
         line-height: {line_spacing} !important;
+        color: {text};
     }}
+    h1, h2, h3, h4, h5, h6 {{
+        color: {text} !important;
+        font-family: '{font_style}', sans-serif !important;
+    }}
+
+    /* Page background */
+    .stApp, [data-testid="stAppViewContainer"] {{
+        background-color: {bg} !important;
+        color: {text} !important;
+    }}
+    [data-testid="stHeader"] {{
+        background-color: {bg} !important;
+    }}
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {{
+        background-color: {sidebar_bg} !important;
+    }}
+    [data-testid="stSidebar"] * {{
+        color: {text} !important;
+    }}
+
+    /* Inputs, selects, textareas */
+    .stTextInput input, .stTextArea textarea,
+    .stSelectbox div[data-baseweb="select"] > div,
+    .stNumberInput input {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border: 1px solid {border_col} !important;
+    }}
+
+    /* Radio + checkbox labels */
+    .stRadio label, .stCheckbox label {{
+        color: {text} !important;
+    }}
+
+    /* Captions */
+    .stCaption, [data-testid="stCaptionContainer"] {{
+        color: {text} !important;
+        opacity: 0.75;
+    }}
+
+    /* Buttons - use accent colour */
     .stButton button {{
         border-radius: 10px !important;
         padding: 10px 20px !important;
         font-weight: bold !important;
+        background-color: {accent} !important;
+        color: {card_bg if is_dark else "#FFFFFF"} !important;
+        border: 1px solid {accent} !important;
+    }}
+    .stButton button:hover {{
+        opacity: 0.9;
+        filter: brightness(1.05);
+    }}
+    .stButton button:disabled {{
+        opacity: 0.4;
+    }}
+
+    /* Download buttons match */
+    .stDownloadButton button {{
+        background-color: {accent} !important;
+        color: {card_bg if is_dark else "#FFFFFF"} !important;
+        border: 1px solid {accent} !important;
+        border-radius: 10px !important;
+        font-weight: bold !important;
+    }}
+
+    /* File uploader */
+    [data-testid="stFileUploader"] section {{
+        background-color: {input_bg} !important;
+        border: 1px dashed {border_col} !important;
+    }}
+
+    /* Slider track */
+    .stSlider [data-baseweb="slider"] div[role="slider"] {{
+        background-color: {accent} !important;
     }}
     </style>
     """, unsafe_allow_html=True)
