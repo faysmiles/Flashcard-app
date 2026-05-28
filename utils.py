@@ -605,35 +605,48 @@ def _mix(hex_color, target_hex, amount):
     return f"#{r:02X}{g:02X}{b:02X}"
 
 
-def render_header(app_title, app_subtitle, text_size, colour_scheme):
-    """Header banner tinted to match the active scheme's accent colour.
+def _header_colors(colour_scheme):
+    """Single source of truth for the header banner colours.
 
-    The title/subtitle colours use inline !important so they beat the global
-    `.stApp h1/p` colour rules from apply_styles (an external !important rule
-    would otherwise repaint them in the body-text colour and kill contrast).
-    Contrast is computed against the DARKER end of the gradient (worst case)
-    so light accents like Sunshine Yellow stay readable along the whole banner.
+    Returns (accent, grad_end, title_color, subtitle_color). The gradient is
+    shaded AWAY from the chosen text colour so contrast stays high across the
+    whole banner. Used by both render_header (to draw the banner) and
+    apply_styles (to emit the high-specificity colour rules that actually win).
     """
     palette = _get_scheme_palette(colour_scheme)
     accent = palette["accent"]
-    # Pick the best text colour for the base accent, then build the gradient by
-    # shading AWAY from that text colour (lighten for black text, darken for
-    # white text). This keeps contrast high along the entire banner.
-    on_accent = _on_color(accent)
-    if on_accent == "#000000":
+    title_color = _on_color(accent)
+    if title_color == "#000000":
         grad_end = _mix(accent, "#FFFFFF", 0.14)   # lighten -> black text stays dark-on-light
+        subtitle_color = "rgba(0,0,0,0.82)"
     else:
         grad_end = _mix(accent, "#000000", 0.22)   # darken  -> white text stays light-on-dark
-    subtitle_col = ("rgba(255,255,255,0.92)" if on_accent == "#FFFFFF"
-                    else "rgba(0,0,0,0.82)")
+        subtitle_color = "rgba(255,255,255,0.92)"
+    return accent, grad_end, title_color, subtitle_color
+
+
+def render_header(app_title, app_subtitle, text_size, colour_scheme):
+    """Header banner tinted to match the active scheme's accent colour.
+
+    NOTE: the title/subtitle text colours are NOT set reliably here. Streamlit's
+    HTML sanitizer strips `!important` from inline style attributes, so an inline
+    colour loses to the global `.stApp h1 { color: text !important }` rule - which
+    paints the title in the body-text colour. On the High Contrast schemes that
+    colour equals the banner background, making the title invisible. The real
+    colour is therefore applied by apply_styles() via a `.fcm-header` class
+    selector inside a <style> block (where !important IS preserved) with higher
+    specificity than the blanket rule. The inline colours below are a harmless
+    fallback for the brief moment before the stylesheet loads.
+    """
+    accent, grad_end, title_color, subtitle_color = _header_colors(colour_scheme)
 
     st.markdown(f"""
-    <div style='text-align:center; padding:24px 20px;
+    <div class="fcm-header" style='text-align:center; padding:24px 20px;
                 background:linear-gradient(135deg, {accent}, {grad_end});
                 border-radius:14px; margin-bottom:20px;'>
-        <h1 style='color:{on_accent} !important; margin:0;
+        <h1 style='color:{title_color}; margin:0;
                    font-size:{text_size * 2}px;'>💡 {app_title}</h1>
-        <p style='color:{subtitle_col} !important; margin:10px 0 0 0;
+        <p style='color:{subtitle_color}; margin:10px 0 0 0;
                   font-size:{text_size}px;'>{app_subtitle}</p>
     </div>
     """, unsafe_allow_html=True)
@@ -699,6 +712,9 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     muted_text = _mix(bg, text, 0.65)
     on_accent = _on_color(accent)
     placeholder_col = _mix(input_bg, text, 0.45)
+
+    # Header banner colours (shared source of truth with render_header).
+    _, _, header_title_col, header_subtitle_col = _header_colors(colour_scheme)
 
     st.markdown(f"""
     <style>
@@ -837,5 +853,19 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
 
     /* ---- Links ---- */
     .stApp a {{ color: {accent} !important; }}
+
+    /* ---- Header banner (HIGHER specificity than the blanket h1/p rules) ---- */
+    /* These win because `.stApp .fcm-header h1` (0,2,1) beats `.stApp h1`     */
+    /* (0,1,1). Set here in a <style> block - not inline - because Streamlit   */
+    /* strips !important from inline style attributes.                         */
+    .stApp .fcm-header h1 {{
+        color: {header_title_col} !important;
+    }}
+    .stApp .fcm-header p {{
+        color: {header_subtitle_col} !important;
+    }}
+    .stApp .fcm-header h1 * {{
+        color: {header_title_col} !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
