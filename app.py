@@ -172,6 +172,7 @@ st.markdown(f"""
 [data-testid="stSelectbox"] div[data-baseweb="select"] span,
 [data-testid="stSelectbox"] div[data-baseweb="select"] input {{
     color: {colors['dropdown_text']} !important;
+    -webkit-text-fill-color: {colors['dropdown_text']} !important;
     opacity: 1 !important;
     font-weight: 600 !important;
     font-size: 15px !important;
