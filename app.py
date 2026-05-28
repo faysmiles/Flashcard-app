@@ -206,44 +206,47 @@ div[role="listbox"] {{
     background-color: {colors['dropdown_bg']} !important;
 }}
 
-/* EVERY option in the open dropdown — light bg, dark text, no exceptions */
+/* Default option — layout and bg only on the option itself */
 li[role="option"],
-li[role="option"] div,
-li[role="option"] span,
-div[role="option"],
-div[role="option"] div,
-div[role="option"] span {{
+div[role="option"] {{
     background-color: {colors['dropdown_bg']} !important;
-    background: {colors['dropdown_bg']} !important;
     color: {colors['dropdown_text']} !important;
     -webkit-text-fill-color: {colors['dropdown_text']} !important;
     opacity: 1 !important;
     font-weight: 500 !important;
     padding: 10px 16px !important;
-    transition: background-color 0.15s ease, color 0.15s ease !important;
 }}
 
-/* Hover state — accent background, white text */
+/* Nested text inside options — colour only, no layout, transparent bg */
+li[role="option"] *,
+div[role="option"] * {{
+    color: {colors['dropdown_text']} !important;
+    -webkit-text-fill-color: {colors['dropdown_text']} !important;
+    background: transparent !important;
+}}
+
+/* Hover — accent fill, white text */
 li[role="option"]:hover,
-li[role="option"]:hover div,
-li[role="option"]:hover span,
-div[role="option"]:hover,
-div[role="option"]:hover div,
-div[role="option"]:hover span {{
+div[role="option"]:hover {{
     background-color: {colors['dropdown_hover_bg']} !important;
-    background: {colors['dropdown_hover_bg']} !important;
     color: #FFFFFF !important;
     -webkit-text-fill-color: #FFFFFF !important;
     cursor: pointer !important;
 }}
 
-/* Currently-selected option — keep it readable (same bg/text as others), use bold + border to indicate */
+li[role="option"]:hover *,
+div[role="option"]:hover * {{
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    background: transparent !important;
+}}
+
+/* Currently-selected — same bg as default, indicate with bold + left border */
 li[role="option"][aria-selected="true"],
 div[role="option"][aria-selected="true"],
 li[role="option"][data-highlighted="true"],
 div[role="option"][data-highlighted="true"] {{
     background-color: {colors['dropdown_bg']} !important;
-    background: {colors['dropdown_bg']} !important;
     color: {colors['dropdown_text']} !important;
     -webkit-text-fill-color: {colors['dropdown_text']} !important;
     font-weight: 700 !important;
@@ -256,7 +259,7 @@ li[role="option"][data-highlighted="true"] *,
 div[role="option"][data-highlighted="true"] * {{
     color: {colors['dropdown_text']} !important;
     -webkit-text-fill-color: {colors['dropdown_text']} !important;
-    background-color: transparent !important;
+    background: transparent !important;
 }}
 
 /* ===== TOP BANNER ===== */
