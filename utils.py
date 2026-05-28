@@ -192,6 +192,29 @@ def pick_fact_emoji(fact_text, fallback='✨'):
 
 # ==================== AI IMAGE GENERATION VIA POLLINATIONS ====================
 
+
+def _looks_like_emoji(s):
+    """Best-effort check that a short string is an emoji (not text/ascii).
+    Accepts single emoji plus modifiers/ZWJ sequences. No external library.
+    """
+    if not s or not isinstance(s, str):
+        return False
+    s = s.strip()
+    if not s or len(s) > 8:
+        return False
+    # Reject anything containing ascii letters/digits (i.e. plain text)
+    if any(c.isascii() and c.isalnum() for c in s):
+        return False
+    # Require at least one char in a pictographic/emoji range
+    for c in s:
+        o = ord(c)
+        if (0x1F000 <= o <= 0x1FAFF) or (0x2600 <= o <= 0x27BF) \
+           or (0x2190 <= o <= 0x21FF) or (0x2B00 <= o <= 0x2BFF) \
+           or o in (0x2122, 0x2139) or (0x1F1E6 <= o <= 0x1F1FF) \
+           or (0xFE00 <= o <= 0xFE0F) or (0x2700 <= o <= 0x27BF):
+            return True
+    return False
+
 def _get_pollinations_key():
     try:
         return st.secrets.get("POLLINATIONS_API_KEY") or os.getenv("POLLINATIONS_API_KEY")
@@ -291,22 +314,28 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
 
 READING LEVEL: {level_text}
 
-YOUR GOAL: Convert ALL key information from the text into {min_cards}-{max_cards} flashcards.
+YOUR GOAL: Turn ALL key information from the text into {min_cards}-{max_cards} flashcards that work as a quick study summary.
 - Group related ideas into clearly themed cards (e.g. "How Dogs Communicate", "What Dogs Eat").
 - Every distinct topic or concept in the text must appear on at least one card — do not skip anything.
-- Each card should have 3-5 facts. Each fact is one clear, standalone sentence.
+- Each card has 3-5 facts. Order the facts so the MOST important or memorable one comes first.
+- Each fact must be a genuine key takeaway worth remembering — not filler, not an example, not trivia.
+- Give each card a short, descriptive title that captures its theme at a glance.
 
 WRITING RULES (follow strictly):
 - Active voice: write "Dogs use smell to communicate." NOT "Smell is used by dogs."
 - One idea per sentence — never join 2 facts with "and" or "but".
+- Front-load the key word: start the sentence with what the fact is actually about.
 - Use digits for numbers: "3 types" not "three types".
 - No double negatives.
 - No vague openers like "It is important to note..." — start with the subject.
 - Each fact must make sense on its own without reading the others.
+- Keep facts tight: a clear summary sentence, not a long explanation.
 
-EMOJI HINTS:
-- Each fact needs an "emoji_hint": ONE keyword for what that specific fact is about.
-- Vary the hint per fact — do not use the card title as the hint for every fact.
+EMOJI (very important — this app relies on visual cues):
+- Each fact needs an "emoji": the SINGLE best emoji that represents that fact's MAIN idea.
+- Choose it for meaning, not for a stray word. "Whales migrate each year" -> the journey, not the animal.
+- Pick concrete, instantly recognisable emojis. Vary them across the facts on a card.
+- Also include an "emoji_hint": one keyword for that fact (used as a backup).
 
 Return ONLY valid JSON in this exact format, no commentary:
 {{
@@ -316,9 +345,9 @@ Return ONLY valid JSON in this exact format, no commentary:
       "topic_keyword": "dog",
       "image_search": "dog communication",
       "facts": [
-        {{"text": "Dogs use body language to show how they feel.", "emoji_hint": "body language"}},
-        {{"text": "A wagging tail usually means a dog is happy.", "emoji_hint": "tail"}},
-        {{"text": "Dogs growl to warn others to stay away.", "emoji_hint": "growl"}}
+        {{"text": "Dogs use body language to show how they feel.", "emoji": "🗣️", "emoji_hint": "body language"}},
+        {{"text": "A wagging tail usually means a dog is happy.", "emoji": "〰️", "emoji_hint": "tail"}},
+        {{"text": "Dogs growl to warn others to stay away.", "emoji": "🔊", "emoji_hint": "growl"}}
       ]
     }}
   ]
@@ -332,7 +361,7 @@ TEXT TO CONVERT:
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "You create flashcards. Each fact's emoji_hint is a unique keyword reflecting that fact's specific content - never just the topic. Return only valid JSON."},
+                {"role": "system", "content": "You create flashcards. For each fact you choose the single best emoji representing its main idea, and order the facts with the most important first. Return only valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
@@ -376,14 +405,20 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
             if isinstance(fact, dict):
                 fact_text = fact.get("text", "")
                 emoji_hint = fact.get("emoji_hint", "")
-                # 1) Try the fact text itself (most accurate - matches concept words).
-                # 2) Try the LLM's hint if the text didn't match.
-                # 3) Fall back to the topic emoji (always relevant, never just '📚').
-                fact_emoji = pick_fact_emoji(fact_text, fallback=None)
-                if fact_emoji is None and emoji_hint:
-                    fact_emoji = pick_fact_emoji(emoji_hint, fallback=None)
-                if fact_emoji is None:
-                    fact_emoji = topic_emoji
+                llm_emoji = fact.get("emoji", "")
+                # 1) Trust the LLM's chosen emoji if it is a real emoji - it
+                #    understands the sentence's MEANING, not just its keywords.
+                # 2) Else match keywords in the fact text (curated fallback).
+                # 3) Else match the LLM's keyword hint.
+                # 4) Else fall back to the topic emoji (always relevant).
+                if _looks_like_emoji(llm_emoji):
+                    fact_emoji = llm_emoji.strip()
+                else:
+                    fact_emoji = pick_fact_emoji(fact_text, fallback=None)
+                    if fact_emoji is None and emoji_hint:
+                        fact_emoji = pick_fact_emoji(emoji_hint, fallback=None)
+                    if fact_emoji is None:
+                        fact_emoji = topic_emoji
                 facts.append({"emoji": fact_emoji, "text": fact_text})
             elif isinstance(fact, str):
                 fact_emoji = pick_fact_emoji(fact, fallback=topic_emoji)
