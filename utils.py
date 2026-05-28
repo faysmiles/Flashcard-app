@@ -534,30 +534,7 @@ def build_cards_zip(flashcards, card_images, colors, page_bg_hex, cache_key):
     return zip_buf.getvalue()
 
 
-def render_header(app_title, app_subtitle, text_size, colour_scheme):
-    st.markdown(f"""
-    <div style='text-align: center; padding: 20px; background: linear-gradient(135deg, #2C5282, #3182CE); border-radius: 12px; margin-bottom: 20px;'>
-        <h1 style='color: white; margin: 0; font-size: {text_size * 2}px;'>💡 {app_title}</h1>
-        <p style='color: rgba(255,255,255,0.9); margin: 10px 0 0 0;'>{app_subtitle}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-def render_feedback_box(feedback_url, colour_scheme):
-    st.markdown(f"""
-    <div style='text-align: center; padding: 20px; margin-top: 40px; border-top: 1px solid #ddd;'>
-        <p>💬 Help improve this app! <a href='{feedback_url}' target='_blank'>Take Survey</a></p>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-def render_mobile_settings_hint():
-    st.markdown("""
-    <div style='background: #f0f0f0; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 14px;'>
-        ⚙️ Tap the <strong>☰</strong> icon in the top-left to access settings!
-    </div>
-    """, unsafe_allow_html=True)
-
+# ==================== COLOUR / THEME HELPERS ====================
 
 def _get_scheme_palette(colour_scheme):
     """Look up a scheme by name across all groups in COLOR_SCHEMES."""
@@ -569,11 +546,104 @@ def _get_scheme_palette(colour_scheme):
     return COLOR_SCHEMES["Accessibility"]["Soft Blue"]
 
 
-def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
-    """Inject CSS for the chosen scheme - paints page bg, sidebar, text, inputs.
+def _hex_to_rgb(hex_color):
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
-    Streamlit's config.toml sets the initial theme once at boot; this function
-    overrides it at runtime so changing the dropdown actually re-paints.
+
+def _relative_luminance(hex_color):
+    """WCAG relative luminance (0 = black, 1 = white)."""
+    def chan(c):
+        c = c / 255.0
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = _hex_to_rgb(hex_color)
+    return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b)
+
+
+def _is_dark(hex_color):
+    """True if a colour is dark enough to need light text on top of it."""
+    return _relative_luminance(hex_color) < 0.4
+
+
+def _on_color(bg_hex):
+    """Return black or white - whichever has the better contrast on bg_hex."""
+    return "#000000" if _relative_luminance(bg_hex) > 0.45 else "#FFFFFF"
+
+
+def _mix(hex_color, target_hex, amount):
+    """Blend hex_color toward target_hex by `amount` (0-1). Used for shading."""
+    r1, g1, b1 = _hex_to_rgb(hex_color)
+    r2, g2, b2 = _hex_to_rgb(target_hex)
+    r = round(r1 + (r2 - r1) * amount)
+    g = round(g1 + (g2 - g1) * amount)
+    b = round(b1 + (b2 - b1) * amount)
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
+def render_header(app_title, app_subtitle, text_size, colour_scheme):
+    """Header banner tinted to match the active scheme's accent colour."""
+    palette = _get_scheme_palette(colour_scheme)
+    accent = palette["accent"]
+    # Gradient: accent -> a slightly darker accent, so it reads as one banner.
+    grad_end = _mix(accent, "#000000", 0.25)
+    on_accent = _on_color(accent)
+    subtitle_col = "rgba(255,255,255,0.92)" if on_accent == "#FFFFFF" else "rgba(0,0,0,0.7)"
+
+    st.markdown(f"""
+    <div style='text-align:center; padding:24px 20px;
+                background:linear-gradient(135deg, {accent}, {grad_end});
+                border-radius:14px; margin-bottom:20px;'>
+        <h1 style='color:{on_accent}; margin:0; font-size:{text_size * 2}px;'>💡 {app_title}</h1>
+        <p style='color:{subtitle_col}; margin:10px 0 0 0; font-size:{text_size}px;'>{app_subtitle}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_feedback_box(feedback_url, colour_scheme):
+    """Footer feedback box tinted to match the active scheme."""
+    palette = _get_scheme_palette(colour_scheme)
+    text = palette["text"]
+    accent = palette["accent"]
+    border = _mix(palette["bg"], text, 0.18)
+
+    st.markdown(f"""
+    <div style='text-align:center; padding:20px; margin-top:40px;
+                border-top:1px solid {border};'>
+        <p style='color:{text};'>💬 Help improve this app!
+        <a href='{feedback_url}' target='_blank'
+           style='color:{accent}; font-weight:700;'>Take Survey</a></p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_mobile_settings_hint(colour_scheme="Soft Blue"):
+    """Settings hint banner tinted to match the active scheme."""
+    palette = _get_scheme_palette(colour_scheme)
+    text = palette["text"]
+    accent = palette["accent"]
+    # Soft tinted background derived from the accent so it never clashes.
+    box_bg = _mix(palette["bg"], accent, 0.12)
+    border = _mix(palette["bg"], accent, 0.30)
+
+    st.markdown(f"""
+    <div style='background:{box_bg}; padding:10px 14px; border-radius:8px;
+                margin-bottom:15px; text-align:center; font-size:14px;
+                border:1px solid {border}; color:{text};'>
+        ⚙️ Tap the <strong style='color:{accent};'>☰</strong> icon in the top-left to access settings!
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
+    """Re-theme the whole Streamlit app to the chosen scheme.
+
+    Streamlit applies its boot-time theme (from config.toml) via CSS custom
+    properties on :root and high-specificity data-testid rules. To beat that
+    we (1) override those custom properties and (2) restate the key surfaces
+    with matching selectors + !important. This runs on every rerun, so the
+    dropdown re-paints the entire page, not just the cards.
     """
     palette = _get_scheme_palette(colour_scheme)
     bg = palette["bg"]
@@ -581,101 +651,153 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     accent = palette["accent"]
     card_bg = palette["card_bg"]
 
-    # Sidebar: a slightly different shade so it reads as a separate panel.
-    # Use card_bg for dark schemes, white-ish for light schemes.
-    is_dark = bg.lower() in ("#000000", "#0d1b2a", "#0a0a0a")
-    sidebar_bg = card_bg if is_dark else "#FFFFFF"
-    input_bg = card_bg if is_dark else "#FFFFFF"
-    border_col = accent if is_dark else "rgba(0,0,0,0.12)"
+    dark = _is_dark(bg)
+    # Panels (sidebar, inputs) sit slightly off the page bg so they read as
+    # distinct surfaces. Lighten on dark schemes, use white on light schemes.
+    panel_bg = _mix(bg, "#FFFFFF", 0.10) if dark else "#FFFFFF"
+    input_bg = panel_bg
+    # Subtle borders derived from the text colour so they're visible on any bg.
+    border_col = _mix(bg, text, 0.22)
+    muted_text = _mix(bg, text, 0.65)
+    on_accent = _on_color(accent)
+    placeholder_col = _mix(input_bg, text, 0.45)
 
     st.markdown(f"""
     <style>
-    /* Font + base sizing */
-    html, body, [class*="css"] {{
+    /* ---- Override Streamlit's theme variables at the root ---- */
+    :root, .stApp {{
+        --background-color: {bg} !important;
+        --default-background-color: {bg} !important;
+        --secondary-background-color: {panel_bg} !important;
+        --text-color: {text} !important;
+        --primary-color: {accent} !important;
+        --font: '{font_style}', sans-serif !important;
+    }}
+
+    /* ---- Fonts + base text ---- */
+    html, body, [class*="css"], .stApp, [data-testid="stMarkdownContainer"] {{
         font-family: '{font_style}', sans-serif !important;
     }}
-    p, li, label, .stMarkdown {{
+    .stApp p, .stApp li, .stApp label, .stApp span, .stMarkdown {{
         font-size: {text_size}px !important;
         line-height: {line_spacing} !important;
-        color: {text};
+        color: {text} !important;
     }}
-    h1, h2, h3, h4, h5, h6 {{
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {{
         color: {text} !important;
         font-family: '{font_style}', sans-serif !important;
     }}
 
-    /* Page background */
-    .stApp, [data-testid="stAppViewContainer"] {{
+    /* ---- Page background (multiple containers for reliability) ---- */
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    .main, .block-container {{
         background-color: {bg} !important;
         color: {text} !important;
     }}
-    [data-testid="stHeader"] {{
-        background-color: {bg} !important;
+    [data-testid="stHeader"], header[data-testid="stHeader"] {{
+        background: {bg} !important;
     }}
 
-    /* Sidebar */
-    [data-testid="stSidebar"] {{
-        background-color: {sidebar_bg} !important;
+    /* ---- Sidebar ---- */
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] > div {{
+        background-color: {panel_bg} !important;
     }}
-    [data-testid="stSidebar"] * {{
+    [data-testid="stSidebar"] *,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span {{
         color: {text} !important;
     }}
 
-    /* Inputs, selects, textareas */
-    .stTextInput input, .stTextArea textarea,
-    .stSelectbox div[data-baseweb="select"] > div,
-    .stNumberInput input {{
+    /* ---- Captions / hints ---- */
+    .stApp [data-testid="stCaptionContainer"],
+    .stApp small {{
+        color: {muted_text} !important;
+    }}
+
+    /* ---- Text inputs / textareas ---- */
+    .stTextInput input, .stTextArea textarea, .stNumberInput input {{
         background-color: {input_bg} !important;
         color: {text} !important;
         border: 1px solid {border_col} !important;
+        border-radius: 8px !important;
+    }}
+    .stTextInput input::placeholder, .stTextArea textarea::placeholder {{
+        color: {placeholder_col} !important;
+        opacity: 1 !important;
     }}
 
-    /* Radio + checkbox labels */
-    .stRadio label, .stCheckbox label {{
+    /* ---- Selectboxes (BaseWeb) ---- */
+    div[data-baseweb="select"] > div {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border: 1px solid {border_col} !important;
+        border-radius: 8px !important;
+    }}
+    div[data-baseweb="select"] svg {{ fill: {text} !important; }}
+    /* dropdown menu popover */
+    div[data-baseweb="popover"] li,
+    ul[role="listbox"] li {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+    }}
+    div[data-baseweb="popover"] li:hover,
+    ul[role="listbox"] li:hover {{
+        background-color: {_mix(input_bg, accent, 0.20)} !important;
+    }}
+
+    /* ---- Radio + checkbox ---- */
+    .stRadio label, .stCheckbox label,
+    [data-testid="stWidgetLabel"] label,
+    [data-testid="stWidgetLabel"] p {{
         color: {text} !important;
     }}
 
-    /* Captions */
-    .stCaption, [data-testid="stCaptionContainer"] {{
-        color: {text} !important;
-        opacity: 0.75;
-    }}
-
-    /* Buttons - use accent colour */
-    .stButton button {{
+    /* ---- Buttons (cover old + new Streamlit testids) ---- */
+    .stButton > button,
+    .stDownloadButton > button,
+    [data-testid="stBaseButton-secondary"],
+    [data-testid="stBaseButton-primary"],
+    [data-testid="baseButton-secondary"],
+    [data-testid="baseButton-primary"] {{
+        background-color: {accent} !important;
+        color: {on_accent} !important;
+        border: 1px solid {accent} !important;
         border-radius: 10px !important;
         padding: 10px 20px !important;
-        font-weight: bold !important;
-        background-color: {accent} !important;
-        color: {card_bg if is_dark else "#FFFFFF"} !important;
-        border: 1px solid {accent} !important;
+        font-weight: 700 !important;
     }}
-    .stButton button:hover {{
-        opacity: 0.9;
-        filter: brightness(1.05);
+    .stButton > button *, .stDownloadButton > button * {{
+        color: {on_accent} !important;
     }}
-    .stButton button:disabled {{
-        opacity: 0.4;
+    .stButton > button:hover,
+    .stDownloadButton > button:hover {{
+        filter: brightness(1.08) !important;
     }}
-
-    /* Download buttons match */
-    .stDownloadButton button {{
-        background-color: {accent} !important;
-        color: {card_bg if is_dark else "#FFFFFF"} !important;
-        border: 1px solid {accent} !important;
-        border-radius: 10px !important;
-        font-weight: bold !important;
+    .stButton > button:disabled,
+    .stDownloadButton > button:disabled {{
+        opacity: 0.4 !important;
     }}
 
-    /* File uploader */
-    [data-testid="stFileUploader"] section {{
+    /* ---- File uploader ---- */
+    [data-testid="stFileUploader"] section,
+    [data-testid="stFileUploaderDropzone"] {{
         background-color: {input_bg} !important;
         border: 1px dashed {border_col} !important;
+        color: {text} !important;
     }}
+    [data-testid="stFileUploader"] section * {{ color: {text} !important; }}
 
-    /* Slider track */
+    /* ---- Slider ---- */
     .stSlider [data-baseweb="slider"] div[role="slider"] {{
         background-color: {accent} !important;
     }}
+    .stSlider [data-testid="stTickBar"] {{ color: {muted_text} !important; }}
+
+    /* ---- Links ---- */
+    .stApp a {{ color: {accent} !important; }}
     </style>
     """, unsafe_allow_html=True)
