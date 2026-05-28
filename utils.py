@@ -6,7 +6,6 @@ import requests
 import json
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
-from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 
 # ==================== EMOJI PICKERS ====================
