@@ -850,7 +850,7 @@ def render_mobile_settings_hint(colour_scheme="Soft Blue"):
     <div style='background:{box_bg}; padding:10px 14px; border-radius:8px;
                 margin-bottom:15px; text-align:center; font-size:14px;
                 border:1px solid {border}; color:{text};'>
-        ⚙️ Tap the <strong style='color:{accent};'>☰</strong> icon in the top-left to access settings!
+        ⚙️ Tap the <strong style='color:{accent};'>arrow icon</strong> in the top-left corner to open settings!
     </div>
     """, unsafe_allow_html=True)
 
