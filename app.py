@@ -56,7 +56,7 @@ from utils import (
 
 st.set_page_config(
     page_title=APP_TITLE,
-    page_icon="💡",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
