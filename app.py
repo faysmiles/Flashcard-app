@@ -84,9 +84,9 @@ def generate_flashcards(text, reading_level):
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
         try:
-            api_key = st.secrets["DEEPSEEK_API_KEY"]
+            api_key = st.secrets["sk-38d0d8130e94432eaf98e538cbe23202"]
         except Exception:
-            st.error("Missing DeepSeek API key. Get one at platform.deepseek.com")
+            st.error("sk-38d0d8130e94432eaf98e538cbe23202")
             return None
 
     prompt = f"""Create 3 flashcards from this text. Reading level: {reading_level}
