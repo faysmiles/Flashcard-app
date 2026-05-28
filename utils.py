@@ -280,25 +280,112 @@ def _get_pollinations_key():
     except Exception:
         return os.getenv("POLLINATIONS_API_KEY")
 
+
+# ==================== SUPABASE IMAGE CACHE (durable, shared across users) ====================
+# A generated image is saved to Supabase storage and indexed by its keyword.
+# The next user who needs the SAME keyword gets the stored image instantly,
+# with no new generation. The cache fills up and gets more useful over time.
+# This layer is OPTIONAL: if the Supabase secrets are not set, image generation
+# works exactly as before (generate fresh each time).
+
+_IMAGE_BUCKET = "flashcard-images"
+
+
+@st.cache_resource(show_spinner=False)
+def _get_supabase():
+    """Return a cached Supabase client, or None if not configured."""
+    try:
+        try:
+            url = st.secrets.get("SUPABASE_URL")
+            key = st.secrets.get("SUPABASE_KEY")
+        except Exception:
+            url = key = None
+        url = url or os.getenv("SUPABASE_URL")
+        key = key or os.getenv("SUPABASE_KEY")
+        if not url or not key:
+            return None
+        from supabase import create_client
+        return create_client(url, key)
+    except Exception as e:
+        print(f"Supabase init skipped: {e}")
+        return None
+
+
+def _normalise_keyword(text):
+    """Lowercase, strip punctuation, collapse spaces - so 'Dogs ' and 'dogs'
+    map to the same cache entry. Exact match only (no stemming)."""
+    cleaned = re.sub(r"[^\w\s-]", "", text or "").lower()
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _cache_lookup(keyword):
+    """Return a stored image URL for this exact keyword, or None."""
+    sb = _get_supabase()
+    if not sb or not keyword:
+        return None
+    try:
+        res = (sb.table("image_cache")
+                 .select("image_url")
+                 .eq("keyword", keyword)
+                 .limit(1)
+                 .execute())
+        if res.data:
+            return res.data[0]["image_url"]
+    except Exception as e:
+        print(f"Cache lookup error for '{keyword}': {e}")
+    return None
+
+
+def _cache_store(keyword, image_bytes, mime):
+    """Upload the image to storage and index it by keyword. Returns the public
+    URL, or None on failure (caller then falls back to a data URL)."""
+    sb = _get_supabase()
+    if not sb or not keyword:
+        return None
+    try:
+        ext = "png" if "png" in mime else "jpg"
+        safe = re.sub(r"[^a-z0-9_-]+", "_", keyword).strip("_") or "image"
+        path = f"{safe}.{ext}"
+        sb.storage.from_(_IMAGE_BUCKET).upload(
+            path, image_bytes,
+            {"content-type": mime, "upsert": "true"},
+        )
+        public_url = sb.storage.from_(_IMAGE_BUCKET).get_public_url(path)
+        sb.table("image_cache").upsert(
+            {"keyword": keyword, "image_url": public_url}
+        ).execute()
+        return public_url
+    except Exception as e:
+        print(f"Cache store error for '{keyword}': {e}")
+        return None
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_wikipedia_image(query):
-    """Generate an image via Pollinations.ai for the given topic query.
-    Kept the original function name so app.py needs no changes.
-    Falls back to None if the key is missing or the request fails.
+    """Return an image URL for the topic query.
+    Order: durable Supabase cache (exact keyword) -> generate via Pollinations,
+    then save to the cache for everyone else. Kept the original function name
+    so app.py needs no changes.
     """
     if not query:
         return None
 
+    keyword = _normalise_keyword(query)
+    if not keyword:
+        return None
+
+    # 1) Durable shared cache - instant reuse if anyone made this before.
+    cached = _cache_lookup(keyword)
+    if cached:
+        return cached
+
+    # 2) Generate a fresh image.
     api_key = _get_pollinations_key()
     if not api_key:
         return None
 
-    clean_query = re.sub(r'[^\w\s-]', '', query).strip()
-    if not clean_query:
-        return None
-
     prompt = (
-        f"clean educational illustration of {clean_query}, "
+        f"clean educational illustration of {keyword}, "
         "simple background, suitable for children and students, "
         "bright clear colours, no text"
     )
@@ -310,11 +397,16 @@ def search_wikipedia_image(query):
         url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
         response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
-            b64 = base64.b64encode(response.content).decode()
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
+            # 3) Save to the shared cache; return the public URL if it worked.
+            public_url = _cache_store(keyword, response.content, mime)
+            if public_url:
+                return public_url
+            # Fallback: no cache configured / upload failed - use a data URL.
+            b64 = base64.b64encode(response.content).decode()
             return f"data:{mime};base64,{b64}"
     except Exception as e:
-        print(f"Pollinations error for '{clean_query}': {e}")
+        print(f"Pollinations error for '{keyword}': {e}")
 
     return None
 
