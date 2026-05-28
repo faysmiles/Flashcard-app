@@ -1,5 +1,5 @@
-# app.py - COMPLETE CLEAN VERSION
-# Copy this entire code into app.py - replaces everything
+# app.py - UPDATED MAIN FLASHCARD APP (Works with DeepSeek + Fixed Images)
+# Copy this entire code into app.py
 
 import os
 import re
@@ -8,8 +8,11 @@ load_dotenv()
 
 import streamlit as st
 
-# Get DeepSeek API key
+# Get DeepSeek API key (not Claude)
 try:
+    if hasattr(st, "secrets") and "ANTHROPIC_API_KEY" in st.secrets:
+        # Keep for backward compatibility, but we'll use DEEPSEEK_API_KEY
+        pass
     if hasattr(st, "secrets") and "DEEPSEEK_API_KEY" in st.secrets:
         os.environ["DEEPSEEK_API_KEY"] = st.secrets["DEEPSEEK_API_KEY"]
 except Exception:
@@ -39,7 +42,7 @@ level = "error"
 
 from config import (
     APP_TITLE, APP_SUBTITLE, READING_LEVELS, FONT_OPTIONS,
-    MIN_FONT_SIZE, MAX_FONT_SIZE, DEFAULT_FONT_SIZE
+    MIN_FONT_SIZE, MAX_FONT_SIZE, DEFAULT_FONT_SIZE, COLOR_SCHEMES
 )
 from utils import (
     apply_styles, extract_text_from_file,
@@ -55,50 +58,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# ===== FIX: Replace keyboard_double_ with hamburger menu =====
-st.markdown("""
-<style>
-/* Hide the ugly text in menu button */
-[data-testid="baseButton-headerNoPadding"] span {
-    display: none !important;
-}
-
-/* Add hamburger menu icon */
-[data-testid="baseButton-headerNoPadding"]::before {
-    content: "☰" !important;
-    font-size: 24px !important;
-    font-weight: bold !important;
-    display: inline-block !important;
-    cursor: pointer !important;
-}
-
-/* Make button larger and clickable */
-[data-testid="baseButton-headerNoPadding"] {
-    width: 44px !important;
-    height: 44px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 8px !important;
-}
-
-[data-testid="baseButton-headerNoPadding"]:hover {
-    background: rgba(0,0,0,0.05) !important;
-}
-
-/* Also fix collapsed sidebar button */
-[data-testid="collapsedControl"] button span {
-    display: none !important;
-}
-
-[data-testid="collapsedControl"] button::before {
-    content: "☰" !important;
-    font-size: 24px !important;
-    font-weight: bold !important;
-}
-</style>
-""", unsafe_allow_html=True)
 
 # Initialize session state
 defaults = {
@@ -127,12 +86,30 @@ FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1
 DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
 MAX_CHARS = 24000
 
-PAGE_BG_MAP = {
-    "Soft Blue":       "#E8F1F5",
-    "Pale Lavender":   "#F5E8F5",
-    "Pale Mint":       "#E8F5F1",
-    "Low Stimulation": "#F2F2EC",
+# Derive scheme metadata from the central COLOR_SCHEMES table.
+# ALL_SCHEME_NAMES: flat list in the order they appear in config (preserves grouping).
+# SCHEME_GROUP: scheme name -> group label (e.g. "Soft Blue" -> "Accessibility").
+# PAGE_BG_MAP: scheme name -> page background hex (used by PNG export).
+ALL_SCHEME_NAMES = []
+SCHEME_GROUP = {}
+PAGE_BG_MAP = {}
+for _group_name, _group in COLOR_SCHEMES.items():
+    for _scheme_name, _palette in _group.items():
+        ALL_SCHEME_NAMES.append(_scheme_name)
+        SCHEME_GROUP[_scheme_name] = _group_name
+        PAGE_BG_MAP[_scheme_name] = _palette["bg"]
+
+# Friendlier group labels for the dropdown
+_GROUP_LABEL = {
+    "Accessibility": "Calm",
+    "Vibrant": "Vibrant",
+    "High Contrast": "High Contrast",
 }
+
+def _format_scheme(name):
+    group = SCHEME_GROUP.get(name, "")
+    label = _GROUP_LABEL.get(group, group)
+    return f"{label} — {name}" if label else name
 
 # --- header ---
 render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_state.colour_scheme)
@@ -175,10 +152,17 @@ with st.sidebar:
         st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
         st.rerun()
 
-    colour_options = ["Soft Blue", "Pale Lavender", "Pale Mint", "Low Stimulation"]
+    colour_options = ALL_SCHEME_NAMES
     if st.session_state.colour_scheme not in colour_options:
         st.session_state.colour_scheme = "Soft Blue"
-    new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox")
+    new_colour = st.selectbox(
+        "Colour Scheme",
+        colour_options,
+        index=colour_options.index(st.session_state.colour_scheme),
+        format_func=_format_scheme,
+        key="colour_selectbox",
+        help="Calm = low-stimulation palettes for sensory comfort. Vibrant = brighter, more saturated. High Contrast = WCAG AAA pairings for low-vision and dyslexic readers.",
+    )
     if new_colour != st.session_state.colour_scheme:
         st.session_state.colour_scheme = new_colour
         st.rerun()
@@ -246,6 +230,10 @@ with btn:
                         ))
                     for idx, url in results:
                         st.session_state.card_images[idx] = url
+                        if url:
+                            st.success(f"✅ Found image for card {idx + 1}")
+                        else:
+                            st.info(f"ℹ️ No image found for card {idx + 1}")
 
 if not st.session_state.flashcard_generated:
     st.markdown(
@@ -275,6 +263,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     if flipped_count == len(flashcards):
         st.success("🎉 You've studied all the cards! Well done!")
     
+    # Card styling functions
     def card_outer_style(accent_hex, scheme=None):
         base = (
             f"background: #FFFEF9;"
@@ -307,6 +296,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
             return "padding: 24px 22px;"
         return "padding: 28px 24px;"
 
+    # Single-card paginated view
     total_cards = len(flashcards)
 
     if st.session_state.current_card_idx >= total_cards:
@@ -460,6 +450,7 @@ f"""<div style='{outer_style}'>
             st.session_state.card_flipped[idx] = not is_flipped
             st.rerun()
 
+    # PNG download for single card
     _, dl_single, _ = st.columns([1, 1, 1])
     with dl_single:
         wiki_bytes = fetch_image_bytes(img_url) if img_url else None
@@ -481,6 +472,7 @@ f"""<div style='{outer_style}'>
             use_container_width=True,
         )
 
+    # Navigation
     st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
     nav_prev, nav_info, nav_next = st.columns([1, 1.2, 1])
 
@@ -559,6 +551,6 @@ f"""<div style='{outer_style}'>
             use_container_width=True,
         )
 
-# --- feedback box ---
+# --- feedback box at bottom ---
 st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
 render_feedback_box(FEEDBACK_URL, st.session_state.colour_scheme)
