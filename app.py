@@ -18,7 +18,9 @@ try:
 except Exception:
     pass
 
-# Create config file if needed
+# Create a neutral boot theme. The real per-scheme colours are applied at
+# runtime by apply_styles() on every rerun, so this only needs to be a sane
+# default for the very first paint before any scheme is chosen.
 config_dir = os.path.expanduser("~/.streamlit")
 config_file = os.path.join(config_dir, "config.toml")
 if not os.path.exists(config_file):
@@ -26,9 +28,9 @@ if not os.path.exists(config_file):
     with open(config_file, "w") as f:
         f.write("""[theme]
 primaryColor = "#3A7CA5"
-backgroundColor = "#E8F1F5"
-secondaryBackgroundColor = "#FFFFFF"
-textColor = "#1C3A42"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#1C1C1C"
 font = "sans serif"
 base = "light"
 
@@ -117,7 +119,7 @@ render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_st
 st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 
 # Mobile settings hint
-render_mobile_settings_hint()
+render_mobile_settings_hint(st.session_state.colour_scheme)
 
 # --- settings panel in sidebar ---
 with st.sidebar:
