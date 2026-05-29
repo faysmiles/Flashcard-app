@@ -85,7 +85,7 @@ apply_styles(
 )
 
 DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
-MAX_CHARS = 48000
+MAX_CHARS = 70000
 
 # Derive scheme metadata from the central COLOR_SCHEMES table.
 # ALL_SCHEME_NAMES: flat list in the order they appear in config (preserves grouping).
