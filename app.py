@@ -262,37 +262,78 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
         st.success("🎉 You've studied all the cards! Well done!")
     
     # Card styling functions
-    def card_outer_style(accent_hex, scheme=None):
-        base = (
-            f"background: #FFFEF9;"
-            f"border-radius: 18px;"
-            f"margin: 8px auto;"
-            f"max-width: 620px;"
-            f"box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);"
-            f"overflow: hidden;"
-        )
+    def card_outer_style(accent_hex, card_bg, scheme=None):
         if scheme == "Low Stimulation":
-            return base + f"border: 2px solid {accent_hex};"
-        return base
+            return (
+                f"background:{card_bg};"
+                f"border-radius:20px;"
+                f"margin:12px auto;"
+                f"max-width:860px;"
+                f"border:2px solid {accent_hex};"
+                f"overflow:hidden;"
+            )
+        return (
+            f"background:{card_bg};"
+            f"border-radius:24px;"
+            f"margin:12px auto;"
+            f"max-width:860px;"
+            f"overflow:hidden;"
+            f"box-shadow:"
+            f"0 1px 2px rgba(0,0,0,0.07),"
+            f"0 4px 8px rgba(0,0,0,0.07),"
+            f"0 12px 24px rgba(0,0,0,0.09),"
+            f"0 24px 48px rgba(0,0,0,0.06);"
+        )
 
-    def emoji_strip_html(accent_hex, topic_emoji, scheme=None, count=7):
+    def accent_stripe_html(accent_hex, scheme=None):
         if scheme == "Low Stimulation":
             return ""
+        return (
+            f"<div style='"
+            f"height:6px;"
+            f"background:linear-gradient(90deg,{accent_hex},{accent_hex}99,{accent_hex}33);"
+            f"'></div>"
+        )
+
+    def emoji_strip_html(accent_hex, topic_emoji, scheme=None, count=9):
+        if scheme == "Low Stimulation":
+            return ""
+        sizes = [18, 20, 24, 26, 28, 26, 24, 20, 18]
+        sizes = (sizes * ((count // len(sizes)) + 1))[:count]
+        anim = (
+            "<style>"
+            "@keyframes fcmEmojiFloat{"
+            "0%,100%{transform:translateY(0)}"
+            "50%{transform:translateY(-4px)}"
+            "}"
+            "@media(prefers-reduced-motion:reduce){"
+            ".fcm-strip-emoji{animation:none!important}"
+            "}"
+            "</style>"
+        )
         emojis_row = "".join(
-            f"<span style='font-size:20px; line-height:1;'>{topic_emoji}</span>"
-            for _ in range(count)
+            f"<span class='fcm-strip-emoji' style='"
+            f"font-size:{sz}px;line-height:1;display:inline-block;"
+            f"animation:fcmEmojiFloat {1.8 + i*0.15:.2f}s ease-in-out infinite;"
+            f"animation-delay:{i*0.12:.2f}s;"
+            f"'>{twemojify(topic_emoji)}</span>"
+            for i, sz in enumerate(sizes)
         )
         return (
-            f"<div style='background:{accent_hex}; padding:10px 16px; "
-            f"display:flex; justify-content:space-around; align-items:center;'>"
+            f"{anim}"
+            f"<div style='"
+            f"background:linear-gradient(135deg,{accent_hex},{accent_hex}cc);"
+            f"padding:14px 20px;"
+            f"display:flex;justify-content:space-around;align-items:center;gap:4px;"
+            f"'>"
             f"{emojis_row}"
             f"</div>"
         )
 
     def card_body_style(scheme=None):
         if scheme == "Low Stimulation":
-            return "padding: 24px 22px;"
-        return "padding: 28px 24px;"
+            return "padding:28px 28px;"
+        return "padding:36px 40px;"
 
     # Single-card paginated view
     total_cards = len(flashcards)
@@ -310,8 +351,10 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     accent_color = card_colors.get('accent', label_color)
 
     scheme_name = st.session_state.colour_scheme
-    outer_style = card_outer_style(accent_color, scheme=scheme_name)
+    card_bg = card_colors.get('card_bg', '#FFFEF9')
+    outer_style = card_outer_style(accent_color, card_bg, scheme=scheme_name)
     body_style = card_body_style(scheme=scheme_name)
+    accent_stripe = accent_stripe_html(accent_color, scheme=scheme_name)
     top_strip = emoji_strip_html(accent_color, emoji, scheme=scheme_name)
     bottom_strip = top_strip
 
@@ -336,21 +379,26 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
 
     img_alt = f"Illustration related to the topic: {card['title']}"
 
-    card_bg_color = "#FFFEF9"
-    sticker_size = 44
+    card_bg_color = card_bg
+    sticker_size = 48
     if has_image and img_url:
         sticker_html = (
-            f"<div style='position:absolute; top:-8px; right:-8px; "
+            f"<div style='position:absolute; top:-10px; right:-10px; "
             f"width:{sticker_size}px; height:{sticker_size}px; border-radius:50%; "
             f"background:{accent_color}; display:flex; align-items:center; "
-            f"justify-content:center; font-size:24px; line-height:1; "
+            f"justify-content:center; font-size:26px; line-height:1; "
             f"border:3px solid {card_bg_color}; "
-            f"box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2;' "
+            f"box-shadow:0 3px 10px rgba(0,0,0,0.30); z-index:2;' "
             f"aria-hidden='true'>{twemojify(emoji)}</div>"
         )
+        # Polaroid: white border, slight rotation, drop shadow
         image_frame_style = (
-            f"box-shadow:0 0 0 4px {accent_color}, "
-            f"0 4px 12px rgba(0,0,0,0.12);"
+            f"padding:10px 10px 28px 10px;"
+            f"background:#ffffff;"
+            f"box-shadow:0 4px 16px rgba(0,0,0,0.18),0 1px 3px rgba(0,0,0,0.12);"
+            f"border-radius:3px;"
+            f"transform:rotate(-1.2deg);"
+            f"display:inline-block;"
         )
     else:
         sticker_html = ""
@@ -384,14 +432,15 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
 
         if has_image and img_url:
             image_block = (
-                f"<div style='text-align:center; margin:0 0 24px 0;'>"
-                f"<div style='position:relative; display:inline-block;'>"
+                f"<div style='text-align:center; margin:0 0 30px 0;'>"
+                f"<div style='position:relative; display:inline-block; {image_frame_style}'>"
                 f"<img src='{img_url}' alt='{img_alt}' "
-                f"style='max-width:100%; max-height:320px; width:auto; height:auto; "
-                f"border-radius:12px; {image_frame_style} display:block;' />"
+                f"style='max-width:100%; max-height:300px; width:auto; height:auto; "
+                f"border-radius:2px; display:block;' />"
                 f"{sticker_html}"
                 f"</div>"
-                f"<p style='font-size:0.8em; color:{label_color}; margin:8px 0 0 0;'>{card['title']}</p>"
+                f"<p style='font-size:0.78em; color:{label_color}; margin:14px 0 0 0; "
+                f"letter-spacing:1px; font-weight:600; text-transform:uppercase;'>{card['title']}</p>"
                 f"</div>"
             )
         else:
@@ -399,9 +448,10 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
 
         st.markdown(
 f"""<div style='{outer_style}'>
+{accent_stripe}
 {top_strip}
 <div style='{body_style}'>
-<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{deco[0]} KEY FACTS {deco[1]}</p>
+<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.8em; margin:0 0 20px 0; text-transform:uppercase;'>{deco[0]} KEY FACTS {deco[1]}</p>
 {image_block}
 {facts_html}
 </div>
@@ -412,29 +462,31 @@ f"""<div style='{outer_style}'>
     else:
         if has_image and img_url:
             anchor_block = (
-                f"<div style='text-align:center; margin:0 0 20px 0;'>"
-                f"<div style='position:relative; display:inline-block;'>"
+                f"<div style='text-align:center; margin:0 0 24px 0;'>"
+                f"<div style='position:relative; display:inline-block; {image_frame_style}'>"
                 f"<img src='{img_url}' alt='{img_alt}' "
-                f"style='max-width:280px; max-height:280px; width:auto; height:auto; "
-                f"border-radius:14px; {image_frame_style} display:block;' />"
+                f"style='max-width:300px; max-height:300px; width:auto; height:auto; "
+                f"border-radius:2px; display:block;' />"
                 f"{sticker_html}"
                 f"</div>"
                 f"</div>"
             )
         else:
             anchor_block = (
-                f"<div style='font-size:100px; line-height:1; margin-bottom:20px;' "
+                f"<div style='font-size:110px; line-height:1; margin-bottom:24px;' "
                 f"role='img' aria-label='{img_alt}'>{twemojify(emoji)}</div>"
             )
 
+        title_size = max(st.session_state.text_size + 14, 30)
         st.markdown(
 f"""<div style='{outer_style}'>
+{accent_stripe}
 {top_strip}
 <div style='{body_style} text-align:center;'>
 {anchor_block}
-<p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>TOPIC</p>
-<div style='color:{text_color}; font-family:"{st.session_state.font_style}", sans-serif; font-size:{max(st.session_state.text_size + 10, 26)}px; font-weight:700;'>{card['title']}</div>
-<p style='font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;' aria-hidden='true'>{deco[0]} {deco[1]} {deco[2]} {deco[3]}</p>
+<p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.78em; margin:0 0 14px 0; text-transform:uppercase;'>TOPIC</p>
+<div style='color:{text_color}; font-family:"{st.session_state.font_style}", sans-serif; font-size:{title_size}px; font-weight:800; line-height:1.25; text-shadow:0 2px 8px rgba(0,0,0,0.10); padding:0 16px;'>{card['title']}</div>
+<p style='font-size:30px; opacity:0.35; margin-top:28px; letter-spacing:14px;' aria-hidden='true'>{deco[0]} {deco[1]} {deco[2]} {deco[3]}</p>
 </div>
 {bottom_strip}
 </div>""",
