@@ -158,6 +158,11 @@ def _render_level_modal(pending_level):
             st.rerun()
 
 
+def _safe(text):
+    """Escape curly braces in user/LLM text before injecting into f-strings."""
+    return str(text).replace("{", "&#123;").replace("}", "&#125;")
+
+
 def _get_scheme_palette_safe():
     """Get the current colour palette without importing inside a function."""
     from config import COLOR_SCHEMES
