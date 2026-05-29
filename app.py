@@ -32,7 +32,7 @@ level = "error"
 
 from config import (
     APP_TITLE, APP_SUBTITLE, READING_LEVELS, FONT_OPTIONS,
-    MIN_FONT_SIZE, MAX_FONT_SIZE, DEFAULT_FONT_SIZE
+    MIN_FONT_SIZE, MAX_FONT_SIZE, DEFAULT_FONT_SIZE, COLOR_SCHEMES,
 )
 from utils import (
     apply_styles, extract_text_from_file,
@@ -76,15 +76,14 @@ DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨
 MAX_CHARS = 70000  # <-- changed from 24000 to 70000
 
 PAGE_BG_MAP = {
-    "Soft Blue":       "#E8F1F5",
-    "Pale Lavender":   "#F5E8F5",
-    "Pale Mint":       "#E8F5F1",
-    "Low Stimulation": "#F2F2EC",
+    name: palette["bg"]
+    for group in COLOR_SCHEMES.values()
+    for name, palette in group.items()
 }
 
 render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_state.colour_scheme)
 st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
-render_mobile_settings_hint()
+render_mobile_settings_hint(st.session_state.colour_scheme)
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
@@ -117,7 +116,7 @@ with st.sidebar:
         st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
         st.rerun()
 
-    colour_options = ["Soft Blue", "Pale Lavender", "Pale Mint", "Low Stimulation"]
+    colour_options = [name for group in COLOR_SCHEMES.values() for name in group]
     if st.session_state.colour_scheme not in colour_options:
         st.session_state.colour_scheme = "Soft Blue"
     new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox")
