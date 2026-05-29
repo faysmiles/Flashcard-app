@@ -12,10 +12,13 @@ READING_LEVELS = {
 
 # Font options - expanded!
 FONT_OPTIONS = [
-    "OpenDyslexic", "Lexend", "Verdana", "Arial", "Calibri", 
-    "Tahoma", "Georgia", "Trebuchet MS", "Poppins", "Nunito", 
-    "Montserrat", "Lato", "Roboto", "Inter", "Comic Sans MS", 
-    "Caveat", "Pacifico", "Merriweather", "Fira Code"
+    "Arial", "Verdana", "Comic Sans MS", "OpenDyslexic", "Calibri",
+    "Helvetica", "Times New Roman", "Garamond", "Futura", "Gotham",
+    "Open Sans", "Roboto", "Lato", "Montserrat", "Inter",
+    "Playfair Display", "Merriweather", "Bebas Neue", "Oswald",
+    "Blambot Casual", "Wild Words", "Whizbang", "Gideon",
+    "Journalist", "Primal Scream", "Spookadelic", "Monsters Attack",
+    "Digital Geometric",
 ]
 
 # Color schemes
