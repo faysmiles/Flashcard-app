@@ -52,7 +52,7 @@ st.set_page_config(
 defaults = {
     "flashcard_generated": False,
     "flashcards": None,
-    "font_style": "Verdana",
+    "font_style": "OpenDyslexic",
     "text_size": DEFAULT_FONT_SIZE,
     "colour_scheme": "Soft Blue",
     "card_flipped": {},
@@ -218,7 +218,7 @@ with st.sidebar:
 
     st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
-    safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Verdana"
+    safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Arial"
     new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox")
     if new_font != st.session_state.font_style:
         st.session_state.font_style = new_font
