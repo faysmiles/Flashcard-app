@@ -2434,6 +2434,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     /* strips !important from inline style attributes.                         */
     .stApp .fcm-header h1 {{
         color: {header_title_col} !important;
+        font-size: {text_size * 2}px !important;
     }}
     .stApp .fcm-header p {{
         color: {header_subtitle_col} !important;
