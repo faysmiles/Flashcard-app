@@ -62,6 +62,10 @@ defaults = {
     "active_reading_level": None,
     "pending_reading_level": None,
     "trigger_regenerate": False,
+    # The selectbox value lives here so we can reconcile it BEFORE the widget
+    # is built (Streamlit forbids changing a widget-keyed value afterwards).
+    "reading_level_select": list(READING_LEVELS.keys())[0],
+    "revert_dropdown": False,
     "image_search_cache": {},
     "dialog_answered": False,
     "stored_user_text": "",
@@ -92,69 +96,68 @@ st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 render_mobile_settings_hint(st.session_state.colour_scheme)
 
 def _render_level_modal(pending_level):
-    """Inline modal — fully controlled via session state, no st.dialog."""
+    """Inline confirmation — fully controlled via session state (no st.dialog).
+
+    The card and its buttons are ALL rendered as native Streamlit elements in a
+    centred column. The previous version drew the card as a fixed-position HTML
+    overlay (z-index 9998) but left the Yes/No buttons in the normal page flow
+    *underneath* that overlay, so the overlay swallowed every click and the
+    buttons were invisible. Keeping everything native avoids that entirely.
+    """
     palette = _get_scheme_palette_safe()
     accent  = palette["accent"]
     bg      = palette["card_bg"]
     text    = palette["text"]
+    level_label = pending_level.split("(")[0].strip()
 
-    # Overlay + centred card using fixed positioning via CSS injected into the page
     st.markdown(f"""
 <style>
-.fcm-overlay {{
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45);
-    z-index: 9998;
-    display: flex; align-items: center; justify-content: center;
-}}
-.fcm-modal {{
+.fcm-card {{
     background: {bg};
+    border: 2px solid {accent}66;
+    border-left: 6px solid {accent};
     border-radius: 16px;
-    padding: 32px 28px 24px;
-    max-width: 420px; width: 90%;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
-    z-index: 9999;
+    padding: 26px 26px 10px 26px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
     animation: fcmPop 0.18s ease-out;
 }}
 @keyframes fcmPop {{
-    from {{ transform: scale(0.92); opacity: 0; }}
+    from {{ transform: scale(0.96); opacity: 0; }}
     to   {{ transform: scale(1);    opacity: 1; }}
 }}
-.fcm-modal-title {{
-    font-size: 1.25em; font-weight: 700;
-    color: {text}; margin: 0 0 12px 0;
-}}
-.fcm-modal-body {{
-    font-size: 1em; color: {text};
-    opacity: 0.85; margin: 0 0 24px 0;
-    line-height: 1.6;
-}}
-.fcm-modal-level {{
-    color: {accent}; font-weight: 700;
-}}
+.fcm-title {{ font-size: 1.25em; font-weight: 700; color: {text}; margin: 0 0 10px 0; }}
+.fcm-body  {{ font-size: 1em; color: {text}; opacity: 0.85; margin: 0; line-height: 1.6; }}
+.fcm-level {{ color: {accent}; font-weight: 700; }}
 </style>
-<div class="fcm-overlay">
-  <div class="fcm-modal">
-    <p class="fcm-modal-title">Change reading level?</p>
-    <p class="fcm-modal-body">
-      This will create a new deck of cards at
-      <span class="fcm-modal-level">{pending_level.split("(")[0].strip()}</span>
-      level.
-    </p>
-  </div>
+""", unsafe_allow_html=True)
+
+    _, mid, _ = st.columns([1, 3, 1])
+    with mid:
+        st.markdown(f"""
+<div class="fcm-card">
+  <p class="fcm-title">Change reading level?</p>
+  <p class="fcm-body">This will create a new deck of cards at
+     <span class="fcm-level">{_safe(level_label)}</span> level.</p>
 </div>
 """, unsafe_allow_html=True)
 
-    col_no, col_yes = st.columns(2)
-    with col_no:
-        if st.button("No, keep current cards", use_container_width=True, key="modal_no"):
+        col_no, col_yes = st.columns(2)
+        with col_no:
+            if st.button("No, keep current cards", use_container_width=True, key="modal_no"):
+                st.session_state.pending_reading_level = None
+                st.session_state.revert_dropdown = True
+                st.rerun()
+        with col_yes:
+            if st.button("Yes, generate new deck ✨", use_container_width=True, key="modal_yes"):
+                st.session_state.active_reading_level = pending_level
+                st.session_state.pending_reading_level = None
+                st.session_state.trigger_regenerate = True
+                st.rerun()
+
+        if st.button("✕ Close", use_container_width=True, key="modal_close"):
+            # Same outcome as "No": dismiss and snap the dropdown back.
             st.session_state.pending_reading_level = None
-            st.rerun()
-    with col_yes:
-        if st.button("Yes, generate new deck ✨", use_container_width=True, key="modal_yes"):
-            st.session_state.active_reading_level = pending_level
-            st.session_state.pending_reading_level = None
-            st.session_state.trigger_regenerate = True
+            st.session_state.revert_dropdown = True
             st.rerun()
 
 
@@ -172,29 +175,46 @@ def _get_scheme_palette_safe():
             return group[scheme]
     return COLOR_SCHEMES["Accessibility"]["Soft Blue"]
 
+# --- Reconcile the reading-level dropdown BEFORE the widget is created ---
+# A widget-keyed session_state value can't be changed once the widget has been
+# instantiated this run, so any "snap back" to the active level must happen
+# here (this is why the old index= trick never reverted the dropdown).
+reading_level_options = list(READING_LEVELS.keys())
+active_level = st.session_state.active_reading_level or reading_level_options[0]
+if active_level not in reading_level_options:
+    active_level = reading_level_options[0]
+if st.session_state.reading_level_select not in reading_level_options:
+    st.session_state.reading_level_select = active_level
+if st.session_state.revert_dropdown:
+    st.session_state.reading_level_select = active_level
+    st.session_state.revert_dropdown = False
+
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    reading_level_options = list(READING_LEVELS.keys())
-    # Always show the confirmed active level in the widget — this makes No/X
-    # snap the dropdown back automatically since we control the index.
-    active_level = st.session_state.active_reading_level or reading_level_options[0]
-    if active_level not in reading_level_options:
-        active_level = reading_level_options[0]
     selected_level = st.selectbox(
         "Reading Level",
         reading_level_options,
-        index=reading_level_options.index(active_level),
         key="reading_level_select",
     )
     st.caption("📖 Each level creates a new set of cards.")
-    # Only set pending if: cards exist, something genuinely changed, and no
-    # dialog is already open (prevents re-triggering on every rerun).
-    if (selected_level != active_level
-            and st.session_state.flashcard_generated
-            and not st.session_state.pending_reading_level):
-        st.session_state.pending_reading_level = selected_level
-        st.rerun()
-    reading_level = active_level
+
+    if not st.session_state.flashcard_generated:
+        # No deck yet — the choice applies directly to the first deck, so
+        # there's nothing to confirm. (This also fixes the first deck always
+        # generating at the default level regardless of the dropdown.)
+        reading_level = selected_level
+    else:
+        # A deck exists: changing the level needs confirmation.
+        if selected_level != active_level:
+            # Open (or re-point) the confirmation at the requested level.
+            if st.session_state.pending_reading_level != selected_level:
+                st.session_state.pending_reading_level = selected_level
+                st.rerun()
+        else:
+            # Re-selecting the active level dismisses any open dialog.
+            if st.session_state.pending_reading_level:
+                st.session_state.pending_reading_level = None
+        reading_level = active_level
 
     st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
