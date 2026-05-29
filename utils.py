@@ -13,6 +13,20 @@ from openai import OpenAI
 # Topic emojis: matched against a single keyword (the LLM-provided topic_keyword
 # or the card title). Order doesn't matter much here since titles are short.
 _TOPIC_EMOJI_MAP = {
+    # --- PRIORITY: collision-prone long keys (checked first) ---
+    'cinematography': '🎬', 'screenwriting': '🎬', 'method acting': '🎬',
+    'theatre production': '🎬', 'film production': '🎬',
+    'ethnomusicology': '🎤', 'audio engineering': '🎤',
+    'venture capital': '💡', 'intellectual property': '💡',
+    'carpentry': '🪚', 'joinery': '🪚',
+    'pottery': '🏺', 'resin pouring': '🏺',
+    'skateboarding': '🛹', 'rollerblading': '🛹',
+    'rockhounding': '🪨', 'fossil hunting': '🪨', 'seashell collecting': '🪨',
+    'smart home': '🏠', 'home automation': '🏠',
+    'esports': '🏆', 'speedrunning': '🏆', 'competitive gaming': '🏆',
+    'breakdancing': '🕺', 'street dance': '🕺', 'hip hop dance': '🕺',
+    'speech pathology': '🗣️', 'speech therapy': '🗣️',
+
     # --- PRIORITY: multi-word phrases that must beat short-word substring matches ---
     'harry potter': '🧙', 'star wars': '🚀', 'lord of the rings': '🧙',
     'princess bride': '🌹',
@@ -1019,6 +1033,157 @@ _TOPIC_EMOJI_MAP = {
     'fishing': '🎣', 'hunting': '🏹', 'swimming': '🏊',
     'gaming': '🎮', 'chess': '♟️', 'puzzles': '🧩',
     'collecting': '🏆', 'stamp collecting': '📮',
+    # --- Philosophy & humanities ---
+    'ethics': '🤔', 'ethical': '🤔', 'aesthetics': '🤔', 'epistemology': '🤔',
+    'metaphysics': '🤔', 'political philosophy': '🤔', 'moral philosophy': '🤔',
+    'logic': '🤔', 'logical': '🤔',
+    'hermeneutics': '📜', 'archival science': '📜', 'historiography': '📜',
+    'biblical studies': '✝️', 'hermeneutic': '✝️',
+    'phonetics': '🗣️', 'phonology': '🗣️', 'morphology': '🗣️',
+    'syntax': '🗣️', 'semantics': '🗣️', 'pragmatics': '🗣️',
+    'historical linguistics': '🗣️',
+    'literary criticism': '📖', 'comparative literature': '📖',
+    'field archaeology': '🏺', 'bioarchaeology': '🏺', 'zooarchaeology': '🏺',
+    'geoarchaeology': '🏺', 'cultural heritage': '🏺',
+
+    # --- Natural sciences (gaps) ---
+    'geology': '🪨', 'geotechnical': '🪨', 'mineralogy': '🪨',
+    'hydrology': '💧', 'hydrological': '💧',
+    'climatology': '🌡️', 'climate science': '🌡️',
+    'cosmology': '🌌', 'astrophysics': '🌌', 'astrobiology': '🌌',
+    'molecular biology': '🧬', 'evolutionary biology': '🧬',
+    'polymer science': '🧪', 'analytical chemistry': '🧪',
+
+    # --- Maths & computing (gaps) ---
+    'topology': '∞', 'number theory': '∞', 'discrete mathematics': '∞',
+    'linear algebra': '∞', 'pure mathematics': '∞',
+    'cybersecurity': '🔒', 'encryption': '🔒', 'network security': '🔒',
+    'information security': '🔒',
+    'database systems': '🗄️', 'data structures': '🗄️',
+    'signal processing': '📡', 'telecommunications': '📡', 'microelectronics': '📡',
+    'power systems': '⚡', 'electrical engineering': '⚡', 'circuit design': '⚡',
+
+    # --- Engineering (gaps) ---
+    'fluid mechanics': '💨', 'aerodynamics': '💨', 'hydrodynamics': '💨',
+    'kinematics': '⚙️', 'mechanical engineering': '⚙️',
+    'structural analysis': '🏗️', 'civil engineering': '🏗️', 'urban planning': '🏗️',
+    'geotechnical engineering': '🏗️',
+    'avionics': '✈️', 'propulsion': '✈️', 'orbital mechanics': '✈️',
+    'aerospace engineering': '✈️', 'aerospace': '✈️',
+    'materials science': '🧱',
+
+    # --- Social sciences (gaps) ---
+    'neuroscience': '🧠', 'cognitive psychology': '🧠', 'neurology': '🧠',
+    'econometrics': '📊', 'biostatistics': '📊', 'demography': '📊',
+    'international relations': '🌍', 'global health policy': '🌍',
+    'development economics': '🌍',
+    'public policy': '⚖️', 'penology': '⚖️', 'victimology': '⚖️',
+    'torts': '⚖️', 'contract law': '⚖️', 'corporate law': '⚖️',
+    'constitutional law': '⚖️',
+    'forensic science': '🔬', 'forensic accounting': '🔬',
+    'social theory': '👥', 'urban sociology': '👥', 'ethnography': '👥',
+
+    # --- Arts & media (gaps) ---
+    'printmaking': '🖨️', 'typography': '🖨️',
+    'ui/ux design': '🖥️', 'ux design': '🖥️', '3d modeling': '🖥️',
+    'animation': '🖥️', 'game design': '🖥️', 'digital art': '🖥️',
+    'cinematography': '🎬', 'screenwriting': '🎬', 'method acting': '🎬',
+    'theatre production': '🎬', 'film production': '🎬',
+    'ethnomusicology': '🎤', 'audio engineering': '🎤', 'vocal performance': '🎤',
+    'investigative reporting': '📰', 'broadcast journalism': '📰',
+    'public relations': '📰', 'mass communication': '📰',
+
+    # --- Business & law (gaps) ---
+    'investment banking': '🏦', 'corporate finance': '🏦', 'auditing': '🏦',
+    'human resources': '👔', 'operations management': '👔',
+    'supply chain logistics': '👔', 'strategic management': '👔',
+    'consumer behaviour': '📣', 'digital marketing': '📣',
+    'brand management': '📣', 'market research': '📣',
+    'venture capital': '💡', 'intellectual property': '💡',
+    'entrepreneurship': '💡', 'startup': '💡',
+
+    # --- Health & medicine (gaps) ---
+    'pathology': '🦠', 'epidemiology': '🦠', 'immunology': '🦠',
+    'pharmacology': '💊', 'dietotherapy': '💊', 'metabolism': '💊',
+    'sports nutrition': '💊',
+    'speech pathology': '🗣️', 'speech therapy': '🗣️',
+    'global health': '🏥', 'preventative medicine': '🏥', 'public health': '🏥',
+
+    # --- Trades & applied skills (gaps) ---
+    'plumbing': '🔧', 'hvac': '🔧', 'auto mechanics': '🔧',
+    'aviation maintenance': '🔧', 'marine engineering': '🔧',
+    'carpentry': '🪚', 'joinery': '🪚',
+    'horticulture': '🌱', 'hydroponics': '🌱', 'permaculture': '🌱',
+    'composting': '🌱',
+    'animal husbandry': '🐄',
+    'butchery': '🍖', 'molecular gastronomy': '🍖', 'pastry arts': '🍰',
+
+    # --- Textile & craft hobbies (gaps) ---
+    'crocheting': '🧶', 'embroidery': '🧶', 'quilting': '🧶',
+    'weaving': '🧶', 'lacemaking': '🧶', 'spinning wool': '🧶',
+    'woodturning': '🪵', 'whittling': '🪵', 'blacksmithing': '🪵',
+    'glassblowing': '🪵', 'metal sculpting': '🪵',
+    'origami': '📦', 'papier-mâché': '📦', 'scale model building': '📦',
+    'scrapbooking': '📦', 'cardmaking': '📦',
+    'pottery': '🏺', 'resin pouring': '🏺',
+    'clock repair': '🕰️', 'antique restoration': '🕰️', 'bookbinding': '🕰️',
+    'shoe cobbling': '🕰️',
+
+    # --- Outdoor & adventure hobbies (gaps) ---
+    'bouldering': '🧗', 'mountaineering': '🧗', 'caving': '🧗',
+    'spelunking': '🧗',
+    'kayaking': '🛶', 'canoeing': '🛶', 'paddleboarding': '🛶',
+    'snorkeling': '🤿', 'scuba diving': '🤿',
+    'skateboarding': '🛹', 'rollerblading': '🛹',
+    'foraging': '🍄', 'mushroom hunting': '🍄', 'geocaching': '🍄',
+    'bonsai training': '🌿', 'aquascaping': '🌿',
+    'parkour': '🤸',
+
+    # --- Food & home hobbies (gaps) ---
+    'homebrewing': '🍺', 'beer brewing': '🍺', 'winemaking': '🍷',
+    'cheese making': '🧀', 'fermenting': '🧀', 'pickling': '🧀',
+    'coffee roasting': '☕',
+    'smart home': '🏠', 'home automation': '🏠',
+
+    # --- Games & puzzles (gaps) ---
+    'backgammon': '🎲', 'dungeons and dragons': '🎲', 'warhammer': '🎲',
+    'tabletop gaming': '🎲', 'board gaming': '🎲',
+    'mahjong': '🀄', 'tarot': '🀄', 'tarot reading': '🀄',
+    'sudoku': '🧩', 'jigsaw puzzles': '🧩', 'rubiks cube': '🧩',
+    'logic grids': '🧩', 'crosswords': '🧩',
+    'esports': '🏆', 'speedrunning': '🏆', 'competitive gaming': '🏆',
+
+    # --- Martial arts (gaps) ---
+    'brazilian jiu-jitsu': '🥋', 'muay thai': '🥋', 'krav maga': '🥋',
+    'bjj': '🥋',
+
+    # --- Fitness (gaps) ---
+    'calisthenics': '💪', 'powerlifting': '💪',
+
+    # --- Dance (gaps) ---
+    'salsa': '💃', 'tango': '💃', 'ballroom dance': '💃',
+    'swing dancing': '💃', 'latin dance': '💃',
+    'ballet': '🩰', 'tap dance': '🩰',
+    'breakdancing': '🕺', 'street dance': '🕺', 'hip hop dance': '🕺',
+
+    # --- Collecting hobbies (gaps) ---
+    'philately': '📮', 'stamp collecting': '📮', 'postcard collecting': '📮',
+    'numismatics': '🪙', 'coin collecting': '🪙',
+    'vinyl records': '💿', 'record collecting': '💿', 'comic books': '💿',
+    'trading cards': '💿',
+    'rockhounding': '🪨', 'fossil hunting': '🪨', 'seashell collecting': '🪨',
+    'mineral collecting': '🪨',
+    'mechanical watches': '⌚', 'vintage cameras': '⌚', 'watch collecting': '⌚',
+    'sneakers': '👟', 'sneaker collecting': '👟',
+    'action figures': '🎭', 'movie memorabilia': '🎭',
+
+    # --- Performance & audio hobbies (gaps) ---
+    'stand-up comedy': '🎤', 'improv': '🎤', 'karaoke': '🎤',
+    'magic tricks': '🪄', 'puppetry': '🪄', 'juggling': '🪄',
+    'fire spinning': '🪄', 'fire performance': '🪄',
+    'djing': '🎧', 'podcasting': '🎧', 'field recording': '🎧',
+    'blogging': '✍️', 'journaling': '✍️', 'fan fiction': '✍️',
+    'poetry slams': '✍️',
 }
 
 
