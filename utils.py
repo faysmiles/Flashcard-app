@@ -2584,6 +2584,30 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     with matching selectors + !important. This runs on every rerun, so the
     dropdown re-paints the entire page, not just the cards.
     """
+    # --- Load the non-system fonts so the Font Style selector actually works ---
+    # Arial / Comic Sans MS / Calibri are (usually) installed locally and render
+    # as-is. Everything else must be pulled in as a webfont, otherwise the
+    # browser silently falls back to the default sans-serif and switching fonts
+    # appears to "do nothing". Google Fonts covers most; OpenDyslexic ships via
+    # an @font-face (it isn't on Google Fonts). Gotham is proprietary and can't
+    # be loaded from a free CDN, so it will still fall back unless self-hosted.
+    st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@400;500;600&family=Merriweather:wght@400;700&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff2') format('woff2'),
+         url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff') format('woff');
+    font-weight: normal; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-bold-webfont.woff2') format('woff2');
+    font-weight: bold; font-style: normal; font-display: swap;
+}
+</style>
+""", unsafe_allow_html=True)
+
     palette = _get_scheme_palette(colour_scheme)
     bg = palette["bg"]
     text = palette["text"]
