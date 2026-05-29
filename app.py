@@ -37,7 +37,7 @@ from config import (
 from utils import (
     apply_styles, extract_text_from_file,
     generate_flashcards_from_llm, get_card_colors,
-    search_wikipedia_image, render_header, render_feedback_box,
+    search_wikipedia_image, render_header,
     render_card_to_png, fetch_image_bytes, build_cards_zip,
     render_mobile_settings_hint,
 )
@@ -71,7 +71,6 @@ apply_styles(
     st.session_state.line_spacing,
 )
 
-FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
 DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
 MAX_CHARS = 70000  # <-- changed from 24000 to 70000
 
@@ -498,7 +497,3 @@ f"""<div style='{outer_style}'>
             key="dl_all_text",
             use_container_width=True,
         )
-
-# --- feedback box at bottom of page ---
-st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
-render_feedback_box(FEEDBACK_URL, st.session_state.colour_scheme)
