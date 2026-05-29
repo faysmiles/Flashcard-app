@@ -2532,8 +2532,8 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
     <div class="fcm-header" style='text-align:center; padding:24px 20px;
                 background:linear-gradient(135deg, {accent}, {grad_end});
                 border-radius:14px; margin-bottom:20px;'>
-        <h1 style='color:{title_color}; margin:0;
-                   font-size:{text_size * 2}px;'>{left_stars}{app_title}{right_stars}</h1>
+        <h1 style='color:{title_color}; margin:0; line-height:1.15;
+                   font-size:{text_size * 2}px;'>{left_stars}<span class="fcm-title-text">{app_title}</span>{right_stars}</h1>
         <p style='color:{subtitle_color}; margin:12px 0 0 0;
                   font-size:{text_size}px;'>{app_subtitle}</p>
     </div>
@@ -2593,7 +2593,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     # be loaded from a free CDN, so it will still fall back unless self-hosted.
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@400;500;600&family=Merriweather:wght@400;700&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@400;500;600&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
 @font-face {
     font-family: 'OpenDyslexic';
     src: url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff2') format('woff2'),
@@ -2774,12 +2774,15 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     /* These win because `.stApp .fcm-header h1` (0,2,1) beats `.stApp h1`     */
     /* (0,1,1). Set here in a <style> block - not inline - because Streamlit   */
     /* strips !important from inline style attributes.                         */
-    .stApp .fcm-header h1 {{
+    .stApp .fcm-header h1,
+    .stApp .fcm-header h1 .fcm-title-text {{
         color: {header_title_col} !important;
         font-size: {text_size * 2}px !important;
+        line-height: 1.15 !important;
     }}
     .stApp .fcm-header p {{
         color: {header_subtitle_col} !important;
+        font-size: {text_size}px !important;
     }}
     .stApp .fcm-header h1 * {{
         color: {header_title_col} !important;
