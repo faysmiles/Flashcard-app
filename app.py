@@ -64,7 +64,7 @@ defaults = {
     "trigger_regenerate": False,
     "image_search_cache": {},
     "dialog_answered": False,
-
+    "stored_user_text": "",
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -98,20 +98,21 @@ def _level_change_dialog(pending_level):
     col_no, col_yes = st.columns(2)
     with col_no:
         if st.button("No, keep current cards", use_container_width=True, key="dialog_no"):
+            # Clear pending — widget will snap back to active_level on next rerun
             st.session_state.pending_reading_level = None
-            st.session_state.dialog_answered = True
             st.rerun()
     with col_yes:
         if st.button("Yes, generate new deck ✨", use_container_width=True, key="dialog_yes"):
             st.session_state.active_reading_level = pending_level
             st.session_state.pending_reading_level = None
-            st.session_state.dialog_answered = True
             st.session_state.trigger_regenerate = True
             st.rerun()
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
     reading_level_options = list(READING_LEVELS.keys())
+    # Always show the confirmed active level in the widget — this makes No/X
+    # snap the dropdown back automatically since we control the index.
     active_level = st.session_state.active_reading_level or reading_level_options[0]
     if active_level not in reading_level_options:
         active_level = reading_level_options[0]
@@ -122,9 +123,14 @@ with st.sidebar:
         key="reading_level_select",
     )
     st.caption("📖 Each level creates a new set of cards.")
-    if selected_level != active_level and st.session_state.flashcard_generated:
+    # Only set pending if: cards exist, something genuinely changed, and no
+    # dialog is already open (prevents re-triggering on every rerun).
+    if (selected_level != active_level
+            and st.session_state.flashcard_generated
+            and not st.session_state.pending_reading_level):
         st.session_state.pending_reading_level = selected_level
-    reading_level = selected_level
+        st.rerun()
+    reading_level = active_level
 
     st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
@@ -170,11 +176,10 @@ with st.sidebar:
     st.caption("💡 These settings adjust the whole app. Change them any time - your cards won't disappear.")
 
 # --- Fire reading level dialog if needed ---
-# If dialog was open last run but dialog_answered was NOT set, user closed via X → cancel.
-if not st.session_state.pending_reading_level and not st.session_state.dialog_answered:
-    pass  # nothing pending, normal state
-st.session_state.dialog_answered = False  # reset each run
-
+# X-close: st.dialog closes itself and Streamlit reruns. pending_reading_level
+# is still set but no button fired, so we clear it here (cancels the change).
+# We detect this because the dialog is no longer open (Streamlit closed it)
+# but pending is still set — clearing it snaps the dropdown back.
 if st.session_state.pending_reading_level:
     _level_change_dialog(st.session_state.pending_reading_level)
 
@@ -217,8 +222,9 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     st.session_state.current_card_idx = 0
 
     new_cards = None
+    _text_to_use = st.session_state.stored_user_text or user_text
     with st.spinner(f"🤖 AI is creating {level_key.split('(')[0].strip()} flashcards..."):
-        new_cards = generate_flashcards_from_llm(user_text, reading_level=level_code)
+        new_cards = generate_flashcards_from_llm(_text_to_use, reading_level=level_code)
         if new_cards:
             st.session_state.flashcards = new_cards
             st.session_state.flashcard_generated = True
@@ -254,7 +260,8 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
 # --- Auto-regenerate after dialog confirmation ---
 if st.session_state.trigger_regenerate:
     st.session_state.trigger_regenerate = False
-    if user_text.strip() and word_count >= 20:
+    _regen_text = st.session_state.stored_user_text or user_text
+    if _regen_text.strip() and len(_regen_text.split()) >= 20:
         _run_generation(st.session_state.active_reading_level, show_images, reuse_images=True)
     else:
         st.warning("⚠️ Please enter or upload some text first, then change the reading level.")
@@ -268,6 +275,7 @@ with btn:
             st.warning("⚠️ Please add a bit more text (at least 20 words) so the AI has enough to work with.")
         else:
             st.session_state.active_reading_level = reading_level
+            st.session_state.stored_user_text = user_text
             st.session_state.image_search_cache = {}
             _run_generation(reading_level, show_images, reuse_images=False)
 
