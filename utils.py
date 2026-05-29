@@ -386,7 +386,7 @@ def search_wikipedia_image(query):
     prompt = (
         f"clean educational illustration of {keyword}, "
         "simple background, suitable for children and students, "
-        "bright clear colours, no text"
+        "bright clear colours, no text, no labels"
     )
 
     try:
@@ -481,6 +481,12 @@ WRITING RULES (follow strictly):
 - Each fact must make sense on its own without reading the others.
 - Keep facts tight: a clear summary sentence, not a long explanation.
 
+IMAGE (very important — this drives the card illustration):
+- Each card needs an "image_search": a descriptive phrase (8-15 words) that would find the RIGHT image for this card's specific topic.
+- Be specific, not generic. "a dog using body language to show happiness to its owner" beats "dog".
+- Describe the scene or concept visually: what would you see in a good illustration of this card?
+- Avoid abstract words that don't translate to images (e.g. "importance", "overview").
+
 EMOJI (very important — this app relies on visual cues):
 - Each fact needs an "emoji": the SINGLE best emoji that represents that fact's MAIN idea.
 - Choose it for meaning, not for a stray word. "Whales migrate each year" -> the journey, not the animal.
@@ -493,7 +499,7 @@ Return ONLY valid JSON in this exact format, no commentary:
     {{
       "title": "How Dogs Communicate",
       "topic_keyword": "dog",
-      "image_search": "dog communication",
+      "image_search": "a dog using body language to communicate with its owner",
       "facts": [
         {{"text": "Dogs use body language to show how they feel.", "emoji": "🗣️", "emoji_hint": "body language"}},
         {{"text": "A wagging tail usually means a dog is happy.", "emoji": "〰️", "emoji_hint": "tail"}},
