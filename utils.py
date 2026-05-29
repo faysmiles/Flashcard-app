@@ -14,7 +14,25 @@ from openai import OpenAI
 # or the card title). Order doesn't matter much here since titles are short.
 _TOPIC_EMOJI_MAP = {
     # --- PRIORITY: multi-word phrases that must beat short-word substring matches ---
-    'harry potter': '🧙', 'star wars': '🚀', 'lord of the rings': '💍',
+    'harry potter': '🧙', 'star wars': '🚀', 'lord of the rings': '🧙',
+    'princess bride': '🌹',
+    # Food dishes that contain animal/short-word substrings
+    'tiramisu': '🍰', 'ramen': '🍜', 'baguette': '🥖', 'baguettes': '🥖',
+    'guacamole': '🥑', 'shawarma': '🥙', 'sunday roast': '🍖',
+    'tom yum': '🍲', 'croissant': '🥐', 'croissants': '🥐',
+    'massaman': '🍛', 'lasagne': '🍝', 'lasagna': '🍝',
+    'parmesan': '🧀', 'mozzarella': '🧀', 'prosciutto': '🥩',
+    'bolognese': '🍝', 'carbonara': '🍝',
+    'dim sum': '🥟', 'char siu': '🥩',
+    'pad thai': '🍜', 'satay': '🍢',
+    'bibimbap': '🍚', 'bulgogi': '🥩',
+    'samosa': '🥟', 'pakora': '🍤', 'chapati': '🫓',
+    'enchilada': '🌯', 'quesadilla': '🫓',
+    'bouillabaisse': '🦞', 'ratatouille': '🍆',
+    'clam chowder': '🦪', 'lobster roll': '🦞',
+    'bangers and mash': '🌭', 'shepherd\'s pie': '🥧',
+    'toad in the hole': '🌭', 'yorkshire pudding': '🫓',
+    'fish and chips': '🐟',
     'empire strikes back': '🚀', 'return of the jedi': '🚀',
     'indiana jones': '🏺', 'raiders of the lost ark': '🏺',
     'lion king': '🦁', 'finding nemo': '🐠', 'toy story': '🧸',
@@ -455,7 +473,7 @@ _TOPIC_EMOJI_MAP = {
     'disney': '✨', 'pixar': '🎬', 'dreamworks': '🎬',
     'netflix': '📺', 'streaming': '📺',
     'jedi': '⚔️', 'lightsaber': '⚔️',
-    'tolkien': '📖',
+    'tolkien': '🧙',
 
     # --- IMDB Top 100 films ---
     # Top 10
@@ -466,10 +484,10 @@ _TOPIC_EMOJI_MAP = {
     '12 angry men': '⚖️', 'twelve angry men': '⚖️',
     "schindler's list": '📜',
     'schindlers list': '📜',
-    'lord of the rings': '💍', 'fellowship of the ring': '💍',
-    'return of the king': '💍', 'two towers': '💍',
+    'lord of the rings': '🧙', 'fellowship of the ring': '🧙',
+    'return of the king': '🧙', 'two towers': '🧙',
     'pulp fiction': '🎲',
-    'hobbit': '💍',
+    'hobbit': '🧙',
 
     # Classics & drama
     'casablanca': '🎩',
@@ -541,7 +559,7 @@ _TOPIC_EMOJI_MAP = {
     # Fantasy & magic
     'harry potter': '🧙', 'hogwarts': '🧙', 'wizarding': '🧙', 'potter': '🧙',
     'wizard of oz': '🌈',
-    'princess bride': '💍',
+    'princess bride': '🌹',
     'pan labyrinth': '🌀',
     'spirited away': '👻',
     'my neighbour totoro': '🌳', 'my neighbor totoro': '🌳',
@@ -837,11 +855,97 @@ _TOPIC_EMOJI_MAP = {
     'bread': '🍞', 'grain': '🌾', 'cereal': '🌾',
     'sugar': '🍬', 'fat': '🧈', 'protein': '🥩', 'vitamin': '💊',
     'cooking': '🍳', 'baking': '🥖', 'recipe': '📋',
-    'restaurant': '🍴', 'chef': '👨‍🍳',
-    'pizza': '🍕', 'pasta': '🍝', 'sushi': '🍱', 'burger': '🍔',
+    'restaurant': '🍴', 'chef': '👨‍🍳', 'kitchen': '🍳',
+    'vegan': '🥗', 'vegetarian': '🥗', 'halal': '🌙', 'kosher': '✡️',
+    'street food': '🥙', 'fast food': '🍔', 'takeaway': '🥡',
+    'spicy': '🌶️', 'sweet': '🍬', 'savoury': '🧂', 'salty': '🧂',
+
+    # Italian
+    'pizza': '🍕', 'pasta': '🍝', 'spaghetti': '🍝', 'lasagne': '🍝',
+    'risotto': '🍚', 'gelato': '🍦', 'tiramisu': '🍰',
+    'carbonara': '🍝', 'bolognese': '🍝', 'pesto': '🌿',
+    'bruschetta': '🍞', 'focaccia': '🍞',
+
+    # Japanese
+    'sushi': '🍣', 'sashimi': '🍣', 'ramen': '🍜', 'udon': '🍜',
+    'tempura': '🍤', 'teriyaki': '🍱', 'miso': '🍲', 'tofu': '🫘',
+    'onigiri': '🍙', 'gyoza': '🥟', 'edamame': '🫘',
+    'katsu': '🍱', 'yakitori': '🍢',
+
+    # Chinese
+    'dim sum': '🥟', 'dumplings': '🥟', 'spring rolls': '🥢',
+    'fried rice': '🍚', 'noodles': '🍜', 'peking duck': '🦆',
+    'char siu': '🥩', 'hot pot': '🍲', 'wonton': '🥟',
+    'sweet and sour': '🍊', 'chow mein': '🍜',
+
+    # Indian
+    'curry': '🍛', 'naan': '🫓', 'roti': '🫓', 'chapati': '🫓',
+    'biryani': '🍚', 'samosa': '🥟', 'dal': '🍲', 'lentil': '🫘',
+    'tikka masala': '🍛', 'vindaloo': '🌶️', 'korma': '🍛',
+    'paneer': '🧀', 'mango lassi': '🥛', 'chutney': '🫙',
+    'tandoori': '🔥', 'pakora': '🍤',
+
+    # Mexican
+    'taco': '🌮', 'tacos': '🌮', 'burrito': '🌯', 'burritos': '🌯',
+    'enchilada': '🌯', 'quesadilla': '🫓', 'guacamole': '🥑',
+    'salsa': '🍅', 'nachos': '🧀', 'fajita': '🌮',
+    'tortilla': '🫓', 'tamale': '🌽', 'churros': '🍩',
+
+    # American
+    'burger': '🍔', 'hamburger': '🍔', 'cheeseburger': '🍔',
+    'hot dog': '🌭', 'bbq': '🍖', 'barbecue': '🍖',
+    'mac and cheese': '🧀', 'pancakes': '🥞', 'waffles': '🧇',
+    'fried chicken': '🍗', 'wings': '🍗', 'ribs': '🍖',
+    'clam chowder': '🦪', 'lobster roll': '🦞',
+    'cornbread': '🍞', 'biscuits and gravy': '🍳',
+    'apple pie': '🥧', 'cheesecake': '🍰',
+
+    # British & Irish
+    'fish and chips': '🐟', 'full english': '🍳', 'fry up': '🍳',
+    'sunday roast': '🍖', 'roast dinner': '🍖',
+    'shepherd\'s pie': '🥧', 'cottage pie': '🥧',
+    'bangers and mash': '🌭', 'beans on toast': '🫘',
+    'scones': '🫓', 'crumpets': '🫓', 'pasty': '🥧',
+    'haggis': '🥩', 'black pudding': '🍳',
+    'yorkshire pudding': '🫓', 'toad in the hole': '🌭',
+
+    # French
+    'croissant': '🥐', 'baguette': '🥖', 'crepe': '🫓',
+    'quiche': '🥧', 'souffle': '🍮', 'ratatouille': '🍆',
+    'bouillabaisse': '🦞', 'coq au vin': '🍗',
+    'french onion soup': '🧅', 'crème brûlée': '🍮',
+    'macarons': '🍪', 'éclair': '🍩',
+
+    # Spanish
+    'paella': '🍚', 'tapas': '🍽️', 'gazpacho': '🍅',
+    'churros': '🍩', 'tortilla española': '🥚',
+    'jamón': '🥩', 'chorizo': '🌶️', 'patatas bravas': '🥔',
+
+    # Middle Eastern
+    'hummus': '🫘', 'falafel': '🫓', 'shawarma': '🥙',
+    'kebab': '🥙', 'pita': '🫓', 'flatbread': '🫓',
+    'tabbouleh': '🌿', 'baklava': '🍯', 'mezze': '🍽️',
+    'tahini': '🫙',
+
+    # Thai
+    'pad thai': '🍜', 'green curry': '🍛', 'tom yum': '🍲',
+    'massaman': '🍛', 'sticky rice': '🍚', 'som tam': '🥗',
+    'satay': '🍢',
+
+    # Korean
+    'kimchi': '🥬', 'bibimbap': '🍚', 'bulgogi': '🥩',
+    'japchae': '🍜', 'tteok': '🍡', 'kimbap': '🍣',
+    'doenjang': '🫙', 'korean bbq': '🍖',
+
+    # Desserts & drinks
     'chocolate': '🍫', 'cake': '🎂', 'ice cream': '🍦',
-    'coffee': '☕', 'tea': '🫖', 'smoothie': '🥤',
-    'vegan': '🥗', 'vegetarian': '🥗',
+    'doughnut': '🍩', 'cookie': '🍪', 'brownie': '🍫',
+    'pudding': '🍮', 'custard': '🍮', 'trifle': '🍮',
+    'coffee': '☕', 'espresso': '☕', 'latte': '☕', 'cappuccino': '☕',
+    'tea': '🫖', 'green tea': '🍵', 'chai': '🍵',
+    'smoothie': '🥤', 'juice': '🥤', 'milkshake': '🥛',
+    'wine': '🍷', 'beer': '🍺', 'cocktail': '🍹',
+    'lemonade': '🍋', 'hot chocolate': '🍫',
 
     # --- Environment & sustainability ---
     'environment': '🌍', 'environmental': '🌍', 'sustainability': '♻️',
