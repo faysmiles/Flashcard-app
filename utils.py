@@ -1772,7 +1772,7 @@ Return ONLY valid JSON in this exact format, no commentary:
 }}
 
 TEXT TO CONVERT:
-{raw_text[:60000]}"""
+{raw_text[:70000]}"""
 
     try:
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
