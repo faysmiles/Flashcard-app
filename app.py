@@ -73,7 +73,7 @@ apply_styles(
 
 FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSftcBkHjYju-nNZ0uENPLc1CNSLTrEV3WBR0PenubeZALjypw/viewform"
 DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
-MAX_CHARS = 24000
+MAX_CHARS = 70000  # <-- changed from 24000 to 70000
 
 PAGE_BG_MAP = {
     "Soft Blue":       "#E8F1F5",
@@ -150,7 +150,6 @@ if user_text and len(user_text) > MAX_CHARS:
 
 word_count = len(user_text.split()) if user_text else 0
 st.caption(f"📝 {word_count} words")
-# Updated for your current stack
 st.caption("⚠️ Your text is sent to DeepSeek AI and Pollinations image service to create flashcards. Please don't paste anything confidential.")
 
 _, btn, _ = st.columns([1, 1.2, 1])
