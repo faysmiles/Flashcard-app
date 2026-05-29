@@ -88,7 +88,8 @@ with st.sidebar:
     st.markdown("### ⚙️ Settings")
     reading_level = st.selectbox("Reading Level", list(READING_LEVELS.keys()), key="reading_level_select")
     
-    new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(st.session_state.font_style), key="font_selectbox")
+    safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Verdana"
+    new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox")
     if new_font != st.session_state.font_style:
         st.session_state.font_style = new_font
         st.rerun()
