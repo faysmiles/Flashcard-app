@@ -1,160 +1,700 @@
-Extraterrestrial life, or alien life (colloquially aliens), is life that originates from another world rather than on Earth. No extraterrestrial life has yet been detected. Such life might range from simple forms such as microbes to intelligent beings, possibly bringing forth civilizations that might be far more, or far less, advanced than humans.[1][2][3] The Drake equation speculates about the existence of sapient life elsewhere in the universe. The science of extraterrestrial life is known as astrobiology.
+# app.py - main flashcard app (DeepSeek + Pollinations + Supabase – no Anthropic)
 
-Speculation about inhabited worlds beyond Earth dates back to antiquity. Early Christian writers, including Augustine, discussed ideas from thinkers like Democritus and Epicurus about countless worlds in the vast universe.[4] Pre-modern writers typically assumed extraterrestrial "worlds" were inhabited by living beings. William Vorilong, in the 15th century, acknowledged the possibility Jesus could have visited extraterrestrial worlds to redeem their inhabitants.[4]: 26  In 1440, Nicholas of Cusa suggested Earth is a "brilliant star"; he theorized that all celestial bodies, even the Sun, could host life.[5] Descartes wrote that there were no means to prove the stars were not inhabited by "intelligent creatures", but their existence was a matter of speculation.[4]: 67 
+import os
+import re
+from dotenv import load_dotenv
+load_dotenv()
 
-In comparison to the life-abundant Earth, the vast majority of intrasolar and extrasolar planets and moons have harsh surface conditions and disparate atmospheric chemistry, or lack an atmosphere.[6] However, there are many extreme and chemically harsh ecosystems on Earth that do support forms of life and are often hypothesized to be the origin of life on Earth. Examples include life surrounding hydrothermal vents,[7] acidic hot springs,[8] and volcanic lakes,[9] as well as halophiles[10] and the deep biosphere.[11]
+import streamlit as st
 
-Since the mid-20th century, researchers have searched for extraterrestrial life and intelligence. Solar system studies focus on Venus, Mars, Europa, and Titan, while exoplanet discoveries now total 6,022 confirmed planets in 4,490 systems as of October 2025. Depending on the category of search, methods range from analysis of telescope and specimen data[12] to radios used to detect and transmit interstellar communication.[13] Interstellar travel remains largely hypothetical, with only the Voyager 1 and Voyager 2 probes confirmed to have entered the interstellar medium. The concept of extraterrestrial life, especially intelligent life, has greatly influenced culture and fiction. A key debate centers on contacting extraterrestrial intelligence: some advocate active attempts, while others warn it could be risky, given human history of exploiting other societies.[14][15]
-Context
-This article is one of a series on:
-Life in the universe
-Outline
-Astrobiology
-Planetary habitability in the Solar System
+# Anthropic key handling removed – you now use DeepSeek, Pollinations, Supabase
 
-    Venus Earth Mars Europa Enceladus Titan
+config_dir = os.path.expanduser("~/.streamlit")
+config_file = os.path.join(config_dir, "config.toml")
+if not os.path.exists(config_file):
+    os.makedirs(config_dir, exist_ok=True)
+    with open(config_file, "w") as f:
+        f.write("""[theme]
+primaryColor = "#3A7CA5"
+backgroundColor = "#E8F1F5"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#1C3A42"
+font = "sans serif"
+base = "light"
 
-Life outside the Solar System
+[client]
+showErrorDetails = false
+toolbarMode = "minimal"
 
-    Habitable zone Potentially habitable exoplanets Galactic habitable zone
+[logger]
+level = "error"
+""")
 
-Habitability of...
+from config import (
+    APP_TITLE, APP_SUBTITLE, READING_LEVELS, FONT_OPTIONS,
+    MIN_FONT_SIZE, MAX_FONT_SIZE, DEFAULT_FONT_SIZE, COLOR_SCHEMES,
+)
+from utils import (
+    apply_styles, extract_text_from_file,
+    generate_flashcards_from_llm, get_card_colors,
+    search_wikipedia_image, render_header,
+    render_card_to_png, fetch_image_bytes, build_cards_zip,
+    render_mobile_settings_hint,
+)
 
-    Binary star systems Natural satellites Neutron star systems Brown dwarf systems Red dwarf systems K-type main-sequence star systems Yellow dwarf systems F-type main-sequence star systems
+st.set_page_config(
+    page_title=APP_TITLE,
+    page_icon="💡",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-    vte
+defaults = {
+    "flashcard_generated": False,
+    "flashcards": None,
+    "font_style": "Verdana",
+    "text_size": DEFAULT_FONT_SIZE,
+    "colour_scheme": "Soft Blue",
+    "card_flipped": {},
+    "card_images": {},
+    "current_card_idx": 0,
+    "line_spacing": 1.8,
+    "active_reading_level": None,
+    "pending_reading_level": None,
+    "trigger_regenerate": False,
+    "image_search_cache": {},
+    "dialog_answered": False,
+    "stored_user_text": "",
+    "show_level_banner": False,
+}
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
-Using Big Bang models for the timeline of the universe, it was too hot for life for the first 15 million years and the elements of organic life, created through stellar fusion, did not exist until at least 50 million years.[16] The first organic compounds may have formed in the protoplanetary disk of dust grains that would eventually create rocky planets like Earth. Although Earth was in a molten state after its birth and may have burned any organics that fell on it, it would have been more receptive once it cooled down.[17] Once the right conditions on Earth were met, life started by a chemical process known as abiogenesis.[18]
+apply_styles(
+    st.session_state.font_style,
+    st.session_state.text_size,
+    st.session_state.colour_scheme,
+    st.session_state.line_spacing,
+)
 
-During most of its stellar evolution, stars combine hydrogen nuclei to make helium nuclei by stellar fusion, and the comparatively lighter weight of helium allows the star to release the extra energy. The process continues until the star uses all of its available fuel, with the speed of consumption being related to the size of the star. During its last stages, stars start combining helium nuclei to form carbon nuclei. The larger stars can further combine carbon nuclei to create oxygen and silicon, oxygen into neon and sulfur, and so on until iron. Ultimately, the star blows much of its content back into the stellar medium, where it would join clouds that would eventually become new generations of stars and planets. Many of those materials are the raw components of life on Earth. As this process takes place in all the universe, said materials are ubiquitous in the cosmos and not a rarity from the Solar System.[19]
+DECORATION_EMOJIS = ['✨', '⭐', '💫', '🌟', '🎯', '📚', '💡', '🎨']
+MAX_CHARS = 70000  # <-- changed from 24000 to 70000
 
-Earth is a planet in the Solar System, a planetary system formed by a star at the center, the Sun, and the objects that orbit it: other planets, moons, asteroids, and comets. The sun is part of the Milky Way, a galaxy. The Milky Way is part of the Local Group, a galaxy group that is in turn part of the Laniakea Supercluster. The universe is composed of all similar structures in existence.[20] The immense distances between celestial objects are a difficulty for studying extraterrestrial life. So far, humans have only set foot on the Moon and sent robotic probes to other planets and moons in the Solar System. Although probes can withstand conditions that may be lethal to humans, the distances cause time delays: the New Horizons took nine years after launch to reach Pluto.[21] No probe has ever reached extrasolar planetary systems. The Voyager 2 left the Solar System at a speed of 50,000 kilometers per hour; if it headed towards the Alpha Centauri system, the closest one to Earth at 4.4 light years, it would reach it in 100,000 years. Under current technology, such systems can only be studied by telescopes, which have limitations.[21] It is estimated that dark matter has a larger amount of combined matter than stars and gas clouds, but as it plays no role in the stellar evolution of stars and planets, it is usually not taken into account by astrobiology.[22]
+PAGE_BG_MAP = {
+    name: palette["bg"]
+    for group in COLOR_SCHEMES.values()
+    for name, palette in group.items()
+}
 
-There is an area around a star, the circumstellar habitable zone or "Goldilocks zone", wherein water may be at the right temperature to exist in liquid form at a planetary surface. This area is neither too close to the star, where water would be heated to steam, nor too far away, where water would be frozen to ice. However, although useful as an approximation, planetary habitability is complex and defined by several factors. Being in the habitable zone is not enough to guarantee a planet is habitable, or that it even contains liquid water. Venus is located in the solar system's habitable zone, but does not have liquid water because of the conditions of its atmosphere. In contrary, a planetary mass moon such as Europa that is beyond the circumstellar habitable zone of the Solar System has been speculated to contain liquid water under the moon’s frozen surface, as it is theorised that heat from tidal flexing causes the subsurface ocean to remain liquid. Jovian planets or gas giants are not considered habitable even if they orbit close enough to their stars as hot Jupiters, due to crushing atmospheric pressures.[23] The actual distances for the habitable zones vary according to the type of star, and even the solar activity of each specific star influences the local habitability. The type of star also defines the time the habitable zone will exist, as its presence and limits will change along with the star's stellar evolution.[24]
+render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_state.colour_scheme)
+st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
+render_mobile_settings_hint(st.session_state.colour_scheme)
 
-The Big Bang occurred 13.8 billion years ago, the Solar System was formed 4.6 billion years ago, and the first hominids appeared 6 million years ago. Life on other planets may have started, evolved, given birth to extraterrestrial intelligences, and perhaps even faced a planetary extinction event millions or billions of years ago. When considered from a cosmic perspective, the brief times of existence of Earth's species may suggest that extraterrestrial life may be equally fleeting under such a scale.[25]
+def _render_level_modal(pending_level):
+    """Inline modal — fully controlled via session state, no st.dialog."""
+    palette = _get_scheme_palette_safe()
+    accent  = palette["accent"]
+    bg      = palette["card_bg"]
+    text    = palette["text"]
 
-During a period of about 7 million years, from about 10 to 17 million years after the Big Bang, the background temperature was between 373 and 273 K (100 and 0 °C; 212 and 32 °F), allowing the possibility of liquid water if any planets existed. Avi Loeb (2014) speculated that primitive life might in principle have appeared during this window, which he called "the Habitable Epoch of the Early Universe".[26][27]
+    # Overlay + centred card using fixed positioning via CSS injected into the page
+    st.markdown(f"""
+<style>
+.fcm-overlay {{
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 9998;
+    display: flex; align-items: center; justify-content: center;
+}}
+.fcm-modal {{
+    background: {bg};
+    border-radius: 16px;
+    padding: 32px 28px 24px;
+    max-width: 420px; width: 90%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+    z-index: 9999;
+    animation: fcmPop 0.18s ease-out;
+}}
+@keyframes fcmPop {{
+    from {{ transform: scale(0.92); opacity: 0; }}
+    to   {{ transform: scale(1);    opacity: 1; }}
+}}
+.fcm-modal-title {{
+    font-size: 1.25em; font-weight: 700;
+    color: {text}; margin: 0 0 12px 0;
+}}
+.fcm-modal-body {{
+    font-size: 1em; color: {text};
+    opacity: 0.85; margin: 0 0 24px 0;
+    line-height: 1.6;
+}}
+.fcm-modal-level {{
+    color: {accent}; font-weight: 700;
+}}
+</style>
+<div class="fcm-overlay">
+  <div class="fcm-modal">
+    <p class="fcm-modal-title">Change reading level?</p>
+    <p class="fcm-modal-body">
+      This will create a new deck of cards at
+      <span class="fcm-modal-level">{pending_level.split("(")[0].strip()}</span>
+      level.
+    </p>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-Life on Earth is quite ubiquitous across the planet and has adapted over time to almost all the available environments in it, extremophiles and the deep biosphere thrive at even the most hostile ones. As a result, it is inferred that life in other celestial bodies may be equally adaptive. However, the origin of life is unrelated to its ease of adaptation and may have stricter requirements. A celestial body may not have any life on it, even if it were habitable.[28]
-Likelihood of existence
-Main articles: Drake equation and Extraterrestrial intelligence
+    col_no, col_yes = st.columns(2)
+    with col_no:
+        if st.button("No, keep current cards", use_container_width=True, key="modal_no"):
+            st.session_state.pending_reading_level = None
+            st.rerun()
+    with col_yes:
+        if st.button("Yes, generate new deck ✨", use_container_width=True, key="modal_yes"):
+            st.session_state.active_reading_level = pending_level
+            st.session_state.pending_reading_level = None
+            st.session_state.trigger_regenerate = True
+            st.rerun()
 
-Life in the cosmos beyond Earth has never been observed, but it is expected. The hypothesis of ubiquitous extraterrestrial life relies on three main ideas. The first one, the size of the universe, allows for plenty of planets to have a similar habitability to Earth, and the age of the universe gives enough time for a long process analog to the history of Earth to happen there. The second is that the substances that make life, such as carbon and water, are ubiquitous in the universe. The third is that the physical laws are universal, which means that the forces that would facilitate or prevent the existence of life would be the same ones as on Earth.[29] According to this argument, made by scientists such as Carl Sagan and Stephen Hawking, it would be improbable for life not to exist somewhere else other than Earth.[30][31] This argument is embodied in the Copernican principle, which states that Earth does not occupy a unique position in the Universe, and the mediocrity principle, which states that there is nothing special about life on Earth.[32]
 
-Other authors consider instead that life in the cosmos, or at least multicellular life, may actually be rare. The Rare Earth hypothesis maintains that life on Earth is possible because of a series of factors that range from the location in the galaxy and the configuration of the Solar System to local characteristics of the planet, and that it is unlikely that another planet simultaneously meets all such requirements. The proponents of this hypothesis consider that very little evidence suggests the existence of extraterrestrial life and that, at this point, it is just a desired result and not a reasonable scientific explanation for any gathered data.[33][34]
-Drake equation
+def _get_scheme_palette_safe():
+    """Get the current colour palette without importing inside a function."""
+    from config import COLOR_SCHEMES
+    scheme = st.session_state.get("colour_scheme", "Soft Blue")
+    for group in COLOR_SCHEMES.values():
+        if scheme in group:
+            return group[scheme]
+    return COLOR_SCHEMES["Accessibility"]["Soft Blue"]
 
-In 1961, astronomer and astrophysicist Frank Drake devised the Drake equation as a way to stimulate scientific dialogue at a meeting on the search for extraterrestrial intelligence (SETI).[35][36] The Drake equation is a probabilistic argument used to estimate the number of active, communicative extraterrestrial civilizations in the Milky Way galaxy. The Drake equation is:[37]: xix 
+with st.sidebar:
+    st.markdown("### ⚙️ Settings")
+    reading_level_options = list(READING_LEVELS.keys())
+    # Always show the confirmed active level in the widget — this makes No/X
+    # snap the dropdown back automatically since we control the index.
+    active_level = st.session_state.active_reading_level or reading_level_options[0]
+    if active_level not in reading_level_options:
+        active_level = reading_level_options[0]
+    selected_level = st.selectbox(
+        "Reading Level",
+        reading_level_options,
+        index=reading_level_options.index(active_level),
+        key="reading_level_select",
+    )
+    st.caption("📖 Each level creates a new set of cards.")
+    # Only set pending if: cards exist, something genuinely changed, and no
+    # dialog is already open (prevents re-triggering on every rerun).
+    if (selected_level != active_level
+            and st.session_state.flashcard_generated
+            and not st.session_state.pending_reading_level):
+        st.session_state.pending_reading_level = selected_level
+        st.rerun()
+    reading_level = active_level
 
-    N = R ∗ ⋅ f p ⋅ n e ⋅ f ℓ ⋅ f i ⋅ f c ⋅ L {\displaystyle N=R_{\ast }\cdot f_{p}\cdot n_{e}\cdot f_{\ell }\cdot f_{i}\cdot f_{c}\cdot L}
+    st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
-where:
+    safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Verdana"
+    new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox")
+    if new_font != st.session_state.font_style:
+        st.session_state.font_style = new_font
+        st.rerun()
+    
+    new_size = st.slider("Text Size", MIN_FONT_SIZE, MAX_FONT_SIZE, st.session_state.text_size, key="text_size_slider")
+    if new_size != st.session_state.text_size:
+        st.session_state.text_size = new_size
+        st.rerun()
 
-    N = the number of Milky Way galaxy civilizations communicating across interplanetary space
+    SPACING_OPTIONS = {"Tight (1.5)": 1.5, "Normal (1.8)": 1.8, "Loose (2.0)": 2.0}
+    spacing_keys = list(SPACING_OPTIONS.keys())
+    current_spacing_key = next(
+        (k for k, v in SPACING_OPTIONS.items() if v == st.session_state.line_spacing),
+        "Normal (1.8)",
+    )
+    new_spacing_key = st.selectbox(
+        "Line Spacing",
+        spacing_keys,
+        index=spacing_keys.index(current_spacing_key),
+        key="line_spacing_select",
+        help="Space between lines of text.",
+    )
+    if SPACING_OPTIONS[new_spacing_key] != st.session_state.line_spacing:
+        st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
+        st.rerun()
 
-and
+    colour_options = [name for group in COLOR_SCHEMES.values() for name in group]
+    if st.session_state.colour_scheme not in colour_options:
+        st.session_state.colour_scheme = "Soft Blue"
+    new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox")
+    if new_colour != st.session_state.colour_scheme:
+        st.session_state.colour_scheme = new_colour
+        st.rerun()
+    
+    show_images = st.checkbox("Show Images", value=True, key="show_images_check", help="Show relevant images from Wikipedia on flipped cards")
+    
+    st.markdown("---")
+    st.caption("💡 These settings adjust the whole app. Change them any time - your cards won't disappear.")
 
-    R* = the rate of formation of stars suitable for intelligent life in our galaxy
-    fp = the fraction of those stars that have planets
-    ne = the average number of planets that can potentially support life
-    fl = the fraction of planets that actually support life
-    fi = the fraction of planets with life that evolves to become intelligent life (civilisations)
-    fc = the fraction of civilizations that develop a technology to broadcast detectable signs of their existence into space
-    L = the length of time over which such civilizations broadcast detectable signals into space
+# --- Show reading level modal if needed ---
+if st.session_state.pending_reading_level:
+    _render_level_modal(st.session_state.pending_reading_level)
 
-Drake's proposed estimates are as follows, but numbers on the right side of the equation are agreed as speculative and open to substitution:
+st.markdown("### 📝 Your Text")
 
-10,000 = 5 ⋅ 0.5 ⋅ 2 ⋅ 1 ⋅ 0.2 ⋅ 1 ⋅ 10,000 {\displaystyle 10{,}000=5\cdot 0.5\cdot 2\cdot 1\cdot 0.2\cdot 1\cdot 10{,}000}[38][better source needed]
+input_type = st.radio("Input Type", ["Paste Text", "Upload File"], horizontal=True, label_visibility="collapsed")
 
-The Drake equation has proved controversial since, although it is written as a math equation, none of its values were known at the time. Although some values may eventually be measured, others are based on social sciences and are not knowable by their very nature.[39] This does not allow one to make noteworthy conclusions from the equation.[40]
+if input_type == "Paste Text":
+    user_text = st.text_area("Type or paste your text...", height=150, placeholder="Paste your text here...", label_visibility="collapsed")
+else:
+    uploaded_file = st.file_uploader("Upload a text file (TXT, PDF, or DOCX)", type=["txt", "pdf", "docx"], label_visibility="collapsed")
+    if uploaded_file:
+        user_text = extract_text_from_file(uploaded_file)
+        st.success(f"✅ Loaded {uploaded_file.name}")
+    else:
+        user_text = ""
 
-Based on observations from the Hubble Space Telescope, there are nearly 2 trillion galaxies in the observable universe.[41] It is estimated that at least ten percent of all Sun-like stars have a system of planets.[42] In other words, there are 6.25×1018 stars with planets orbiting them in the observable universe. Even if it is assumed that only one out of a billion of these stars has planets supporting life, there would be some 6.25 billion life-supporting planetary systems in the observable universe. A 2013 study based on results from the Kepler spacecraft estimated that the Milky Way contains at least as many planets as it does stars, resulting in 100–400 billion exoplanets.[43][44] The Nebular hypothesis that explains the formation of the Solar System and other planetary systems would suggest that those can have several configurations, and not all of them may have rocky planets within the habitable zone.[45]
+if user_text and len(user_text) > MAX_CHARS:
+    st.info(f"ℹ️ Your text is quite long - we'll use the first {MAX_CHARS:,} characters.")
+    user_text = user_text[:MAX_CHARS]
 
-The apparent contradiction between high estimates of the probability of the existence of extraterrestrial civilisations and the lack of evidence for such civilisations is known as the Fermi paradox.[46] Dennis W. Sciama claimed that life's existence in the universe depends on various fundamental constants. Zhi-Wei Wang and Samuel L. Braunstein suggest that a random universe capable of supporting life is likely to be just barely able to do so, giving a potential explanation to the Fermi paradox.[47]
-Biochemical basis
-Main article: Hypothetical types of biochemistry
-See also: Water § Effects on life
+word_count = len(user_text.split()) if user_text else 0
+st.caption(f"📝 {word_count} words")
+st.caption("⚠️ Your text is sent to DeepSeek AI and Pollinations image service to create flashcards. Please don't paste anything confidential.")
 
-If extraterrestrial life exists, it could range from simple microorganisms and multicellular organisms similar to animals or plants, to complex alien intelligences akin to humans. When scientists talk about extraterrestrial life, they consider all those types. Although it is possible that extraterrestrial life may have other configurations, scientists use the hierarchy of lifeforms from Earth for simplicity, as it is the only one known to exist.[48]
+def _run_generation(level_key, show_imgs, reuse_images=False):
+    """Shared card generation logic used by both the button and auto-regenerate.
 
-The first basic requirement for life is an environment with non-equilibrium thermodynamics, which means that the thermodynamic equilibrium must be broken by a source of energy. The traditional sources of energy in the cosmos are the stars, such as for life on Earth, which depends on the energy of the sun. However, there are other alternative energy sources, such as volcanoes, plate tectonics, and hydrothermal vents. There are ecosystems on Earth in deep areas of the ocean that do not receive sunlight, and take energy from black smokers instead.[49] Magnetic fields and radioactivity have also been proposed as sources of energy, although they would be less efficient ones.[50]
+    reuse_images=True: carry over any image whose image_search term matches a
+    card in the previous deck (same topic at a different reading level).
+    """
+    level_code = READING_LEVELS[level_key]
+    # Snapshot the previous image cache keyed by search term before clearing
+    prev_cache = {}
+    if reuse_images and st.session_state.image_search_cache:
+        prev_cache = dict(st.session_state.image_search_cache)
 
-Life on Earth requires water in a liquid state as a solvent in which biochemical reactions take place. It is highly unlikely that an abiogenesis process can start within a gaseous or solid medium: the atom speeds, either too fast or too slow, make it difficult for specific ones to meet and start chemical reactions. A liquid medium also allows the transport of nutrients and substances required for metabolism.[51] Sufficient quantities of carbon and other elements, along with water, might enable the formation of living organisms on terrestrial planets with a chemical make-up and temperature range similar to that of Earth.[52][53] Life based on ammonia rather than water has been suggested as an alternative, though this solvent appears less suitable than water. It is also conceivable that there are forms of life whose solvent is a liquid hydrocarbon, such as methane, ethane or propane.[54]
+    st.session_state.card_images = {}
+    st.session_state.card_flipped = {}
+    st.session_state.current_card_idx = 0
 
-Another unknown aspect of potential extraterrestrial life would be the chemical elements that would compose it. Life on Earth is largely composed of carbon, but there could be other hypothetical types of biochemistry. A replacement for carbon would need to be able to create complex molecules, store information required for evolution, and be freely available in the medium. To create DNA, RNA, or a close analog, such an element should be able to bind its atoms with many others, creating complex and stable molecules. It should be able to create at least three covalent bonds: two for making long strings and at least a third to add new links and allow for diverse information. Only nine elements meet this requirement: boron, nitrogen, phosphorus, arsenic, antimony (three bonds), carbon, silicon, germanium and tin (four bonds). As for abundance, carbon, nitrogen, and silicon are the most abundant ones in the universe, far more than the others. On Earth's crust the most abundant of those elements is silicon, in the Hydrosphere it is carbon and in the atmosphere, it is carbon and nitrogen. Silicon, however, has disadvantages over carbon. The molecules formed with silicon atoms are less stable, and more vulnerable to acids, oxygen, and light. An ecosystem of silicon-based lifeforms would require very low temperatures, high atmospheric pressure, an atmosphere devoid of oxygen, and a solvent other than water. The low temperatures required would add an extra problem, the difficulty to kickstart a process of abiogenesis to create life in the first place.[55] Norman Horowitz, head of the Jet Propulsion Laboratory bioscience section for the Mariner and Viking missions from 1965 to 1976 considered that the great versatility of the carbon atom makes it the element most likely to provide solutions, even exotic solutions, to the problems of survival of life on other planets.[56] However, he also considered that the conditions found on Mars were incompatible with carbon based life.
+    new_cards = None
+    _text_to_use = st.session_state.stored_user_text or user_text
+    with st.spinner(f"🤖 AI is creating {level_key.split('(')[0].strip()} flashcards..."):
+        new_cards = generate_flashcards_from_llm(_text_to_use, reading_level=level_code)
+        if new_cards:
+            st.session_state.flashcards = new_cards
+            st.session_state.flashcard_generated = True
 
-Even if extraterrestrial life is based on carbon and uses water as a solvent, like Earth life, it may still have a radically different biochemistry. Life is generally considered to be a product of natural selection. It has been proposed that to undergo natural selection a living entity must have the capacity to replicate itself, the capacity to avoid damage/decay, and the capacity to acquire and process resources in support of the first two capacities.[57] Life on Earth may have started with an RNA world and later evolved to its current form, where some of the RNA tasks were transferred to DNA and proteins. Extraterrestrial life may still be stuck using RNA, or evolve into other configurations. It is unclear if our biochemistry is the most efficient one that could be generated, or which elements would follow a similar pattern.[58] However, it is likely that, even if cells had a different composition to those from Earth, they would still have a cell membrane. Life on Earth jumped from prokaryotes to eukaryotes and from unicellular organisms to multicellular organisms through evolution. So far no alternative process to achieve such a result has been conceived, even if hypothetical. Evolution requires life to be divided into individual organisms, and no alternative organisation has been satisfactorily proposed either. At the basic level, membranes define the limit of a cell, between it and its environment, while remaining partially open to exchange energy and resources with it.[59]
+    if new_cards and show_imgs:
+        # Populate card_images — reuse from prev_cache where search term matches
+        needs_fetch = []
+        for i, card in enumerate(new_cards):
+            search_term = card.get('image_search', card['title'])
+            if search_term in prev_cache:
+                st.session_state.card_images[i] = prev_cache[search_term]
+            else:
+                needs_fetch.append((i, search_term))
 
-The evolution from simple cells to eukaryotes, and from them to multicellular lifeforms, is not guaranteed. The Cambrian explosion took place thousands of millions of years after the origin of life, and its causes are not fully known yet. On the other hand, the jump to multicellularity took place several times, which suggests that it could be a case of convergent evolution, and so likely to take place on other planets as well. Palaeontologist Simon Conway Morris considers that convergent evolution would lead to kingdoms similar to our plants and animals, and that many features are likely to develop in alien animals as well, such as bilateral symmetry, limbs, digestive systems and heads with sensory organs.[60] Scientists from the University of Oxford analysed it from the perspective of evolutionary theory and wrote in a study in the International Journal of Astrobiology that aliens may be similar to humans.[61] The planetary context would also have an influence: a planet with higher gravity would have smaller animals, and other types of stars can lead to non-green photosynthesizers. The amount of energy available would also affect biodiversity, as an ecosystem sustained by black smokers or hydrothermal vents would have less energy available than those sustained by a star's light and heat, and so its lifeforms would not grow beyond a certain complexity.[60] There is also research in assessing the capacity of life for developing intelligence. It has been suggested that this capacity arises with the number of potential niches a planet contains, and that the complexity of life itself is reflected in the information density of planetary environments, which in turn can be computed from its niches.[62]
-Harsh environmental conditions on Earth harboring life
+        if needs_fetch:
+            with st.spinner("🖼️ Finding pictures for each card..."):
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=5) as pool:
+                    results = list(pool.map(
+                        lambda item: (item[0], item[1], search_wikipedia_image(item[1])),
+                        needs_fetch
+                    ))
+                for i, search_term, url in results:
+                    st.session_state.card_images[i] = url
 
-It is common knowledge that the conditions on other planets in the solar system, in addition to the many galaxies outside of the Milky Way galaxy, are very harsh and seem to be too extreme to harbor any life.[63] The environmental conditions on these planets can have intense UV radiation paired with extreme temperatures, lack of water,[64] and much more that can lead to conditions that don't seem to favor the creation or maintenance of extraterrestrial life. However, there has been much historical evidence that some of the earliest and most basic forms of life on Earth originated in some extreme environments[65] that seem unlikely to have harbored life at least at one point in Earth's history. Fossil evidence as well as many historical theories backed up by years of research and studies have marked environments like hydrothermal vents or acidic hot springs as some of the first places that life could have originated on Earth.[66] These environments can be considered extreme when compared to the typical ecosystems that the majority of life on Earth now inhabit, as hydrothermal vents are scorching hot due to the magma escaping from the Earth's mantle and meeting the much colder oceanic water. Even in today's world, there can be a diverse population of bacteria found inhabiting the area surrounding these hydrothermal vents[67] which can suggest that some form of life can be supported even in the harshest of environments like the other planets in the solar system.
+        # Update the persistent search-term → url cache for future reuse
+        st.session_state.image_search_cache = {
+            card.get('image_search', card['title']): st.session_state.card_images.get(i)
+            for i, card in enumerate(new_cards)
+            if st.session_state.card_images.get(i) is not None
+        }
 
-The aspects of these harsh environments that make them ideal for the origin of life on Earth, as well as the possibility of creation of life on other planets, is the chemical reactions forming spontaneously. For example, the hydrothermal vents found on the ocean floor are known to support many chemosynthetic processes[7] which allow organisms to utilize energy through reduced chemical compounds that fix carbon.[67] In return, these reactions will allow for organisms to live in relatively low oxygenated environments while maintaining enough energy to support themselves. The early Earth environment was reducing[68] and therefore, these carbon fixing compounds were necessary for the survival and possible origin of life on Earth. With the little amount of information that scientists have found regarding the atmosphere on other planets in the Milky Way galaxy and beyond, the atmospheres are most likely reducing or with very low oxygen levels,[69] especially when compared with Earth's atmosphere. If there were the necessary elements and ions on these planets, the same carbon fixing, reduced chemical compounds occurring around hydrothermal vents could also occur on these planets' surfaces and possibly result in the origin of extraterrestrial life.
-Planetary habitability in the Solar System
-Main article: Planetary habitability in the Solar System
-Besides Earth, Mars, Europa and Enceladus are the most likely places in the Solar System to find life.
+# --- Auto-regenerate after dialog confirmation ---
+if st.session_state.trigger_regenerate:
+    st.session_state.trigger_regenerate = False
+    st.session_state.show_level_banner = True
+    _regen_text = st.session_state.stored_user_text or user_text
+    if _regen_text.strip() and len(_regen_text.split()) >= 20:
+        _run_generation(st.session_state.active_reading_level, show_images, reuse_images=True)
+    else:
+        st.warning("⚠️ Please enter or upload some text first, then change the reading level.")
 
-The Solar System has a wide variety of planets, dwarf planets, and moons, and each one is studied for its potential to host life. Each one has its own specific conditions that may benefit or harm life. So far, the only lifeforms found are those from Earth. No extraterrestrial intelligence other than humans exists or has ever existed within the Solar System.[70] Astrobiologist Mary Voytek points out that it would be unlikely to find large ecosystems, as they would have already been detected by now.[23]
+# --- Reading level change banner (shows briefly after level changes) ---
+if st.session_state.get("show_level_banner"):
+    new_lvl = st.session_state.active_reading_level or ""
+    lvl_label = new_lvl.split("(")[0].strip()
+    palette = _get_scheme_palette_safe()
+    accent = palette["accent"]
+    st.markdown(f"""
+<style>
+@keyframes fcmTypewriter {{
+    from {{ width: 0; }}
+    to   {{ width: 100%; }}
+}}
+@keyframes fcmFadeSlide {{
+    0%   {{ opacity: 0; transform: translateY(-8px); }}
+    15%  {{ opacity: 1; transform: translateY(0); }}
+    75%  {{ opacity: 1; transform: translateY(0); }}
+    100% {{ opacity: 0; transform: translateY(-8px); }}
+}}
+.fcm-level-banner {{
+    text-align: center;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: {accent}22;
+    border: 1px solid {accent}55;
+    margin-bottom: 12px;
+    animation: fcmFadeSlide 2.2s ease forwards;
+    font-weight: 600;
+    color: {accent};
+    overflow: hidden;
+}}
+.fcm-level-typewriter {{
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid {accent};
+    animation: fcmTypewriter 0.6s steps(30) 0.3s forwards,
+               fcmBlink 0.5s step-end infinite;
+    width: 0;
+}}
+@keyframes fcmBlink {{
+    50% {{ border-color: transparent; }}
+}}
+</style>
+<div class="fcm-level-banner">
+    📖 Reading level changed to
+    <span class="fcm-level-typewriter">{lvl_label}</span>
+</div>
+""", unsafe_allow_html=True)
+    st.session_state.show_level_banner = False
 
-The inner Solar System is likely devoid of life. However, Venus is still of interest to astrobiologists, as it is a terrestrial planet that was likely similar to Earth in its early stages and developed in a different way. There is a greenhouse effect, the surface is the hottest in the Solar System, sulfuric acid clouds, all surface liquid water is lost, and it has a thick carbon-dioxide atmosphere with huge pressure.[71] Comparing both helps to understand the precise differences that lead to beneficial or harmful conditions for life. And despite the conditions against life on Venus, there are suspicions that microbial life-forms may still survive in high-altitude clouds.[23]
+_, btn, _ = st.columns([1, 1.2, 1])
+with btn:
+    if st.button("✨ Make Flashcard", use_container_width=True, key="make_flashcard_btn"):
+        if not user_text.strip():
+            st.warning("⚠️ Please enter or upload some text first!")
+        elif word_count < 20:
+            st.warning("⚠️ Please add a bit more text (at least 20 words) so the AI has enough to work with.")
+        else:
+            st.session_state.active_reading_level = reading_level
+            st.session_state.stored_user_text = user_text
+            st.session_state.image_search_cache = {}
+            _run_generation(reading_level, show_images, reuse_images=False)
 
-Mars is a cold and almost airless desert, inhospitable to life. However, recent studies revealed that water on Mars used to be quite abundant, forming rivers, lakes, and perhaps even oceans. Mars may have been habitable back then, and life on Mars may have been possible. But when the planetary core ceased to generate a magnetic field, solar winds removed the atmosphere and the planet became vulnerable to solar radiation. Ancient life-forms may still have left fossilised remains, and microbes may still survive deep underground.[23]
+if not st.session_state.flashcard_generated:
+    st.markdown(
+        "<p style='text-align:center; opacity:0.75; margin-top:20px;'>👆 Paste some text above to get started!</p>",
+        unsafe_allow_html=True
+    )
 
-As mentioned, the gas giants and ice giants are unlikely to contain life. The most distant solar system bodies, found in the Kuiper Belt and outwards, are locked in permanent deep-freeze, but cannot be ruled out completely.[23]
+# --- show the flashcards ---
+if st.session_state.flashcard_generated and st.session_state.flashcards:
+    flashcards = st.session_state.flashcards
+    
+    for i in range(len(flashcards)):
+        if i not in st.session_state.card_flipped:
+            st.session_state.card_flipped[i] = False
+    
+    card_colors = get_card_colors(st.session_state.colour_scheme)
+    
+    st.markdown("---")
+    st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
+    
+    flipped_count = sum(1 for i in range(len(flashcards)) if st.session_state.card_flipped.get(i, False))
+    st.markdown(
+        f"<div style='padding:10px; text-align:center; background:rgba(212, 160, 23, 0.1); border-radius:8px; font-weight:700; color:#D4A017; font-size:0.9em; margin:10px 0 20px 0;'>👀 Studied: {flipped_count}/{len(flashcards)}</div>",
+        unsafe_allow_html=True
+    )
+    
+    if flipped_count == len(flashcards):
+        st.success("🎉 You've studied all the cards! Well done!")
+    
+    def card_outer_style(accent_hex, scheme=None):
+        base = (
+            f"background: #FFFEF9;"
+            f"border-radius: 18px;"
+            f"margin: 8px auto;"
+            f"max-width: 620px;"
+            f"box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);"
+            f"overflow: hidden;"
+        )
+        if scheme == "Low Stimulation":
+            return base + f"border: 2px solid {accent_hex};"
+        return base
 
-Although the giant planets themselves are highly unlikely to have life, there is much hope to find it on moons orbiting these planets. Europa, from the Jovian system, has a subsurface ocean below a thick layer of ice. Ganymede and Callisto also have subsurface oceans, but life is less likely in them because water is sandwiched between layers of solid ice. Europa would have contact between the ocean and the rocky surface, which helps the chemical reactions. It may be difficult to dig so deep in order to study those oceans, though. Enceladus, a tiny moon of Saturn with another subsurface ocean, may not need to be dug, as it releases water to space in eruption columns. The space probe Cassini flew inside one of these, but could not make a full study because NASA did not expect this phenomenon and did not equip the probe to study ocean water. Still, Cassini detected complex organic molecules, salts, evidence of hydrothermal activity, hydrogen, and methane.[23]
+    def emoji_strip_html(accent_hex, topic_emoji, scheme=None, count=7):
+        if scheme == "Low Stimulation":
+            return ""
+        emojis_row = "".join(
+            f"<span style='font-size:20px; line-height:1;'>{topic_emoji}</span>"
+            for _ in range(count)
+        )
+        return (
+            f"<div style='background:{accent_hex}; padding:10px 16px; "
+            f"display:flex; justify-content:space-around; align-items:center;'>"
+            f"{emojis_row}"
+            f"</div>"
+        )
 
-Titan is the only celestial body in the Solar System besides Earth that has liquid bodies on the surface. It has rivers, lakes, and rain of hydrocarbons, methane, and ethane, and even a cycle similar to Earth's water cycle. This special context encourages speculations about lifeforms with different biochemistry, but the cold temperatures would make such chemistry take place at a very slow pace. Water is rock-solid on the surface, but Titan does have a subsurface water ocean like several other moons. However, it is of such a great depth that it would be very difficult to access it for study.[23]
-Scientific search
-Main article: Astrobiology
+    def card_body_style(scheme=None):
+        if scheme == "Low Stimulation":
+            return "padding: 24px 22px;"
+        return "padding: 28px 24px;"
 
-The science that searches and studies life in the universe, both on Earth and elsewhere, is called astrobiology. With the study of Earth's life, the only known form of life, astrobiology seeks to study how life starts and evolves and the requirements for its continuous existence. This helps to determine what to look for when searching for life in other celestial bodies. This is a complex area of study, and uses the combined perspectives of several scientific disciplines, such as astronomy, biology, chemistry, geology, oceanography, and atmospheric sciences.[72]
+    total_cards = len(flashcards)
 
-The scientific search for extraterrestrial life is being carried out both directly and indirectly. As of 7 May 2026, there are 6,286 confirmed exoplanets in 4,700 planetary systems, with 1,052 systems having more than one planet.[73] Other planets and moons in the Solar System hold the potential for hosting primitive life such as microorganisms. As of 8 February 2021, an updated status of studies considering the possible detection of lifeforms on Venus (via phosphine) and Mars (via methane) was reported.[74]
-Search for basic life
-Lifeforms produce a variety of biosignatures that may be detectable by telescopes.[75][76]
+    if st.session_state.current_card_idx >= total_cards:
+        st.session_state.current_card_idx = 0
+    idx = st.session_state.current_card_idx
 
-Scientists search for biosignatures within the Solar System by studying planetary surfaces and examining meteorites. Some claim to have identified evidence that microbial life has existed on Mars.[77][78][79][80] In 1996, a controversial report stated that structures resembling nanobacteria were discovered in a meteorite, ALH84001, formed of rock ejected from Mars.[77][78] Although all the unusual properties of the meteorite were eventually explained as the result of inorganic processes, the controversy over its discovery laid the groundwork for the development of astrobiology.[77]
+    card = flashcards[idx]
+    is_flipped = st.session_state.card_flipped.get(idx, False)
+    emoji = card.get('emoji', '💡')
+    deco = [DECORATION_EMOJIS[(idx + i*2) % len(DECORATION_EMOJIS)] for i in range(4)]
+    text_color = card_colors['text']
+    label_color = card_colors['label']
+    accent_color = card_colors.get('accent', label_color)
 
-An experiment on the two Viking Mars landers reported gas emissions from heated Martian soil samples that some scientists argue are consistent with the presence of living microorganisms.[81] Lack of corroborating evidence from other experiments on the same samples suggests that a non-biological reaction is a more likely hypothesis.[81][82][83][84]
+    scheme_name = st.session_state.colour_scheme
+    outer_style = card_outer_style(accent_color, scheme=scheme_name)
+    body_style = card_body_style(scheme=scheme_name)
+    top_strip = emoji_strip_html(accent_color, emoji, scheme=scheme_name)
+    bottom_strip = top_strip
 
-In February 2005 NASA scientists reported they may have found some evidence of extraterrestrial life on Mars.[85] The two scientists, Carol Stoker and Larry Lemke of NASA's Ames Research Center, based their claim on methane signatures found in Mars's atmosphere resembling the methane production of some forms of primitive life on Earth, as well as on their own study of primitive life near the Rio Tinto river in Spain. NASA officials soon distanced NASA from the scientists' claims, and Stoker herself backed off from her initial assertions.[86]
+    st.markdown(
+        f"<p style='text-align:center; color:{label_color}; font-weight:700; letter-spacing:2px; margin:28px 0 8px 0; font-size:0.85em;'>✨ CARD {idx + 1} OF {total_cards} ✨</p>",
+        unsafe_allow_html=True
+    )
 
-In November 2011, NASA launched the Mars Science Laboratory that landed the Curiosity rover on Mars. It is designed to assess the past and present habitability on Mars using a variety of scientific instruments. The rover landed on Mars at Gale Crater in August 2012.[87][88]
+    has_image = (
+        show_images
+        and idx in st.session_state.card_images
+        and st.session_state.card_images[idx] is not None
+    )
+    img_url = st.session_state.card_images.get(idx) if has_image else None
 
-A group of scientists at Cornell University started a catalog of microorganisms, with the way each one reacts to sunlight. The goal is to help with the search for similar organisms in exoplanets, as the starlight reflected by planets rich in such organisms would have a specific spectrum, unlike that of starlight reflected from lifeless planets. If Earth was studied from afar with this system, it would reveal a shade of green, as a result of the abundance of plants with photosynthesis.[89]
+    if show_images and idx not in st.session_state.card_images:
+        with st.spinner(f"🖼️ Finding picture for card {idx + 1}..."):
+            search_term = card.get('image_search', card['title'])
+            st.session_state.card_images[idx] = search_wikipedia_image(search_term)
+            has_image = st.session_state.card_images[idx] is not None
+            img_url = st.session_state.card_images[idx]
 
-In August 2011, NASA studied meteorites found on Antarctica, finding adenine, guanine, hypoxanthine, and xanthine. Adenine and guanine are components of DNA, and the others are used in other biological processes. The studies ruled out pollution of the meteorites on Earth, as those components would not be freely available the way they were found in the samples. This discovery suggests that several organic molecules that serve as building blocks of life may be generated within asteroids and comets.[90][91] In October 2011, scientists reported that cosmic dust contains complex organic compounds ("amorphous organic solids with a mixed aromatic-aliphatic structure") that could be created naturally, and rapidly, by stars.[92][93][94] It is still unclear if those compounds played a role in the creation of life on Earth, but Sun Kwok, of the University of Hong Kong, thinks so. "If this is the case, life on Earth may have had an easier time getting started as these organics can serve as basic ingredients for life."[92]
+    img_alt = f"Illustration related to the topic: {_safe(card['title'])}"
 
-In August 2012, and in a world first, astronomers at Copenhagen University reported the detection of a specific sugar molecule, glycolaldehyde, in a distant star system. The molecule was found around the protostellar binary IRAS 16293-2422, which is located 400 light years from Earth.[95] Glycolaldehyde is needed to form ribonucleic acid, or RNA, which is similar in function to DNA. This finding suggests that complex organic molecules may form in stellar systems prior to the formation of planets, eventually arriving on young planets early in their formation.[96]
+    card_bg_color = "#FFFEF9"
+    sticker_size = 44
+    if has_image:
+        sticker_html = (
+            f"<div style='position:absolute; top:-8px; right:-8px; "
+            f"width:{sticker_size}px; height:{sticker_size}px; border-radius:50%; "
+            f"background:{accent_color}; display:flex; align-items:center; "
+            f"justify-content:center; font-size:24px; line-height:1; "
+            f"border:3px solid {card_bg_color}; "
+            f"box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2;' "
+            f"aria-hidden='true'>{emoji}</div>"
+        )
+        image_frame_style = (
+            f"box-shadow:0 0 0 4px {accent_color}, "
+            f"0 4px 12px rgba(0,0,0,0.12);"
+        )
+    else:
+        sticker_html = ""
+        image_frame_style = ""
 
-In December 2023, astronomers reported the first time discovery, in the plumes of Enceladus, moon of the planet Saturn, of hydrogen cyanide, a possible chemical essential for life[97] as we know it, as well as other organic molecules, some of which are yet to be better identified and understood. According to the researchers, "these [newly discovered] compounds could potentially support extant microbial communities or drive complex organic synthesis leading to the origin of life."[98][99]
-Search for extraterrestrial intelligences
-Main article: Search for extraterrestrial intelligence
-The Green Bank Telescope is one of the radio telescopes used by the Breakthrough Listen project to search for alien communications.
+    if is_flipped:
+        fact_lines = []
+        for fact in card['facts']:
+            if isinstance(fact, dict):
+                fact_emoji = fact.get('emoji', '*')
+                fact_text = fact.get('text', '')
+            else:
+                fact_emoji = '*'
+                fact_text = str(fact)
+            fact_lines.append(
+                f"<div style='display:flex; align-items:flex-start; gap:14px; "
+                f"margin:12px 0; padding-left:4px;'>"
+                f"<span style='flex:0 0 auto; width:2em; font-size:1.2em; "
+                f"line-height:var(--line-height); text-align:center;' aria-hidden='true'>{fact_emoji}</span>"
+                f"<span style='flex:1 1 auto; color:{text_color}; "
+                f'font-family:"{st.session_state.font_style}", sans-serif; '
+                f"font-size:{st.session_state.text_size}px; line-height:var(--line-height); "
+                f"text-align:left;'>{_safe(fact_text)}</span>"
+                f"</div>"
+            )
+        facts_html = (
+            "<div style='max-width:85ch; margin:0 auto;'>"
+            + "".join(fact_lines)
+            + "</div>"
+        )
 
-Although most searches are focused on the biology of extraterrestrial life, an extraterrestrial intelligence capable enough to develop a civilization may be detectable by other means as well. Technology may generate technosignatures, effects on the native planet that may not be caused by natural causes. There are three main types of techno-signatures considered: interstellar communications, effects on the atmosphere, and planetary-sized structures such as Dyson spheres.[100]
+        if has_image:
+            image_block = (
+                f"<div style='text-align:center; margin:0 0 24px 0;'>"
+                f"<div style='position:relative; display:inline-block;'>"
+                f"<img src='{img_url}' alt='{img_alt}' "
+                f"style='max-width:100%; max-height:320px; width:auto; height:auto; "
+                f"border-radius:12px; {image_frame_style} display:block;' />"
+                f"{sticker_html}"
+                f"</div>"
+                f"<p style='font-size:0.8em; color:{label_color}; margin:8px 0 0 0;'>{_safe(card['title'])}</p>"
+                f"</div>"
+            )
+        else:
+            image_block = ""
 
-Organizations such as the SETI Institute search the cosmos for potential forms of communication. They started with radio waves, and now search for laser pulses as well. The challenge for this search is that there are natural sources of such signals as well, such as gamma-ray bursts and supernovae, and the difference between a natural signal and an artificial one would be in its specific patterns. Astronomers intend to use artificial intelligence for this, as it can manage large amounts of data and is devoid of biases and preconceptions.[100] Besides, even if there is an advanced extraterrestrial civilization, there is no guarantee that it is transmitting radio communications in the direction of Earth. The length of time required for a signal to travel across space means that a potential answer may arrive decades or centuries after the initial message.[101]
+        st.markdown(
+f"""<div style='{outer_style}'>
+{top_strip}
+<div style='{body_style}'>
+<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{deco[0]} KEY FACTS {deco[1]}</p>
+{image_block}
+{facts_html}
+</div>
+{bottom_strip}
+</div>""",
+            unsafe_allow_html=True
+        )
+    else:
+        if has_image:
+            anchor_block = (
+                f"<div style='text-align:center; margin:0 0 20px 0;'>"
+                f"<div style='position:relative; display:inline-block;'>"
+                f"<img src='{img_url}' alt='{img_alt}' "
+                f"style='max-width:280px; max-height:280px; width:auto; height:auto; "
+                f"border-radius:14px; {image_frame_style} display:block;' />"
+                f"{sticker_html}"
+                f"</div>"
+                f"</div>"
+            )
+        else:
+            anchor_block = (
+                f"<div style='font-size:100px; line-height:1; margin-bottom:20px;' "
+                f"role='img' aria-label='{img_alt}'>{emoji}</div>"
+            )
 
-The atmosphere of Earth is rich in nitrogen dioxide as a result of air pollution, which can be detectable. The natural abundance of carbon, which is also relatively reactive, makes it likely to be a basic component of the development of a potential extraterrestrial technological civilization, as it is on Earth. Fossil fuels may likely be generated and used on such worlds as well. The abundance of chlorofluorocarbons in the atmosphere can also be a clear technosignature, considering their role in ozone depletion. Light pollution may be another technosignature, as multiple lights on the night side of a rocky planet can be a sign of advanced technological development. However, modern telescopes are not strong enough to study exoplanets with the required level of detail to perceive it.[100]
+        st.markdown(
+f"""<div style='{outer_style}'>
+{top_strip}
+<div style='{body_style} text-align:center;'>
+{anchor_block}
+<p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>TOPIC</p>
+<div style='color:{text_color}; font-family:"{st.session_state.font_style}", sans-serif; font-size:{max(st.session_state.text_size + 10, 26)}px; font-weight:700;'>{_safe(card['title'])}</div>
+<p style='font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;' aria-hidden='true'>{deco[0]} {deco[1]} {deco[2]} {deco[3]}</p>
+</div>
+{bottom_strip}
+</div>""",
+            unsafe_allow_html=True
+        )
 
-The Kardashev scale proposes that a civilization may eventually start consuming energy directly from its local star. This would require giant structures built next to it, called Dyson spheres. Those speculative structures would cause an excess infrared radiation, that telescopes may notice. The infrared radiation is typical of young stars, surrounded by dusty protoplanetary disks that will eventually form planets. An older star such as the Sun would have no natural reason to have excess infrared radiation.[100] The presence of heavy elements in a star's light-spectrum is another potential biosignature; such elements would (in theory) be found if the star were being used as an incinerator/repository for nuclear waste products.[102]
-Extrasolar planets
-Main article: Exoplanet
-See also: List of potentially habitable exoplanets
-Artist's impression of Gliese 581 c, the first terrestrial extrasolar planet discovered within its star's habitable zone
+    _, btn_m, _ = st.columns([1, 1, 1])
+    with btn_m:
+        flip_text = "🔄 Show Topic" if is_flipped else "🔄 Reveal Facts"
+        if st.button(flip_text, key=f"flip_{idx}", use_container_width=True):
+            st.session_state.card_flipped[idx] = not is_flipped
+            st.rerun()
 
-Some astronomers search for extrasolar planets that may be conducive to life, narrowing the search to terrestrial planets within the habitable zones of their stars.[103][104] Since 1992, over four thousand exoplanets have been discovered (6,416 planets in 4,809 planetary systems including 1,061 multiple planetary systems as of 23 April 2026).[105]
+    # --- single-card PNG download ---
+    _, dl_single, _ = st.columns([1, 1, 1])
+    with dl_single:
+        wiki_bytes = fetch_image_bytes(img_url) if img_url else None
+        png_bytes = render_card_to_png(
+            card=card,
+            colors=card_colors,
+            idx=idx,
+            total=total_cards,
+            wiki_image_bytes=wiki_bytes,
+            page_bg_hex=PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5"),
+        )
+        safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", card["title"]).strip("_") or "card"
+        st.download_button(
+            label="📸 Download This Card",
+            data=png_bytes,
+            file_name=f"card_{idx + 1}_{safe_title}.png",
+            mime="image/png",
+            key=f"dl_single_{idx}",
+            use_container_width=True,
+        )
 
-The extrasolar planets so far discovered range in size from that of terrestrial planets similar to Earth's size to that of gas giants larger than Jupiter.[105] The number of observed exoplanets is expected to increase greatly in the coming years.[106][better source needed] The Kepler space telescope has also detected a few thousand[107][108] candidate planets,[109][110] of which about 11% may be false positives.[111]
+    # --- prev / counter / next navigation ---
+    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+    nav_prev, nav_info, nav_next = st.columns([1, 1.2, 1])
 
-There is at least one planet on average per star.[112] About 1 in 5 Sun-like stars[a] have an "Earth-sized"[b] planet in the habitable zone,[c] with the nearest expected to be within 12 light-years distance from Earth.[113][114] Assuming 200 billion stars in the Milky Way,[d] that would be 11 billion potentially habitable Earth-sized planets in the Milky Way, rising to 40 billion if red dwarfs are included.[115] The rogue planets in the Milky Way possibly number in the trillions.[116]
+    with nav_prev:
+        if st.button(
+            "◀ Previous",
+            key="nav_prev_btn",
+            disabled=(idx == 0),
+            use_container_width=True,
+        ):
+            st.session_state.current_card_idx = max(0, idx - 1)
+            st.rerun()
 
-The nearest known exoplanet is Proxima Centauri b, located 4.2 light-years (1.3 pc) from Earth in the southern constellation of Centaurus.[117]
+    with nav_info:
+        st.markdown(
+            f"<p style='text-align:center; color:{label_color}; font-weight:700; "
+            f"margin: 10px 0 0 0; font-size:0.95em;'>Card {idx + 1} of {total_cards}</p>",
+            unsafe_allow_html=True
+        )
 
-As of March 2014, the least massive exoplanet known is PSR B1257+12 A, which is about twice the mass of the Moon. The most massive planet listed on the NASA Exoplanet Archive is DENIS-P J082303.1−491201 b,[118][119] about 29 times the mass of Jupiter, although according to most definitions of a planet, it is too massive to be a planet and may be a brown dwarf instead. Almost all of the planets detected so far are within the Milky Way, but there have also been a few possible detections of extragalactic planets. The study of planetary habitability also considers a wide range of other factors in determining the suitability of a planet for hosting life.[12]
+    with nav_next:
+        if st.button(
+            "Next ▶",
+            key="nav_next_btn",
+            disabled=(idx == total_cards - 1),
+            use_container_width=True,
+        ):
+            st.session_state.current_card_idx = min(total_cards - 1, idx + 1)
+            st.rerun()
 
-One sign that a planet probably already contains life is the presence of an atmosphere with significant amounts of oxygen, since that gas is highly reactive and generally would not last long without constant replenishment. This replenishment occurs on Earth through photosynthetic organisms. One way to analyse the atmosphere of an exoplanet is through spectrography when it transits its star, though this might only be feasible with dim stars like white dwarfs
+    
+    st.markdown("---")
+    st.markdown("### 📥 Download All Cards")
+
+    def _format_fact(fact):
+        if isinstance(fact, dict):
+            return f"  {fact.get('emoji', '*')} {fact.get('text', '')}"
+        return f"  * {fact}"
+
+    download_text = "\n\n".join([
+        f"TOPIC: {c['title']}\nFACTS:\n" + "\n".join([_format_fact(f) for f in c['facts']])
+        for c in flashcards
+    ])
+
+    active_page_bg = PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5")
+    zip_cache_key = (
+        flashcards[0]["title"] if flashcards else "",
+        len(flashcards),
+        st.session_state.colour_scheme,
+    )
+    zip_bytes = build_cards_zip(
+        flashcards,
+        st.session_state.card_images,
+        card_colors,
+        active_page_bg,
+        zip_cache_key,
+    )
+
+    dl_left, dl_right = st.columns(2)
+    with dl_left:
+        st.download_button(
+            label="📦 All Cards (ZIP of PNGs)",
+            data=zip_bytes,
+            file_name="flashcards.zip",
+            mime="application/zip",
+            key="dl_all_zip",
+            use_container_width=True,
+        )
+    with dl_right:
+        st.download_button(
+            label="📝 Text File",
+            data=download_text,
+            file_name="study_cards.txt",
+            mime="text/plain",
+            key="dl_all_text",
+            use_container_width=True,
+        )
