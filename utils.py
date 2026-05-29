@@ -1907,39 +1907,129 @@ def fetch_image_bytes(url):
 
 
 def render_card_to_png(card, colors, idx, total, wiki_image_bytes=None, page_bg_hex="#F5F1E8"):
-    """Simple PNG render that respects the chosen colour scheme."""
-    W = 700
-    MARGIN = 30
+    """High-resolution 1920×1080 PNG render respecting the chosen colour scheme."""
+    W, H = 1920, 1080
+    MARGIN = 72
+    CX1, CY1 = MARGIN, MARGIN
+    CX2, CY2 = W - MARGIN, H - MARGIN
 
-    card_bg = colors.get("card_bg", "#FFFFFF")
+    card_bg  = colors.get("card_bg", "#FFFFFF")
+    text_col = colors.get("text",     "#1C1C1C")
+    accent   = colors.get("accent",   "#3A7CA5")
 
-    img = Image.new("RGB", (W, 500), page_bg_hex)
+    def hex_to_rgb(h):
+        h = h.lstrip("#")
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+    img  = Image.new("RGB", (W, H), hex_to_rgb(page_bg_hex))
     draw = ImageDraw.Draw(img)
 
-    # Card background (respects dark/high-contrast schemes)
-    draw.rectangle([MARGIN, MARGIN, W-MARGIN, 470], fill=card_bg, outline=colors['accent'], width=3)
-    
-    # Title
+    # Card background
+    draw.rectangle([CX1, CY1, CX2, CY2], fill=hex_to_rgb(card_bg))
+
+    # Accent stripe across top (6 px tall)
+    draw.rectangle([CX1, CY1, CX2, CY1 + 12], fill=hex_to_rgb(accent))
+
+    # Fonts — graceful fallback
     try:
-        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
-        small_font = ImageFont.truetype("DejaVuSans.ttf", 18)
-    except:
-        font = ImageFont.load_default()
-        small_font = ImageFont.load_default()
-    
-    # Center title
-    bbox = draw.textbbox((0, 0), card['title'], font=font)
-    text_width = bbox[2] - bbox[0]
-    draw.text(((W - text_width) // 2, 100), card['title'], fill=colors['text'], font=font)
-    
-    # Draw facts
-    y = 180
-    for fact in card['facts'][:3]:
-        text = fact.get('text', '')[:100]
-        emoji = fact.get('emoji', '•')
-        draw.text((MARGIN + 20, y), f"{emoji} {text}", fill=colors['text'], font=small_font)
-        y += 45
-    
+        font_title  = ImageFont.truetype("DejaVuSans-Bold.ttf", 80)
+        font_label  = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
+        font_fact   = ImageFont.truetype("DejaVuSans.ttf",      46)
+    except Exception:
+        font_title  = ImageFont.load_default()
+        font_label  = font_title
+        font_fact   = font_title
+
+    # --- Left panel: polaroid image (if available) ---
+    text_x = CX1 + 80          # default: full-width text start
+    if wiki_image_bytes:
+        try:
+            wiki_img = Image.open(BytesIO(wiki_image_bytes)).convert("RGB")
+            panel_w  = (CX2 - CX1) // 2 - 80
+            panel_h  = CY2 - CY1 - 140
+            wiki_img.thumbnail((panel_w, panel_h), Image.LANCZOS)
+
+            pol_pad  = 18
+            pol_bott = 52           # extra bottom border for polaroid caption area
+            pol_w    = wiki_img.width  + pol_pad * 2
+            pol_h    = wiki_img.height + pol_pad + pol_bott
+            pol_x    = CX1 + 60
+            pol_y    = CY1 + (CY2 - CY1 - pol_h) // 2   # vertically centred
+
+            draw.rectangle(
+                [pol_x, pol_y, pol_x + pol_w, pol_y + pol_h],
+                fill=(255, 255, 255)
+            )
+            img.paste(wiki_img, (pol_x + pol_pad, pol_y + pol_pad))
+
+            # Polaroid caption line
+            cap = card['title'][:30]
+            cap_bbox = draw.textbbox((0, 0), cap, font=font_label)
+            cap_x    = pol_x + (pol_w - (cap_bbox[2] - cap_bbox[0])) // 2
+            cap_y    = pol_y + pol_pad + wiki_img.height + 10
+            draw.text((cap_x, cap_y), cap, fill=hex_to_rgb(accent), font=font_label)
+
+            text_x = pol_x + pol_w + 70
+        except Exception:
+            pass  # fall through to full-width text
+
+    # --- Right panel (or full width): title + facts ---
+    content_w = CX2 - text_x - 60
+
+    # "KEY FACTS" label
+    draw.text((text_x, CY1 + 50), "KEY FACTS",
+              fill=hex_to_rgb(accent), font=font_label)
+
+    # Title (wrap if needed)
+    title = card['title']
+    title_y = CY1 + 110
+    chars_per_line = max(content_w // 44, 10)
+    words = title.split()
+    lines, line = [], []
+    for w in words:
+        if sum(len(x) + 1 for x in line) + len(w) > chars_per_line and line:
+            lines.append(" ".join(line)); line = [w]
+        else:
+            line.append(w)
+    if line:
+        lines.append(" ".join(line))
+    for ln in lines[:2]:
+        draw.text((text_x, title_y), ln, fill=hex_to_rgb(text_col), font=font_title)
+        title_y += 96
+
+    # Divider
+    div_y = title_y + 20
+    draw.rectangle([text_x, div_y, text_x + content_w, div_y + 3],
+                   fill=hex_to_rgb(accent))
+
+    # Facts
+    fact_y = div_y + 36
+    for fact in card['facts'][:5]:
+        fact_text = fact.get('text', '') if isinstance(fact, dict) else str(fact)
+        # Wrap
+        chars_f = max(content_w // 26, 10)
+        fwords  = fact_text.split()
+        flines, fl = [], []
+        for w in fwords:
+            if sum(len(x) + 1 for x in fl) + len(w) > chars_f and fl:
+                flines.append(" ".join(fl)); fl = [w]
+            else:
+                fl.append(w)
+        if fl: flines.append(" ".join(fl))
+        for ln in flines[:2]:
+            draw.text((text_x + 10, fact_y), ln,
+                      fill=hex_to_rgb(text_col), font=font_fact)
+            fact_y += 56
+        fact_y += 8     # gap between facts
+
+    # Card counter
+    counter = f"{idx + 1} / {total}"
+    cb = draw.textbbox((0, 0), counter, font=font_label)
+    draw.text(
+        (CX2 - (cb[2] - cb[0]) - 24, CY2 - 50),
+        counter, fill=hex_to_rgb(accent), font=font_label
+    )
+
     out = BytesIO()
     img.save(out, format="PNG")
     return out.getvalue()
