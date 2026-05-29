@@ -59,6 +59,9 @@ defaults = {
     "card_images": {},
     "current_card_idx": 0,
     "line_spacing": 1.8,
+    "active_reading_level": None,
+    "pending_reading_level": None,
+    "trigger_regenerate": False,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -84,10 +87,44 @@ render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_st
 st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 render_mobile_settings_hint(st.session_state.colour_scheme)
 
+@st.dialog("Change reading level?")
+def _level_change_dialog(pending_level, user_text, show_images):
+    st.markdown(
+        f"This will create a new deck of cards at a different reading level.",
+        unsafe_allow_html=False,
+    )
+    col_no, col_yes = st.columns(2)
+    with col_no:
+        if st.button("No, keep current cards", use_container_width=True, key="dialog_no"):
+            st.session_state.pending_reading_level = None
+            st.session_state.active_reading_level = st.session_state.active_reading_level
+            st.rerun()
+    with col_yes:
+        if st.button("Yes, generate new deck ✨", use_container_width=True, key="dialog_yes"):
+            st.session_state.active_reading_level = pending_level
+            st.session_state.pending_reading_level = None
+            st.session_state.trigger_regenerate = True
+            st.rerun()
+
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    reading_level = st.selectbox("Reading Level", list(READING_LEVELS.keys()), key="reading_level_select")
-    
+    reading_level_options = list(READING_LEVELS.keys())
+    active_level = st.session_state.active_reading_level or reading_level_options[0]
+    if active_level not in reading_level_options:
+        active_level = reading_level_options[0]
+    selected_level = st.selectbox(
+        "Reading Level",
+        reading_level_options,
+        index=reading_level_options.index(active_level),
+        key="reading_level_select",
+    )
+    st.caption("📖 Each level creates a new set of cards.")
+    if selected_level != active_level and st.session_state.flashcard_generated:
+        st.session_state.pending_reading_level = selected_level
+    reading_level = selected_level
+
+    st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
+
     safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Verdana"
     new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox")
     if new_font != st.session_state.font_style:
@@ -129,6 +166,14 @@ with st.sidebar:
     st.markdown("---")
     st.caption("💡 These settings adjust the whole app. Change them any time - your cards won't disappear.")
 
+# --- Fire reading level dialog if needed ---
+if st.session_state.pending_reading_level:
+    _level_change_dialog(
+        st.session_state.pending_reading_level,
+        "",
+        st.session_state.get("show_images_check", True),
+    )
+
 st.markdown("### 📝 Your Text")
 
 input_type = st.radio("Input Type", ["Paste Text", "Upload File"], horizontal=True, label_visibility="collapsed")
@@ -151,6 +196,40 @@ word_count = len(user_text.split()) if user_text else 0
 st.caption(f"📝 {word_count} words")
 st.caption("⚠️ Your text is sent to DeepSeek AI and Pollinations image service to create flashcards. Please don't paste anything confidential.")
 
+def _run_generation(level_key, show_imgs):
+    """Shared card generation logic used by both the button and auto-regenerate."""
+    level_code = READING_LEVELS[level_key]
+    st.session_state.card_images = {}
+    st.session_state.card_flipped = {}
+    st.session_state.current_card_idx = 0
+    with st.spinner(f"🤖 AI is creating {level_key.split('(')[0].strip()} flashcards..."):
+        new_cards = generate_flashcards_from_llm(user_text, reading_level=level_code)
+        if new_cards:
+            st.session_state.flashcards = new_cards
+            st.session_state.flashcard_generated = True
+    if new_cards and show_imgs:
+        with st.spinner("🖼️ Finding pictures for each card..."):
+            from concurrent.futures import ThreadPoolExecutor
+            search_terms = [
+                (i, c.get('image_search', c['title']))
+                for i, c in enumerate(new_cards)
+            ]
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                results = list(pool.map(
+                    lambda item: (item[0], search_wikipedia_image(item[1])),
+                    search_terms
+                ))
+            for idx, url in results:
+                st.session_state.card_images[idx] = url
+
+# --- Auto-regenerate after dialog confirmation ---
+if st.session_state.trigger_regenerate:
+    st.session_state.trigger_regenerate = False
+    if user_text.strip() and word_count >= 20:
+        _run_generation(st.session_state.active_reading_level, show_images)
+    else:
+        st.warning("⚠️ Please enter or upload some text first, then change the reading level.")
+
 _, btn, _ = st.columns([1, 1.2, 1])
 with btn:
     if st.button("✨ Make Flashcard", use_container_width=True, key="make_flashcard_btn"):
@@ -159,31 +238,8 @@ with btn:
         elif word_count < 20:
             st.warning("⚠️ Please add a bit more text (at least 20 words) so the AI has enough to work with.")
         else:
-            level_code = READING_LEVELS[reading_level]
-            st.session_state.card_images = {}
-            st.session_state.card_flipped = {}
-            st.session_state.current_card_idx = 0
-            
-            with st.spinner(f"🤖 AI is creating {reading_level.split('(')[0].strip()} flashcards..."):
-                new_cards = generate_flashcards_from_llm(user_text, reading_level=level_code)
-                if new_cards:
-                    st.session_state.flashcards = new_cards
-                    st.session_state.flashcard_generated = True
-            
-            if new_cards and show_images:
-                with st.spinner("🖼️ Finding pictures for each card..."):
-                    from concurrent.futures import ThreadPoolExecutor
-                    search_terms = [
-                        (i, c.get('image_search', c['title']))
-                        for i, c in enumerate(new_cards)
-                    ]
-                    with ThreadPoolExecutor(max_workers=5) as pool:
-                        results = list(pool.map(
-                            lambda item: (item[0], search_wikipedia_image(item[1])),
-                            search_terms
-                        ))
-                    for idx, url in results:
-                        st.session_state.card_images[idx] = url
+            st.session_state.active_reading_level = reading_level
+            _run_generation(reading_level, show_images)
 
 if not st.session_state.flashcard_generated:
     st.markdown(
