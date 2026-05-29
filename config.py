@@ -12,13 +12,19 @@ READING_LEVELS = {
 
 # Font options - expanded!
 FONT_OPTIONS = [
-    "Arial", "Verdana", "Comic Sans MS", "OpenDyslexic", "Calibri",
-    "Helvetica", "Times New Roman", "Garamond", "Futura", "Gotham",
-    "Open Sans", "Roboto", "Lato", "Montserrat", "Inter",
-    "Playfair Display", "Merriweather", "Bebas Neue", "Oswald",
-    "Blambot Casual", "Wild Words", "Whizbang", "Gideon",
-    "Journalist", "Primal Scream", "Spookadelic", "Monsters Attack",
-    "Digital Geometric",
+    # Ordered most accessible / readable (top) -> most playful (bottom)
+    "OpenDyslexic",       # purpose-built for dyslexic readers
+    "Arial",              # neutral, always available, highly legible
+    "Calibri",            # soft humanist sans
+    "Roboto",             # clean screen sans
+    "Gotham",             # clean geometric sans
+    "Merriweather",       # sturdy serif designed for screens
+    "Garamond",           # classic elegant serif
+    "Oswald",             # condensed display sans
+    "Playfair Display",   # high-contrast display serif
+    "Comic Sans MS",      # casual / playful
+    "Fredoka",            # rounded and friendly
+    "Bangers",            # comic-book caps (most decorative)
 ]
 
 # Color schemes
