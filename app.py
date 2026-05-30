@@ -439,37 +439,37 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
         st.success("🎉 You've studied all the cards! Well done!")
     
 def card_outer_style(accent_hex, scheme=None):
-        bg_color = card_colors.get('card_bg', '#FFFEF9')
-        base = (
-            f"background: {bg_color};"
-            f"border-radius: 18px;"
-            f"margin: 8px auto;"
-            f"max-width: 620px;"
-            f"box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);"
-            f"overflow: hidden;"
-        )
-        if scheme == "Low Stimulation":
-            return base + f"border: 2px solid {accent_hex};"
-        return base
+    bg_color = card_colors.get('card_bg', '#FFFEF9')
+    base = (
+        f"background: {bg_color};"
+        f"border-radius: 18px;"
+        f"margin: 8px auto;"
+        f"max-width: 620px;"
+        f"box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);"
+        f"overflow: hidden;"
+    )
+    if scheme == "Low Stimulation":
+        return base + f"border: 2px solid {accent_hex};"
+    return base
 
-    def emoji_strip_html(accent_hex, topic_emoji, scheme=None, count=7):
-        if scheme == "Low Stimulation":
-            return ""
-        emojis_row = "".join(
-            f"<span style='font-size:20px; line-height:1;'>{topic_emoji}</span>"
-            for _ in range(count)
-        )
-        return (
-            f"<div style='background:{accent_hex}; padding:10px 16px; "
-            f"display:flex; justify-content:space-around; align-items:center;'>"
-            f"{emojis_row}"
-            f"</div>"
-        )
+def emoji_strip_html(accent_hex, topic_emoji, scheme=None, count=7):
+    if scheme == "Low Stimulation":
+        return ""
+    emojis_row = "".join(
+        f"<span style='font-size:20px; line-height:1;'>{topic_emoji}</span>"
+        for _ in range(count)
+    )
+    return (
+        f"<div style='background:{accent_hex}; padding:10px 16px; "
+        f"display:flex; justify-content:space-around; align-items:center;'>"
+        f"{emojis_row}"
+        f"</div>"
+    )
 
-    def card_body_style(scheme=None):
-        if scheme == "Low Stimulation":
-            return "padding: 24px 22px;"
-        return "padding: 28px 24px;"
+def card_body_style(scheme=None):
+    if scheme == "Low Stimulation":
+        return "padding: 24px 22px;"
+    return "padding: 28px 24px;"
 
     total_cards = len(flashcards)
 
