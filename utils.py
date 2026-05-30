@@ -2662,7 +2662,12 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         font-family: '{font_style}', sans-serif !important;
     }}
     .stApp p:not([style]), .stApp li:not([style]), .stApp label:not([style]),
-    .stApp span:not([style]), .stMarkdown:not([style]) {{
+    .stMarkdown:not([style]) {{
+        font-size: {text_size}px !important;
+        line-height: {line_spacing} !important;
+        color: {text} !important;
+    }}
+    .stApp span:not([style]):not(.stButton *):not(.stDownloadButton *) {{
         font-size: {text_size}px !important;
         line-height: {line_spacing} !important;
         color: {text} !important;
