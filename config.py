@@ -18,7 +18,6 @@ FONT_OPTIONS = [
     "Calibri",            # soft humanist sans
     "Roboto",             # clean screen sans
     "Gotham",             # clean geometric sans
-    "Merriweather",       # sturdy serif designed for screens
     "Garamond",           # classic elegant serif
     "Oswald",             # condensed display sans
     "Playfair Display",   # high-contrast display serif
