@@ -438,9 +438,10 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     if flipped_count == len(flashcards):
         st.success("🎉 You've studied all the cards! Well done!")
     
-    def card_outer_style(accent_hex, scheme=None):
+def card_outer_style(accent_hex, scheme=None):
+        bg_color = card_colors.get('card_bg', '#FFFEF9')
         base = (
-            f"background: #FFFEF9;"
+            f"background: {bg_color};"
             f"border-radius: 18px;"
             f"margin: 8px auto;"
             f"max-width: 620px;"
@@ -511,7 +512,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
 
     img_alt = f"Illustration related to the topic: {_safe(card['title'])}"
 
-    card_bg_color = "#FFFEF9"
+    card_bg_color = card_colors.get('card_bg', '#FFFEF9')
     sticker_size = 44
     if has_image:
         sticker_html = (
@@ -573,9 +574,9 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
             image_block = ""
 
         st.markdown(
-f"""<div style='{outer_style}'>
+f"""<div style='{outer_style} color:{text_color};'>
 {top_strip}
-<div style='{body_style}'>
+<div style='{body_style} color:{text_color};'>
 <p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{deco[0]} KEY FACTS {deco[1]}</p>
 {image_block}
 {facts_html}
@@ -603,9 +604,9 @@ f"""<div style='{outer_style}'>
             )
 
         st.markdown(
-f"""<div style='{outer_style}'>
+f"""<div style='{outer_style} color:{text_color};'>
 {top_strip}
-<div style='{body_style} text-align:center;'>
+<div style='{body_style} text-align:center; color:{text_color};'>
 {anchor_block}
 <p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>TOPIC</p>
 <div style='color:{text_color}; font-family:"{st.session_state.font_style}", sans-serif; font-size:{max(st.session_state.text_size + 10, 26)}px; font-weight:700;'>{_safe(card['title'])}</div>
