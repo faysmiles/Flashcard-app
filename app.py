@@ -438,10 +438,9 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     if flipped_count == len(flashcards):
         st.success("🎉 You've studied all the cards! Well done!")
     
-def card_outer_style(accent_hex, scheme=None):
-        bg_color = card_colors.get('card_bg', '#FFFEF9')
+    def card_outer_style(accent_hex, scheme=None):
         base = (
-            f"background: {bg_color};"
+            f"background: #FFFEF9;"
             f"border-radius: 18px;"
             f"margin: 8px auto;"
             f"max-width: 620px;"
@@ -512,7 +511,7 @@ def card_outer_style(accent_hex, scheme=None):
 
     img_alt = f"Illustration related to the topic: {_safe(card['title'])}"
 
-    card_bg_color = card_colors.get('card_bg', '#FFFEF9')
+    card_bg_color = "#FFFEF9"
     sticker_size = 44
     if has_image:
         sticker_html = (
