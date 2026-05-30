@@ -308,8 +308,9 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     reuse_images=True: carry over any image whose image_search term matches a
     card in the previous deck (same topic at a different reading level).
     """
+    import time, threading
+
     level_code = READING_LEVELS[level_key]
-    # Snapshot the previous image cache keyed by search term before clearing
     prev_cache = {}
     if reuse_images and st.session_state.image_search_cache:
         prev_cache = dict(st.session_state.image_search_cache)
@@ -318,16 +319,58 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     st.session_state.card_flipped = {}
     st.session_state.current_card_idx = 0
 
-    new_cards = None
     _text_to_use = st.session_state.stored_user_text or user_text
-    with st.spinner(f"🤖 AI is creating {level_key.split('(')[0].strip()} flashcards..."):
-        new_cards = generate_flashcards_from_llm(_text_to_use, reading_level=level_code)
-        if new_cards:
-            st.session_state.flashcards = new_cards
-            st.session_state.flashcard_generated = True
 
+    # ── Phase 1: AI card generation ──────────────────────────────────────────
+    AI_MESSAGES = [
+        "🤖 Reading your notes...",
+        "✏️ Identifying key ideas...",
+        "🧠 Grouping topics into cards...",
+        "📝 Writing facts for each card...",
+        "🎨 Choosing emojis and images...",
+        "✨ Almost done...",
+    ]
+
+    status_box = st.empty()
+    progress_bar = st.progress(0)
+
+    # Run generation in a background thread so we can animate the bar
+    result_container = {}
+    def _generate():
+        result_container["cards"] = generate_flashcards_from_llm(
+            _text_to_use, reading_level=level_code
+        )
+    thread = threading.Thread(target=_generate)
+    thread.start()
+
+    # Animate progress while the thread runs
+    # Curve: fast 0→70%, then crawl 70→92% until thread finishes
+    elapsed = 0
+    msg_idx = 0
+    while thread.is_alive():
+        if elapsed < 3:
+            pct = int(elapsed / 3 * 60)          # 0→60% in first 3 s
+        elif elapsed < 8:
+            pct = 60 + int((elapsed - 3) / 5 * 20)  # 60→80% over next 5 s
+        else:
+            pct = min(92, 80 + int((elapsed - 8) / 10 * 12))  # 80→92% slowly
+        progress_bar.progress(pct)
+        new_msg_idx = min(int(elapsed / 2.5), len(AI_MESSAGES) - 1)
+        if new_msg_idx != msg_idx:
+            msg_idx = new_msg_idx
+        status_box.markdown(f"**{AI_MESSAGES[msg_idx]}**")
+        time.sleep(0.25)
+        elapsed += 0.25
+
+    thread.join()
+    new_cards = result_container.get("cards")
+
+    if new_cards:
+        st.session_state.flashcards = new_cards
+        st.session_state.flashcard_generated = True
+
+    # ── Phase 2: image fetching ───────────────────────────────────────────────
     if new_cards and show_imgs:
-        # Populate card_images — reuse from prev_cache where search term matches
         needs_fetch = []
         for i, card in enumerate(new_cards):
             search_term = card.get('image_search', card['title'])
@@ -337,22 +380,37 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
                 needs_fetch.append((i, search_term))
 
         if needs_fetch:
-            with st.spinner("🖼️ Finding pictures for each card..."):
-                from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=5) as pool:
-                    results = list(pool.map(
-                        lambda item: (item[0], item[1], search_wikipedia_image(item[1])),
-                        needs_fetch
-                    ))
-                for i, search_term, url in results:
-                    st.session_state.card_images[i] = url
+            total = len(needs_fetch)
+            status_box.markdown("**🖼️ Finding images for each card...**")
+            progress_bar.progress(92)
 
-        # Update the persistent search-term → url cache for future reuse
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            futures = {}
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                for item in needs_fetch:
+                    f = pool.submit(search_wikipedia_image, item[1])
+                    futures[f] = item
+
+                done = 0
+                for future in as_completed(futures):
+                    i, search_term = futures[future]
+                    st.session_state.card_images[i] = future.result()
+                    done += 1
+                    pct = 92 + int(done / total * 7)
+                    progress_bar.progress(pct)
+
         st.session_state.image_search_cache = {
             card.get('image_search', card['title']): st.session_state.card_images.get(i)
             for i, card in enumerate(new_cards)
             if st.session_state.card_images.get(i) is not None
         }
+
+    # ── Done ──────────────────────────────────────────────────────────────────
+    progress_bar.progress(100)
+    status_box.markdown("**✅ Cards ready!**")
+    time.sleep(0.5)
+    status_box.empty()
+    progress_bar.empty()
 
 # --- Auto-regenerate after dialog confirmation ---
 if st.session_state.trigger_regenerate:
