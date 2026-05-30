@@ -224,7 +224,12 @@ with st.sidebar:
         st.session_state.font_style = new_font
         st.rerun()
     
-    new_size = st.slider("Text Size", MIN_FONT_SIZE, MAX_FONT_SIZE, st.session_state.text_size, key="text_size_slider")
+    new_size = st.select_slider(
+        "Text Size",
+        options=list(range(MIN_FONT_SIZE, MAX_FONT_SIZE + 1)),
+        value=st.session_state.text_size,
+        key="text_size_slider",
+    )
     if new_size != st.session_state.text_size:
         st.session_state.text_size = new_size
         st.rerun()
