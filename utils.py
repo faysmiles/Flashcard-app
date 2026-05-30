@@ -2670,8 +2670,6 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     [data-testid="stMain"],
     .main, .block-container {{
         background-color: {bg} !important;
-    }}
-    .stApp {{
         color: {text} !important;
     }}
     [data-testid="stHeader"], header[data-testid="stHeader"] {{
@@ -2826,6 +2824,31 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     }}
     @media (prefers-reduced-motion: reduce) {{
         .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
+    }}
+
+    /* ---- Mobile: prevent virtual keyboard on sidebar controls ----
+       iOS triggers the keyboard when an input has font-size < 16px (it
+       auto-zooms to compensate). Setting 16px on all sidebar inputs and
+       select elements stops that. pointer-events:none on the BaseWeb
+       combobox input prevents it from ever receiving focus/keyboard.   */
+    @media (max-width: 768px) {{
+        [data-testid="stSidebar"] input,
+        [data-testid="stSidebar"] select,
+        [data-testid="stSidebar"] textarea,
+        .stApp input,
+        .stApp select {{
+            font-size: 16px !important;
+        }}
+        [data-testid="stSidebar"] div[data-baseweb="select"] input,
+        .stApp div[data-baseweb="select"] input {{
+            pointer-events: none !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            caret-color: transparent !important;
+        }}
+        [data-testid="stSidebar"] div[data-baseweb="input"] input {{
+            pointer-events: none !important;
+        }}
     }}
     </style>
     """, unsafe_allow_html=True)
