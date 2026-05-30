@@ -492,7 +492,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     bottom_strip = top_strip
 
     st.markdown(
-        f"<p style='text-align:center; color:{label_color}; font-weight:700; letter-spacing:2px; margin:28px 0 8px 0; font-size:0.85em;'>✨ CARD {idx + 1} OF {total_cards} ✨</p>",
+        f"<p style='text-align:center; color:{label_color}; font-weight:700; letter-spacing:2px; margin:28px 0 8px 0; font-size:0.85em;'>{'CARD ' + str(idx + 1) + ' OF ' + str(total_cards) if scheme_name == 'Low Stimulation' else '✨ CARD ' + str(idx + 1) + ' OF ' + str(total_cards) + ' ✨'}</p>",
         unsafe_allow_html=True
     )
 
@@ -515,7 +515,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     card_bg_color = card_colors.get('card_bg', '#FFFEF9')
     sticker_size = 44
     if has_image:
-        sticker_html = (
+        sticker_html = "" if scheme_name == "Low Stimulation" else (
             f"<div style='position:absolute; top:-8px; right:-8px; "
             f"width:{sticker_size}px; height:{sticker_size}px; border-radius:50%; "
             f"background:{accent_color}; display:flex; align-items:center; "
@@ -577,7 +577,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
 f"""<div style='{outer_style} color:{text_color};'>
 {top_strip}
 <div style='{body_style} color:{text_color};'>
-<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{deco[0]} KEY FACTS {deco[1]}</p>
+<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{'KEY FACTS' if scheme_name == 'Low Stimulation' else deco[0] + ' KEY FACTS ' + deco[1]}</p>
 {image_block}
 {facts_html}
 </div>
@@ -599,6 +599,7 @@ f"""<div style='{outer_style} color:{text_color};'>
             )
         else:
             anchor_block = (
+                "" if scheme_name == "Low Stimulation" else
                 f"<div style='font-size:100px; line-height:1; margin-bottom:20px;' "
                 f"role='img' aria-label='{img_alt}'>{emoji}</div>"
             )
@@ -610,7 +611,7 @@ f"""<div style='{outer_style} color:{text_color};'>
 {anchor_block}
 <p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>TOPIC</p>
 <div style='color:{text_color}; font-family:"{st.session_state.font_style}", sans-serif; font-size:{max(st.session_state.text_size + 10, 26)}px; font-weight:700;'>{_safe(card['title'])}</div>
-<p style='font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;' aria-hidden='true'>{deco[0]} {deco[1]} {deco[2]} {deco[3]}</p>
+{'<p style="font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;" aria-hidden="true">' + deco[0] + ' ' + deco[1] + ' ' + deco[2] + ' ' + deco[3] + '</p>' if scheme_name != 'Low Stimulation' else ''}
 </div>
 {bottom_strip}
 </div>""",
