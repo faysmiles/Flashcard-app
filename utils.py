@@ -2648,10 +2648,16 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     html, body, [class*="css"], .stApp, [data-testid="stMarkdownContainer"] {{
         font-family: '{font_style}', sans-serif !important;
     }}
-    .stApp p, .stApp li, .stApp label, .stApp span, .stMarkdown {{
+    .stApp p:not([style]), .stApp li:not([style]), .stApp label:not([style]),
+    .stApp span:not([style]), .stMarkdown:not([style]) {{
         font-size: {text_size}px !important;
         line-height: {line_spacing} !important;
         color: {text} !important;
+    }}
+    /* Elements with inline styles keep their own font/line-height but not a forced colour */
+    .stApp p[style], .stApp li[style], .stApp span[style] {{
+        font-size: {text_size}px !important;
+        line-height: {line_spacing} !important;
     }}
     .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {{
         color: {text} !important;
