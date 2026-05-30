@@ -1993,11 +1993,45 @@ def search_wikipedia_image(query):
 # ==================== DEEPSEEK FLASHCARD GENERATION ====================
 
 @st.cache_data(show_spinner=False, ttl=3600)
-def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
-    """Call DeepSeek and return the raw parsed flashcard list (cached).
+def _enrich_card(card):
+    """Apply emoji enrichment to a single raw card dict from the LLM."""
+    topic = card.get("title", "")
+    topic_keyword = card.get("topic_keyword", topic)
+    topic_emoji = get_emoji_for_topic(topic_keyword or topic)
 
-    Kept separate from enrichment so changing the emoji map doesn't require
-    a cache flush - only the API call itself is memoised.
+    facts = []
+    for fact in card.get("facts", [])[:5]:
+        if isinstance(fact, dict):
+            fact_text = fact.get("text", "")
+            emoji_hint = fact.get("emoji_hint", "")
+            llm_emoji = fact.get("emoji", "")
+            if _looks_like_emoji(llm_emoji):
+                fact_emoji = llm_emoji.strip()
+            else:
+                fact_emoji = pick_fact_emoji(fact_text, fallback=None)
+                if fact_emoji is None and emoji_hint:
+                    fact_emoji = pick_fact_emoji(emoji_hint, fallback=None)
+                if fact_emoji is None:
+                    fact_emoji = topic_emoji
+            facts.append({"emoji": fact_emoji, "text": fact_text})
+        elif isinstance(fact, str):
+            fact_emoji = pick_fact_emoji(fact, fallback=topic_emoji)
+            facts.append({"emoji": fact_emoji, "text": fact})
+
+    return {
+        "title": topic,
+        "facts": facts,
+        "emoji": topic_emoji,
+        "image_search": card.get("image_search", topic_keyword),
+    }
+
+
+def stream_flashcards_from_llm(raw_text, reading_level="intermediate"):
+    """Stream flashcards from DeepSeek one at a time.
+
+    Yields one enriched card dict as soon as its JSON object is complete
+    in the stream, so the caller can display card 1 immediately while
+    the rest are still being generated.
     """
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
@@ -2006,9 +2040,8 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
         except Exception:
             st.error("🔑 Missing DeepSeek API key")
             st.info("Add your key to .env or Streamlit secrets")
-            return None
+            return
 
-    # Scale card count to text length
     n_chars = len(raw_text)
     if n_chars <= 5000:
         min_cards, max_cards = 3, 5
@@ -2019,7 +2052,6 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
     else:
         min_cards, max_cards = 12, 20
 
-    # Reading level instructions
     if reading_level == "simple":
         level_text = (
             "EASY (Ages 4-11): Use very short, common words only. "
@@ -2046,28 +2078,28 @@ READING LEVEL: {level_text}
 
 YOUR GOAL: Turn ALL key information from the text into {min_cards}-{max_cards} flashcards that work as a quick study summary.
 - Group related ideas into clearly themed cards (e.g. "How Dogs Communicate", "What Dogs Eat").
-- Every distinct topic or concept in the text must appear on at least one card — do not skip anything.
+- Every distinct topic or concept in the text must appear on at least one card - do not skip anything.
 - Each card has 3-5 facts. Order the facts so the MOST important or memorable one comes first.
-- Each fact must be a genuine key takeaway worth remembering — not filler, not an example, not trivia.
+- Each fact must be a genuine key takeaway worth remembering - not filler, not an example, not trivia.
 - Give each card a short, descriptive title that captures its theme at a glance.
 
 WRITING RULES (follow strictly):
 - Active voice: write "Dogs use smell to communicate." NOT "Smell is used by dogs."
-- One idea per sentence — never join 2 facts with "and" or "but".
+- One idea per sentence - never join 2 facts with "and" or "but".
 - Front-load the key word: start the sentence with what the fact is actually about.
 - Use digits for numbers: "3 types" not "three types".
 - No double negatives.
-- No vague openers like "It is important to note..." — start with the subject.
+- No vague openers like "It is important to note..." - start with the subject.
 - Each fact must make sense on its own without reading the others.
 - Keep facts tight: a clear summary sentence, not a long explanation.
 
-IMAGE (very important — this drives the card illustration):
+IMAGE (very important - this drives the card illustration):
 - Each card needs an "image_search": a descriptive phrase (8-15 words) that would find the RIGHT image for this card's specific topic.
 - Be specific, not generic. "a dog using body language to show happiness to its owner" beats "dog".
 - Describe the scene or concept visually: what would you see in a good illustration of this card?
 - Avoid abstract words that don't translate to images (e.g. "importance", "overview").
 
-EMOJI (very important — this app relies on visual cues):
+EMOJI (very important - this app relies on visual cues):
 - Each fact needs an "emoji": the SINGLE best emoji that represents that fact's MAIN idea.
 - Choose it for meaning, not for a stray word. "Whales migrate each year" -> the journey, not the animal.
 - Pick concrete, instantly recognisable emojis. Vary them across the facts on a card.
@@ -2094,80 +2126,61 @@ TEXT TO CONVERT:
 
     try:
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
-        response = client.chat.completions.create(
+        stream = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "You create flashcards. For each fact you choose the single best emoji representing its main idea, and order the facts with the most important first. Return only valid JSON."},
+                {"role": "system", "content": "You create flashcards. Return only valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=8000
+            max_tokens=8000,
+            stream=True,
         )
-        content = response.choices[0].message.content
-        content = re.sub(r'```json\s*', '', content)
-        content = re.sub(r'```\s*', '', content)
-        result = json.loads(content)
-        return result.get("flashcards", [])
 
-    except json.JSONDecodeError as e:
-        st.error(f"JSON parsing error: {str(e)}")
-        return None
+        buffer = ""
+        depth = 0
+        in_string = False
+        escape_next = False
+        card_start = None
+
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            for ch in delta:
+                buffer += ch
+                if escape_next:
+                    escape_next = False
+                    continue
+                if ch == "\\" and in_string:
+                    escape_next = True
+                    continue
+                if ch == '"':
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if ch == "{":
+                    depth += 1
+                    if depth == 2:
+                        card_start = len(buffer) - 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 1 and card_start is not None:
+                        card_json = buffer[card_start:len(buffer)]
+                        card_start = None
+                        try:
+                            raw_card = json.loads(card_json)
+                            yield _enrich_card(raw_card)
+                        except json.JSONDecodeError:
+                            pass
+
     except Exception as e:
         st.error(f"API error: {str(e)}")
-        return None
 
 
 def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
-    """Generate flashcards: cached LLM call + fresh emoji enrichment per fact.
-
-    The emoji for each fact is picked from the FACT TEXT (not just the LLM's
-    hint), so each bullet on a card reflects its own content.
-    """
-    raw_data = _fetch_flashcard_data_from_llm(raw_text, reading_level)
-    if not raw_data:
-        if raw_data is None:
-            return None
-        st.error("No flashcards generated")
-        return None
-
-    flashcards = []
-    for card in raw_data:
-        topic = card.get("title", "")
-        topic_keyword = card.get("topic_keyword", topic)
-        topic_emoji = get_emoji_for_topic(topic_keyword or topic)
-
-        facts = []
-        for fact in card.get("facts", [])[:5]:
-            if isinstance(fact, dict):
-                fact_text = fact.get("text", "")
-                emoji_hint = fact.get("emoji_hint", "")
-                llm_emoji = fact.get("emoji", "")
-                # 1) Trust the LLM's chosen emoji if it is a real emoji - it
-                #    understands the sentence's MEANING, not just its keywords.
-                # 2) Else match keywords in the fact text (curated fallback).
-                # 3) Else match the LLM's keyword hint.
-                # 4) Else fall back to the topic emoji (always relevant).
-                if _looks_like_emoji(llm_emoji):
-                    fact_emoji = llm_emoji.strip()
-                else:
-                    fact_emoji = pick_fact_emoji(fact_text, fallback=None)
-                    if fact_emoji is None and emoji_hint:
-                        fact_emoji = pick_fact_emoji(emoji_hint, fallback=None)
-                    if fact_emoji is None:
-                        fact_emoji = topic_emoji
-                facts.append({"emoji": fact_emoji, "text": fact_text})
-            elif isinstance(fact, str):
-                fact_emoji = pick_fact_emoji(fact, fallback=topic_emoji)
-                facts.append({"emoji": fact_emoji, "text": fact})
-
-        flashcards.append({
-            'title': topic,
-            'facts': facts,
-            'emoji': topic_emoji,
-            'image_search': card.get('image_search', topic_keyword),
-        })
-
-    return flashcards
+    """Non-streaming wrapper — collects all streamed cards into a list."""
+    cards = list(stream_flashcards_from_llm(raw_text, reading_level))
+    return cards if cards else None
 
 
 # ==================== EXISTING HELPER FUNCTIONS (keep these) ====================
@@ -2825,41 +2838,5 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     @media (prefers-reduced-motion: reduce) {{
         .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
     }}
-
-    /* ---- Sidebar selectbox: no text cursor, no keyboard ---- */
-    [data-testid="stSidebar"] [data-baseweb="select"] input,
-    [data-testid="stSidebar"] [data-baseweb="input"] input {{
-        caret-color: transparent !important;
-        cursor: pointer !important;
-    }}
-    [data-testid="stSidebar"] * {{
-        cursor: default !important;
-    }}
-    [data-testid="stSidebar"] [data-baseweb="select"],
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] [role="option"] {{
-        cursor: pointer !important;
-    }}
     </style>
-    """, unsafe_allow_html=True)
-
-    # Inject JS to set readonly + inputmode=none on all sidebar inputs so
-    # mobile keyboards never appear and desktop shows no text cursor.
-    st.markdown("""
-    <script>
-    (function patchSidebarInputs() {
-        function patch() {
-            const sidebar = document.querySelector('[data-testid="stSidebar"]');
-            if (!sidebar) return;
-            sidebar.querySelectorAll('input').forEach(el => {
-                el.setAttribute('readonly', 'true');
-                el.setAttribute('inputmode', 'none');
-                el.style.caretColor = 'transparent';
-                el.style.cursor = 'pointer';
-            });
-        }
-        patch();
-        new MutationObserver(patch).observe(document.body, { childList: true, subtree: true });
-    })();
-    </script>
     """, unsafe_allow_html=True)
