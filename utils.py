@@ -2745,13 +2745,25 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         color: {text} !important;
         border: 1px solid {border_col} !important;
         border-radius: 8px !important;
+        cursor: pointer !important;
     }}
     div[data-baseweb="select"] svg {{ fill: {text} !important; }}
+    /* Prevent keyboard on mobile — make the inner text input read-only visually */
+    div[data-baseweb="select"] input {{
+        pointer-events: none !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        caret-color: transparent !important;
+        cursor: pointer !important;
+    }}
     /* dropdown menu popover */
     div[data-baseweb="popover"] li,
     ul[role="listbox"] li {{
         background-color: {input_bg} !important;
         color: {text} !important;
+        font-size: {text_size}px !important;
+        padding: 12px 16px !important;
+        min-height: 44px !important;
     }}
     div[data-baseweb="popover"] li:hover,
     ul[role="listbox"] li:hover {{
