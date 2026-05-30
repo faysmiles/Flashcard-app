@@ -342,6 +342,7 @@ if st.session_state.trigger_regenerate:
     _regen_text = st.session_state.stored_user_text or user_text
     if _regen_text.strip() and len(_regen_text.split()) >= 20:
         _run_generation(st.session_state.active_reading_level, show_images, reuse_images=True)
+        st.rerun()
     else:
         st.warning("⚠️ Please enter or upload some text first, then change the reading level.")
 
@@ -407,6 +408,7 @@ with btn:
             st.session_state.stored_user_text = user_text
             st.session_state.image_search_cache = {}
             _run_generation(reading_level, show_images, reuse_images=False)
+            st.rerun()
 
 if not st.session_state.flashcard_generated:
     st.markdown(
