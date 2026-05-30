@@ -2826,26 +2826,40 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
     }}
 
-    /* ---- Kill text cursor and keyboard on all interactive sidebar elements ----
-       Selectboxes, sliders and any BaseWeb input inside the sidebar should
-       never show a text cursor or trigger the mobile keyboard.              */
-    [data-testid="stSidebar"] input,
+    /* ---- Sidebar selectbox: no text cursor, no keyboard ---- */
     [data-testid="stSidebar"] [data-baseweb="select"] input,
-    [data-testid="stSidebar"] [data-baseweb="input"] input,
-    [data-testid="stSidebar"] [role="slider"] {{
-        pointer-events: none !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
+    [data-testid="stSidebar"] [data-baseweb="input"] input {{
         caret-color: transparent !important;
-        cursor: default !important;
+        cursor: pointer !important;
     }}
     [data-testid="stSidebar"] * {{
         cursor: default !important;
     }}
+    [data-testid="stSidebar"] [data-baseweb="select"],
     [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] [role="radio"],
-    [data-testid="stSidebar"] button {{
+    [data-testid="stSidebar"] [role="option"] {{
         cursor: pointer !important;
     }}
     </style>
+    """, unsafe_allow_html=True)
+
+    # Inject JS to set readonly + inputmode=none on all sidebar inputs so
+    # mobile keyboards never appear and desktop shows no text cursor.
+    st.markdown("""
+    <script>
+    (function patchSidebarInputs() {
+        function patch() {
+            const sidebar = document.querySelector('[data-testid="stSidebar"]');
+            if (!sidebar) return;
+            sidebar.querySelectorAll('input').forEach(el => {
+                el.setAttribute('readonly', 'true');
+                el.setAttribute('inputmode', 'none');
+                el.style.caretColor = 'transparent';
+                el.style.cursor = 'pointer';
+            });
+        }
+        patch();
+        new MutationObserver(patch).observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
     """, unsafe_allow_html=True)
