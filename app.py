@@ -191,27 +191,22 @@ if st.session_state.revert_dropdown:
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    selected_level = st.selectbox(
+    selected_level = st.radio(
         "Reading Level",
         reading_level_options,
+        index=reading_level_options.index(st.session_state.reading_level_select),
         key="reading_level_select",
     )
     st.caption("📖 Each level creates a new set of cards.")
 
     if not st.session_state.flashcard_generated:
-        # No deck yet — the choice applies directly to the first deck, so
-        # there's nothing to confirm. (This also fixes the first deck always
-        # generating at the default level regardless of the dropdown.)
         reading_level = selected_level
     else:
-        # A deck exists: changing the level needs confirmation.
         if selected_level != active_level:
-            # Open (or re-point) the confirmation at the requested level.
             if st.session_state.pending_reading_level != selected_level:
                 st.session_state.pending_reading_level = selected_level
                 st.rerun()
         else:
-            # Re-selecting the active level dismisses any open dialog.
             if st.session_state.pending_reading_level:
                 st.session_state.pending_reading_level = None
         reading_level = active_level
@@ -219,11 +214,16 @@ with st.sidebar:
     st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
     safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Arial"
-    new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox")
+    new_font = st.radio(
+        "Font Style",
+        FONT_OPTIONS,
+        index=FONT_OPTIONS.index(safe_font),
+        key="font_selectbox",
+    )
     if new_font != st.session_state.font_style:
         st.session_state.font_style = new_font
         st.rerun()
-    
+
     new_size = st.select_slider(
         "Text Size",
         options=list(range(MIN_FONT_SIZE, MAX_FONT_SIZE + 1)),
@@ -240,12 +240,11 @@ with st.sidebar:
         (k for k, v in SPACING_OPTIONS.items() if v == st.session_state.line_spacing),
         "Normal (1.8)",
     )
-    new_spacing_key = st.selectbox(
+    new_spacing_key = st.radio(
         "Line Spacing",
         spacing_keys,
         index=spacing_keys.index(current_spacing_key),
         key="line_spacing_select",
-        help="Space between lines of text.",
     )
     if SPACING_OPTIONS[new_spacing_key] != st.session_state.line_spacing:
         st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
@@ -254,7 +253,12 @@ with st.sidebar:
     colour_options = [name for group in COLOR_SCHEMES.values() for name in group]
     if st.session_state.colour_scheme not in colour_options:
         st.session_state.colour_scheme = "Soft Blue"
-    new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox")
+    new_colour = st.radio(
+        "Colour Scheme",
+        colour_options,
+        index=colour_options.index(st.session_state.colour_scheme),
+        key="colour_selectbox",
+    )
     if new_colour != st.session_state.colour_scheme:
         st.session_state.colour_scheme = new_colour
         st.rerun()
