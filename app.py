@@ -108,88 +108,57 @@ def _render_level_modal(pending_level):
 
     st.markdown(f"""
 <style>
-/* Dim overlay — fixed behind everything */
-.fcm-overlay {{
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.40);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 99;
-    animation: fcmFadeIn 0.15s ease-out;
-}}
-@keyframes fcmFadeIn {{
-    from {{ opacity: 0; }} to {{ opacity: 1; }}
-}}
-
-/* Wrapper sits in normal page flow so Streamlit buttons follow naturally */
-.fcm-modal-wrap {{
-    position: relative;
-    z-index: 100;
-    display: flex;
-    justify-content: center;
-    margin: 12px 0 0 0;
+@keyframes fcmSlideIn {{
+    from {{ transform: translateY(-8px); opacity: 0; }}
+    to   {{ transform: translateY(0);    opacity: 1; }}
 }}
 .fcm-modal {{
     background: {bg};
     border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.28), 0 0 0 1px {accent}33;
-    padding: 36px 40px 32px 40px;
-    width: min(460px, 95vw);
-    animation: fcmSlideIn 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+    border: 1px solid {accent}33;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    padding: 32px 36px 24px 36px;
     text-align: center;
+    animation: fcmSlideIn 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+    margin-bottom: 16px;
 }}
-@keyframes fcmSlideIn {{
-    from {{ transform: translateY(-10px); opacity: 0; }}
-    to   {{ transform: translateY(0);     opacity: 1; }}
-}}
-.fcm-modal-icon  {{ font-size: 2.8em; line-height: 1; margin-bottom: 14px; display: block; }}
-.fcm-modal-title {{ font-size: 1.3em; font-weight: 800; color: {text}; margin: 0 0 10px 0; }}
+.fcm-modal-icon  {{ font-size: 2.6em; line-height: 1; margin-bottom: 12px; display: block; }}
+.fcm-modal-title {{ font-size: 1.25em; font-weight: 800; color: {text}; margin: 0 0 10px 0; }}
 .fcm-modal-body  {{ font-size: 1em; color: {text}; opacity: 0.72; margin: 0; line-height: 1.65; }}
 .fcm-modal-level {{ color: {accent}; font-weight: 700; opacity: 1; }}
-</style>
-
-<div class="fcm-overlay"></div>
-<div class="fcm-modal-wrap">
-  <div class="fcm-modal">
-    <span class="fcm-modal-icon">{level_emoji}</span>
-    <p class="fcm-modal-title">Switch reading level?</p>
-    <p class="fcm-modal-body">
-      Your current cards will be replaced with a new deck at
-      <span class="fcm-modal-level">{_safe(level_label)}</span> level.
-    </p>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-    # Buttons live in normal page flow directly below the card
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
-        st.markdown(f"""
-<style>
-.fcm-btn-wrap .stButton > button {{
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    font-size: 0.95em !important;
-    padding: 12px 20px !important;
-    transition: all 0.15s ease !important;
-    position: relative; z-index: 100;
-}}
 .fcm-btn-yes .stButton > button {{
     background: {accent} !important;
     border-color: {accent} !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    padding: 12px 20px !important;
 }}
 .fcm-btn-no .stButton > button {{
     background: transparent !important;
     color: {text} !important;
     border: 2px solid {accent}66 !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    padding: 12px 20px !important;
 }}
 .fcm-btn-no .stButton > button:hover {{
     border-color: {accent} !important;
     background: {accent}15 !important;
 }}
 </style>
-<div class="fcm-btn-wrap"></div>
+""", unsafe_allow_html=True)
+
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        st.markdown(f"""
+<div class="fcm-modal">
+  <span class="fcm-modal-icon">{level_emoji}</span>
+  <p class="fcm-modal-title">Switch reading level?</p>
+  <p class="fcm-modal-body">
+    Your current cards will be replaced with a new deck at
+    <span class="fcm-modal-level">{_safe(level_label)}</span> level.
+  </p>
+</div>
 """, unsafe_allow_html=True)
         col_no, col_yes = st.columns(2)
         with col_no:
