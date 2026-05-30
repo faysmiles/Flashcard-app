@@ -1994,6 +1994,11 @@ def search_wikipedia_image(query):
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
+    """Call DeepSeek and return the raw parsed flashcard list (cached).
+
+    Kept separate from enrichment so changing the emoji map doesn't require
+    a cache flush - only the API call itself is memoised.
+    """
     api_key = os.getenv("DEEPSEEK_API_KEY")
     if not api_key:
         try:
@@ -2003,6 +2008,7 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
             st.info("Add your key to .env or Streamlit secrets")
             return None
 
+    # Scale card count to text length
     n_chars = len(raw_text)
     if n_chars <= 5000:
         min_cards, max_cards = 3, 5
@@ -2013,6 +2019,7 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
     else:
         min_cards, max_cards = 12, 20
 
+    # Reading level instructions
     if reading_level == "simple":
         level_text = (
             "EASY (Ages 4-11): Use very short, common words only. "
@@ -2090,7 +2097,7 @@ TEXT TO CONVERT:
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "You create flashcards. Return only valid JSON."},
+                {"role": "system", "content": "You create flashcards. For each fact you choose the single best emoji representing its main idea, and order the facts with the most important first. Return only valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
@@ -2101,6 +2108,7 @@ TEXT TO CONVERT:
         content = re.sub(r'```\s*', '', content)
         result = json.loads(content)
         return result.get("flashcards", [])
+
     except json.JSONDecodeError as e:
         st.error(f"JSON parsing error: {str(e)}")
         return None
@@ -2109,14 +2117,17 @@ TEXT TO CONVERT:
         return None
 
 
-def stream_flashcards_from_llm(raw_text, reading_level="intermediate"):
-    """Alias kept for import compatibility."""
-    return iter(generate_flashcards_from_llm(raw_text, reading_level) or [])
-
-
 def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
+    """Generate flashcards: cached LLM call + fresh emoji enrichment per fact.
+
+    The emoji for each fact is picked from the FACT TEXT (not just the LLM's
+    hint), so each bullet on a card reflects its own content.
+    """
     raw_data = _fetch_flashcard_data_from_llm(raw_text, reading_level)
     if not raw_data:
+        if raw_data is None:
+            return None
+        st.error("No flashcards generated")
         return None
 
     flashcards = []
@@ -2131,6 +2142,11 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
                 fact_text = fact.get("text", "")
                 emoji_hint = fact.get("emoji_hint", "")
                 llm_emoji = fact.get("emoji", "")
+                # 1) Trust the LLM's chosen emoji if it is a real emoji - it
+                #    understands the sentence's MEANING, not just its keywords.
+                # 2) Else match keywords in the fact text (curated fallback).
+                # 3) Else match the LLM's keyword hint.
+                # 4) Else fall back to the topic emoji (always relevant).
                 if _looks_like_emoji(llm_emoji):
                     fact_emoji = llm_emoji.strip()
                 else:
@@ -2145,14 +2161,13 @@ def generate_flashcards_from_llm(raw_text, reading_level="intermediate"):
                 facts.append({"emoji": fact_emoji, "text": fact})
 
         flashcards.append({
-            "title": topic,
-            "facts": facts,
-            "emoji": topic_emoji,
-            "image_search": card.get("image_search", topic_keyword),
+            'title': topic,
+            'facts': facts,
+            'emoji': topic_emoji,
+            'image_search': card.get('image_search', topic_keyword),
         })
 
     return flashcards
-
 
 
 # ==================== EXISTING HELPER FUNCTIONS (keep these) ====================
@@ -2634,12 +2649,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         font-family: '{font_style}', sans-serif !important;
     }}
     .stApp p:not([style]), .stApp li:not([style]), .stApp label:not([style]),
-    .stMarkdown:not([style]) {{
-        font-size: {text_size}px !important;
-        line-height: {line_spacing} !important;
-        color: {text} !important;
-    }}
-    .stApp span:not([style]):not(.stButton *):not(.stDownloadButton *) {{
+    .stApp span:not([style]), .stMarkdown:not([style]) {{
         font-size: {text_size}px !important;
         line-height: {line_spacing} !important;
         color: {text} !important;
