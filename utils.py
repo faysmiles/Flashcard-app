@@ -2055,7 +2055,7 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
     if reading_level == "simple":
         level_text = (
             "EASY (Ages 4-11): Use very short, common words only. "
-            "One idea per sentence. Maximum 10 words per sentence. "
+            "One idea per sentence. Maximum 12 words per sentence. "
             "Active voice always. Use digits for numbers (e.g. 3 not three). "
             "No jargon — if a technical word is essential, explain it in the same sentence."
         )
@@ -2084,6 +2084,7 @@ YOUR GOAL: Turn ALL key information from the text into {min_cards}-{max_cards} f
 - Give each card a short, descriptive title that captures its theme at a glance.
 
 WRITING RULES (follow strictly):
+- Grammatically correct: every sentence must be a complete, natural English sentence. Never drop words to hit a word count — write the sentence properly first, then trim only if it still reads naturally.
 - Active voice: write "Dogs use smell to communicate." NOT "Smell is used by dogs."
 - One idea per sentence — never join 2 facts with "and" or "but".
 - Front-load the key word: start the sentence with what the fact is actually about.
