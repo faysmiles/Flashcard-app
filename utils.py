@@ -2670,6 +2670,10 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     [data-testid="stMain"],
     .main, .block-container {{
         background-color: {bg} !important;
+    }}
+    /* Set default text colour on .stApp only – not on every container,
+       which would override inline-coloured card elements via inheritance. */
+    .stApp {{
         color: {text} !important;
     }}
     [data-testid="stHeader"], header[data-testid="stHeader"] {{
