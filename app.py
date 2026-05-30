@@ -108,79 +108,72 @@ def _render_level_modal(pending_level):
 
     st.markdown(f"""
 <style>
-/* Dim overlay behind the modal */
+/* Dim overlay — fixed behind everything */
 .fcm-overlay {{
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.35);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    z-index: 999;
+    background: rgba(0,0,0,0.40);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 99;
     animation: fcmFadeIn 0.15s ease-out;
 }}
 @keyframes fcmFadeIn {{
-    from {{ opacity: 0; }}
-    to   {{ opacity: 1; }}
+    from {{ opacity: 0; }} to {{ opacity: 1; }}
 }}
 
-/* Modal card */
+/* Wrapper sits in normal page flow so Streamlit buttons follow naturally */
+.fcm-modal-wrap {{
+    position: relative;
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    margin: 12px 0 0 0;
+}}
 .fcm-modal {{
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1000;
     background: {bg};
     border-radius: 20px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.3), 0 0 0 1px {accent}33;
-    padding: 36px 40px 28px 40px;
-    width: min(480px, 90vw);
-    animation: fcmSlideIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.28), 0 0 0 1px {accent}33;
+    padding: 36px 40px 32px 40px;
+    width: min(460px, 95vw);
+    animation: fcmSlideIn 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
     text-align: center;
 }}
 @keyframes fcmSlideIn {{
-    from {{ transform: translate(-50%, -46%); opacity: 0; }}
-    to   {{ transform: translate(-50%, -50%); opacity: 1; }}
+    from {{ transform: translateY(-10px); opacity: 0; }}
+    to   {{ transform: translateY(0);     opacity: 1; }}
 }}
+.fcm-modal-icon  {{ font-size: 2.8em; line-height: 1; margin-bottom: 14px; display: block; }}
+.fcm-modal-title {{ font-size: 1.3em; font-weight: 800; color: {text}; margin: 0 0 10px 0; }}
+.fcm-modal-body  {{ font-size: 1em; color: {text}; opacity: 0.72; margin: 0; line-height: 1.65; }}
+.fcm-modal-level {{ color: {accent}; font-weight: 700; opacity: 1; }}
+</style>
 
-.fcm-modal-icon {{
-    font-size: 3em;
-    line-height: 1;
-    margin-bottom: 12px;
-    display: block;
-}}
-.fcm-modal-title {{
-    font-size: 1.3em;
-    font-weight: 800;
-    color: {text};
-    margin: 0 0 10px 0;
-    letter-spacing: -0.01em;
-}}
-.fcm-modal-body {{
-    font-size: 1em;
-    color: {text};
-    opacity: 0.75;
-    margin: 0 0 28px 0;
-    line-height: 1.6;
-}}
-.fcm-modal-level {{
-    color: {accent};
-    font-weight: 700;
-    opacity: 1;
-}}
-.fcm-modal-divider {{
-    height: 1px;
-    background: {accent}22;
-    margin: 0 -40px 24px -40px;
-}}
+<div class="fcm-overlay"></div>
+<div class="fcm-modal-wrap">
+  <div class="fcm-modal">
+    <span class="fcm-modal-icon">{level_emoji}</span>
+    <p class="fcm-modal-title">Switch reading level?</p>
+    <p class="fcm-modal-body">
+      Your current cards will be replaced with a new deck at
+      <span class="fcm-modal-level">{_safe(level_label)}</span> level.
+    </p>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
-/* Override Streamlit button styles just inside this modal context */
-.fcm-btn-row .stButton > button {{
+    # Buttons live in normal page flow directly below the card
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        st.markdown(f"""
+<style>
+.fcm-btn-wrap .stButton > button {{
     border-radius: 12px !important;
     font-weight: 700 !important;
     font-size: 0.95em !important;
     padding: 12px 20px !important;
     transition: all 0.15s ease !important;
+    position: relative; z-index: 100;
 }}
 .fcm-btn-yes .stButton > button {{
     background: {accent} !important;
@@ -189,31 +182,15 @@ def _render_level_modal(pending_level):
 .fcm-btn-no .stButton > button {{
     background: transparent !important;
     color: {text} !important;
-    border: 2px solid {accent}55 !important;
+    border: 2px solid {accent}66 !important;
 }}
 .fcm-btn-no .stButton > button:hover {{
     border-color: {accent} !important;
-    background: {accent}11 !important;
+    background: {accent}15 !important;
 }}
 </style>
-
-<div class="fcm-overlay"></div>
-<div class="fcm-modal">
-  <span class="fcm-modal-icon">{level_emoji}</span>
-  <p class="fcm-modal-title">Switch reading level?</p>
-  <p class="fcm-modal-body">
-    Your current cards will be replaced with a new deck at
-    <span class="fcm-modal-level">{_safe(level_label)}</span> level.
-  </p>
-  <div class="fcm-modal-divider"></div>
-</div>
+<div class="fcm-btn-wrap"></div>
 """, unsafe_allow_html=True)
-
-    # Buttons must be native Streamlit — position them to visually sit inside
-    # the modal using a centred narrow column.
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
-        st.markdown('<div class="fcm-btn-row">', unsafe_allow_html=True)
         col_no, col_yes = st.columns(2)
         with col_no:
             st.markdown('<div class="fcm-btn-no">', unsafe_allow_html=True)
@@ -230,7 +207,6 @@ def _render_level_modal(pending_level):
                 st.session_state.trigger_regenerate = True
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _safe(text):
