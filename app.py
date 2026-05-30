@@ -195,7 +195,6 @@ with st.sidebar:
         "Reading Level",
         reading_level_options,
         key="reading_level_select",
-        accept_new_input=False,
     )
     st.caption("📖 Each level creates a new set of cards.")
 
@@ -220,7 +219,7 @@ with st.sidebar:
     st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
 
     safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Arial"
-    new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox", accept_new_input=False)
+    new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox")
     if new_font != st.session_state.font_style:
         st.session_state.font_style = new_font
         st.rerun()
@@ -242,7 +241,6 @@ with st.sidebar:
         index=spacing_keys.index(current_spacing_key),
         key="line_spacing_select",
         help="Space between lines of text.",
-        accept_new_input=False,
     )
     if SPACING_OPTIONS[new_spacing_key] != st.session_state.line_spacing:
         st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
@@ -251,7 +249,7 @@ with st.sidebar:
     colour_options = [name for group in COLOR_SCHEMES.values() for name in group]
     if st.session_state.colour_scheme not in colour_options:
         st.session_state.colour_scheme = "Soft Blue"
-    new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox", accept_new_input=False)
+    new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox")
     if new_colour != st.session_state.colour_scheme:
         st.session_state.colour_scheme = new_colour
         st.rerun()
