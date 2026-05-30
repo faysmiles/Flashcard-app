@@ -416,28 +416,6 @@ if not st.session_state.flashcard_generated:
         unsafe_allow_html=True
     )
 
-# --- show the flashcards ---
-if st.session_state.flashcard_generated and st.session_state.flashcards:
-    flashcards = st.session_state.flashcards
-    
-    for i in range(len(flashcards)):
-        if i not in st.session_state.card_flipped:
-            st.session_state.card_flipped[i] = False
-    
-    card_colors = get_card_colors(st.session_state.colour_scheme)
-    
-    st.markdown("---")
-    st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
-    
-    flipped_count = sum(1 for i in range(len(flashcards)) if st.session_state.card_flipped.get(i, False))
-    st.markdown(
-        f"<div style='padding:10px; text-align:center; background:rgba(212, 160, 23, 0.1); border-radius:8px; font-weight:700; color:#D4A017; font-size:0.9em; margin:10px 0 20px 0;'>👀 Studied: {flipped_count}/{len(flashcards)}</div>",
-        unsafe_allow_html=True
-    )
-    
-    if flipped_count == len(flashcards):
-        st.success("🎉 You've studied all the cards! Well done!")
-    
 def card_outer_style(accent_hex, scheme=None):
     bg_color = card_colors.get('card_bg', '#FFFEF9')
     base = (
@@ -470,6 +448,28 @@ def card_body_style(scheme=None):
     if scheme == "Low Stimulation":
         return "padding: 24px 22px;"
     return "padding: 28px 24px;"
+
+# --- show the flashcards ---
+if st.session_state.flashcard_generated and st.session_state.flashcards:
+    flashcards = st.session_state.flashcards
+
+    for i in range(len(flashcards)):
+        if i not in st.session_state.card_flipped:
+            st.session_state.card_flipped[i] = False
+
+    card_colors = get_card_colors(st.session_state.colour_scheme)
+
+    st.markdown("---")
+    st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
+
+    flipped_count = sum(1 for i in range(len(flashcards)) if st.session_state.card_flipped.get(i, False))
+    st.markdown(
+        f"<div style='padding:10px; text-align:center; background:rgba(212, 160, 23, 0.1); border-radius:8px; font-weight:700; color:#D4A017; font-size:0.9em; margin:10px 0 20px 0;'>👀 Studied: {flipped_count}/{len(flashcards)}</div>",
+        unsafe_allow_html=True
+    )
+
+    if flipped_count == len(flashcards):
+        st.success("🎉 You've studied all the cards! Well done!")
 
     total_cards = len(flashcards)
 
