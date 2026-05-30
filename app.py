@@ -300,30 +300,35 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     _text_to_use = st.session_state.stored_user_text or user_text
     level_label = level_key.split('(')[0].strip()
 
-    status = st.empty()
-    status.markdown(f"🤖 **Generating {level_label} flashcards…**")
+    with st.spinner(f"🤖 Generating {level_label} flashcards…"):
+        for card in stream_flashcards_from_llm(_text_to_use, reading_level=level_code):
+            st.session_state.flashcards.append(card)
 
-    for card in stream_flashcards_from_llm(_text_to_use, reading_level=level_code):
-        st.session_state.flashcards.append(card)
-        n = len(st.session_state.flashcards)
-        st.session_state.flashcard_generated = True
+    if not st.session_state.flashcards:
+        return
 
-        # Fetch image for this card immediately if enabled
-        if show_imgs:
-            search_term = card.get('image_search', card['title'])
-            idx = n - 1
-            if search_term in prev_cache:
-                st.session_state.card_images[idx] = prev_cache[search_term]
-            else:
-                st.session_state.card_images[idx] = search_wikipedia_image(search_term)
+    st.session_state.flashcard_generated = True
 
-        status.markdown(f"🤖 **Card {n} ready** — keep going…")
-        st.rerun()
-
-    status.empty()
-
-    # Update image cache
     if show_imgs:
+        needs_fetch = []
+        for i, card in enumerate(st.session_state.flashcards):
+            search_term = card.get('image_search', card['title'])
+            if search_term in prev_cache:
+                st.session_state.card_images[i] = prev_cache[search_term]
+            else:
+                needs_fetch.append((i, search_term))
+
+        if needs_fetch:
+            with st.spinner("🖼️ Finding images…"):
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=5) as pool:
+                    results = list(pool.map(
+                        lambda item: (item[0], item[1], search_wikipedia_image(item[1])),
+                        needs_fetch
+                    ))
+                for i, search_term, url in results:
+                    st.session_state.card_images[i] = url
+
         st.session_state.image_search_cache = {
             card.get('image_search', card['title']): st.session_state.card_images.get(i)
             for i, card in enumerate(st.session_state.flashcards)
