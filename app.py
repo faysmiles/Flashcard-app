@@ -36,8 +36,8 @@ from config import (
 )
 from utils import (
     apply_styles, extract_text_from_file,
-    generate_flashcards_from_llm, get_card_colors,
-    search_wikipedia_image, render_header,
+    generate_flashcards_from_llm, stream_flashcards_from_llm,
+    get_card_colors, search_wikipedia_image, render_header,
     render_card_to_png, fetch_image_bytes, build_cards_zip,
     render_mobile_settings_hint,
 )
@@ -199,13 +199,19 @@ with st.sidebar:
     st.caption("📖 Each level creates a new set of cards.")
 
     if not st.session_state.flashcard_generated:
+        # No deck yet — the choice applies directly to the first deck, so
+        # there's nothing to confirm. (This also fixes the first deck always
+        # generating at the default level regardless of the dropdown.)
         reading_level = selected_level
     else:
+        # A deck exists: changing the level needs confirmation.
         if selected_level != active_level:
+            # Open (or re-point) the confirmation at the requested level.
             if st.session_state.pending_reading_level != selected_level:
                 st.session_state.pending_reading_level = selected_level
                 st.rerun()
         else:
+            # Re-selecting the active level dismisses any open dialog.
             if st.session_state.pending_reading_level:
                 st.session_state.pending_reading_level = None
         reading_level = active_level
@@ -217,13 +223,8 @@ with st.sidebar:
     if new_font != st.session_state.font_style:
         st.session_state.font_style = new_font
         st.rerun()
-
-    new_size = st.select_slider(
-        "Text Size",
-        options=list(range(MIN_FONT_SIZE, MAX_FONT_SIZE + 1)),
-        value=st.session_state.text_size,
-        key="text_size_slider",
-    )
+    
+    new_size = st.slider("Text Size", MIN_FONT_SIZE, MAX_FONT_SIZE, st.session_state.text_size, key="text_size_slider")
     if new_size != st.session_state.text_size:
         st.session_state.text_size = new_size
         st.rerun()
@@ -239,6 +240,7 @@ with st.sidebar:
         spacing_keys,
         index=spacing_keys.index(current_spacing_key),
         key="line_spacing_select",
+        help="Space between lines of text.",
     )
     if SPACING_OPTIONS[new_spacing_key] != st.session_state.line_spacing:
         st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
@@ -284,13 +286,7 @@ st.caption(f"📝 {word_count} words")
 st.caption("⚠️ Your text is sent to DeepSeek AI and Pollinations image service to create flashcards. Please don't paste anything confidential.")
 
 def _run_generation(level_key, show_imgs, reuse_images=False):
-    """Shared card generation logic used by both the button and auto-regenerate.
-
-    reuse_images=True: carry over any image whose image_search term matches a
-    card in the previous deck (same topic at a different reading level).
-    """
     level_code = READING_LEVELS[level_key]
-    # Snapshot the previous image cache keyed by search term before clearing
     prev_cache = {}
     if reuse_images and st.session_state.image_search_cache:
         prev_cache = dict(st.session_state.image_search_cache)
@@ -298,40 +294,39 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     st.session_state.card_images = {}
     st.session_state.card_flipped = {}
     st.session_state.current_card_idx = 0
+    st.session_state.flashcards = []
+    st.session_state.flashcard_generated = False
 
-    new_cards = None
     _text_to_use = st.session_state.stored_user_text or user_text
-    with st.spinner(f"🤖 AI is creating {level_key.split('(')[0].strip()} flashcards..."):
-        new_cards = generate_flashcards_from_llm(_text_to_use, reading_level=level_code)
-        if new_cards:
-            st.session_state.flashcards = new_cards
-            st.session_state.flashcard_generated = True
+    level_label = level_key.split('(')[0].strip()
 
-    if new_cards and show_imgs:
-        # Populate card_images — reuse from prev_cache where search term matches
-        needs_fetch = []
-        for i, card in enumerate(new_cards):
+    status = st.empty()
+    status.markdown(f"🤖 **Generating {level_label} flashcards…**")
+
+    for card in stream_flashcards_from_llm(_text_to_use, reading_level=level_code):
+        st.session_state.flashcards.append(card)
+        n = len(st.session_state.flashcards)
+        st.session_state.flashcard_generated = True
+
+        # Fetch image for this card immediately if enabled
+        if show_imgs:
             search_term = card.get('image_search', card['title'])
+            idx = n - 1
             if search_term in prev_cache:
-                st.session_state.card_images[i] = prev_cache[search_term]
+                st.session_state.card_images[idx] = prev_cache[search_term]
             else:
-                needs_fetch.append((i, search_term))
+                st.session_state.card_images[idx] = search_wikipedia_image(search_term)
 
-        if needs_fetch:
-            with st.spinner("🖼️ Finding pictures for each card..."):
-                from concurrent.futures import ThreadPoolExecutor
-                with ThreadPoolExecutor(max_workers=5) as pool:
-                    results = list(pool.map(
-                        lambda item: (item[0], item[1], search_wikipedia_image(item[1])),
-                        needs_fetch
-                    ))
-                for i, search_term, url in results:
-                    st.session_state.card_images[i] = url
+        status.markdown(f"🤖 **Card {n} ready** — keep going…")
+        st.rerun()
 
-        # Update the persistent search-term → url cache for future reuse
+    status.empty()
+
+    # Update image cache
+    if show_imgs:
         st.session_state.image_search_cache = {
             card.get('image_search', card['title']): st.session_state.card_images.get(i)
-            for i, card in enumerate(new_cards)
+            for i, card in enumerate(st.session_state.flashcards)
             if st.session_state.card_images.get(i) is not None
         }
 
@@ -414,6 +409,28 @@ if not st.session_state.flashcard_generated:
         unsafe_allow_html=True
     )
 
+# --- show the flashcards ---
+if st.session_state.flashcard_generated and st.session_state.flashcards:
+    flashcards = st.session_state.flashcards
+    
+    for i in range(len(flashcards)):
+        if i not in st.session_state.card_flipped:
+            st.session_state.card_flipped[i] = False
+    
+    card_colors = get_card_colors(st.session_state.colour_scheme)
+    
+    st.markdown("---")
+    st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
+    
+    flipped_count = sum(1 for i in range(len(flashcards)) if st.session_state.card_flipped.get(i, False))
+    st.markdown(
+        f"<div style='padding:10px; text-align:center; background:rgba(212, 160, 23, 0.1); border-radius:8px; font-weight:700; color:#D4A017; font-size:0.9em; margin:10px 0 20px 0;'>👀 Studied: {flipped_count}/{len(flashcards)}</div>",
+        unsafe_allow_html=True
+    )
+    
+    if flipped_count == len(flashcards):
+        st.success("🎉 You've studied all the cards! Well done!")
+    
 def card_outer_style(accent_hex, scheme=None):
     bg_color = card_colors.get('card_bg', '#FFFEF9')
     base = (
@@ -447,28 +464,6 @@ def card_body_style(scheme=None):
         return "padding: 24px 22px;"
     return "padding: 28px 24px;"
 
-# --- show the flashcards ---
-if st.session_state.flashcard_generated and st.session_state.flashcards:
-    flashcards = st.session_state.flashcards
-
-    for i in range(len(flashcards)):
-        if i not in st.session_state.card_flipped:
-            st.session_state.card_flipped[i] = False
-
-    card_colors = get_card_colors(st.session_state.colour_scheme)
-
-    st.markdown("---")
-    st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
-
-    flipped_count = sum(1 for i in range(len(flashcards)) if st.session_state.card_flipped.get(i, False))
-    st.markdown(
-        f"<div style='padding:10px; text-align:center; background:rgba(212, 160, 23, 0.1); border-radius:8px; font-weight:700; color:#D4A017; font-size:0.9em; margin:10px 0 20px 0;'>👀 Studied: {flipped_count}/{len(flashcards)}</div>",
-        unsafe_allow_html=True
-    )
-
-    if flipped_count == len(flashcards):
-        st.success("🎉 You've studied all the cards! Well done!")
-
     total_cards = len(flashcards)
 
     if st.session_state.current_card_idx >= total_cards:
@@ -490,7 +485,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     bottom_strip = top_strip
 
     st.markdown(
-        f"<p style='text-align:center; color:{label_color}; font-weight:700; letter-spacing:2px; margin:28px 0 8px 0; font-size:0.85em;'>{'CARD ' + str(idx + 1) + ' OF ' + str(total_cards) if scheme_name == 'Low Stimulation' else '✨ CARD ' + str(idx + 1) + ' OF ' + str(total_cards) + ' ✨'}</p>",
+        f"<p style='text-align:center; color:{label_color}; font-weight:700; letter-spacing:2px; margin:28px 0 8px 0; font-size:0.85em;'>✨ CARD {idx + 1} OF {total_cards} ✨</p>",
         unsafe_allow_html=True
     )
 
@@ -513,7 +508,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     card_bg_color = card_colors.get('card_bg', '#FFFEF9')
     sticker_size = 44
     if has_image:
-        sticker_html = "" if scheme_name == "Low Stimulation" else (
+        sticker_html = (
             f"<div style='position:absolute; top:-8px; right:-8px; "
             f"width:{sticker_size}px; height:{sticker_size}px; border-radius:50%; "
             f"background:{accent_color}; display:flex; align-items:center; "
@@ -572,10 +567,10 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
             image_block = ""
 
         st.markdown(
-f"""<div style='{outer_style} color:{text_color};'>
+f"""<div style='{outer_style}'>
 {top_strip}
-<div style='{body_style} color:{text_color};'>
-<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{'KEY FACTS' if scheme_name == 'Low Stimulation' else deco[0] + ' KEY FACTS ' + deco[1]}</p>
+<div style='{body_style}'>
+<p style='text-align:center; color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.9em; margin:0 0 16px 0;'>{deco[0]} KEY FACTS {deco[1]}</p>
 {image_block}
 {facts_html}
 </div>
@@ -597,19 +592,18 @@ f"""<div style='{outer_style} color:{text_color};'>
             )
         else:
             anchor_block = (
-                "" if scheme_name == "Low Stimulation" else
                 f"<div style='font-size:100px; line-height:1; margin-bottom:20px;' "
                 f"role='img' aria-label='{img_alt}'>{emoji}</div>"
             )
 
         st.markdown(
-f"""<div style='{outer_style} color:{text_color};'>
+f"""<div style='{outer_style}'>
 {top_strip}
-<div style='{body_style} text-align:center; color:{text_color};'>
+<div style='{body_style} text-align:center;'>
 {anchor_block}
 <p style='color:{label_color}; font-weight:800; letter-spacing:3px; font-size:0.85em; margin:0 0 16px 0;'>TOPIC</p>
 <div style='color:{text_color}; font-family:"{st.session_state.font_style}", sans-serif; font-size:{max(st.session_state.text_size + 10, 26)}px; font-weight:700;'>{_safe(card['title'])}</div>
-{'<p style="font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;" aria-hidden="true">' + deco[0] + ' ' + deco[1] + ' ' + deco[2] + ' ' + deco[3] + '</p>' if scheme_name != 'Low Stimulation' else ''}
+<p style='font-size:28px; opacity:0.4; margin-top:24px; letter-spacing:10px;' aria-hidden='true'>{deco[0]} {deco[1]} {deco[2]} {deco[3]}</p>
 </div>
 {bottom_strip}
 </div>""",
