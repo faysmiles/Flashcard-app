@@ -1890,18 +1890,50 @@ def _get_supabase():
 
 
 def _normalise_keyword(text):
-    """Lowercase, strip punctuation, collapse spaces - so 'Dogs ' and 'dogs'
-    map to the same cache entry. Exact match only (no stemming)."""
+    """Lowercase, strip punctuation, collapse spaces."""
     cleaned = re.sub(r"[^\w\s-]", "", text or "").lower()
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
+# Common filler words to strip when extracting a short cache key from a long
+# image_search phrase like "a dog using body language to communicate with owner"
+_STOP_WORDS = {
+    "a", "an", "the", "of", "in", "on", "at", "to", "for", "with", "by",
+    "from", "into", "about", "as", "its", "their", "his", "her", "that",
+    "this", "these", "those", "and", "or", "but", "is", "are", "was",
+    "were", "be", "been", "being", "have", "has", "had", "do", "does",
+    "did", "show", "showing", "shows", "depict", "depicting", "depicts",
+    "illustrate", "illustrating", "illustrates", "image", "picture",
+    "photo", "photograph", "diagram", "using", "used", "use", "uses",
+    "during", "between", "through", "across", "under", "over", "around",
+}
+
+
+def _extract_cache_key(query):
+    """Reduce a long image_search phrase to 2-4 meaningful words.
+
+    "a dog using body language to communicate with its owner"
+    -> "dog body language"
+
+    This dramatically increases cache hits because two cards about the same
+    topic produce slightly different long phrases but the same short key.
+    """
+    words = _normalise_keyword(query).split()
+    core = [w for w in words if w not in _STOP_WORDS and len(w) > 2]
+    # Keep at most 4 words so the key stays stable
+    return " ".join(core[:4])
+
+
 def _cache_lookup(keyword):
-    """Return a stored image URL for this exact keyword, or None."""
+    """Return a stored image URL for this keyword, or None.
+    Tries the short core key first, then falls back to the full normalised
+    phrase so existing cache entries are not lost after this update.
+    """
     sb = _get_supabase()
     if not sb or not keyword:
         return None
     try:
+        # Primary: short core key
         res = (sb.table("image_cache")
                  .select("image_url")
                  .eq("keyword", keyword)
@@ -1914,15 +1946,16 @@ def _cache_lookup(keyword):
     return None
 
 
-def _cache_store(keyword, image_bytes, mime):
-    """Upload the image to storage and index it by keyword. Returns the public
-    URL, or None on failure (caller then falls back to a data URL)."""
+def _cache_store(core_key, full_description, image_bytes, mime):
+    """Upload the image to Supabase storage and index it by core_key.
+    Also stores the full_description so you can see what each image is.
+    """
     sb = _get_supabase()
-    if not sb or not keyword:
+    if not sb or not core_key:
         return None
     try:
         ext = "png" if "png" in mime else "jpg"
-        safe = re.sub(r"[^a-z0-9_-]+", "_", keyword).strip("_") or "image"
+        safe = re.sub(r"[^a-z0-9_-]+", "_", core_key).strip("_") or "image"
         path = f"{safe}.{ext}"
         sb.storage.from_(_IMAGE_BUCKET).upload(
             path, image_bytes,
@@ -1930,40 +1963,39 @@ def _cache_store(keyword, image_bytes, mime):
         )
         public_url = sb.storage.from_(_IMAGE_BUCKET).get_public_url(path)
         sb.table("image_cache").upsert(
-            {"keyword": keyword, "image_url": public_url}
+            {"keyword": core_key, "image_url": public_url, "description": full_description}
         ).execute()
         return public_url
     except Exception as e:
-        print(f"Cache store error for '{keyword}': {e}")
+        print(f"Cache store error for '{core_key}': {e}")
         return None
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_wikipedia_image(query):
     """Return an image URL for the topic query.
-    Order: durable Supabase cache (exact keyword) -> generate via Pollinations,
-    then save to the cache for everyone else. Kept the original function name
-    so app.py needs no changes.
+    Order: Supabase cache (short core key) -> generate via Pollinations
+    then save to cache for everyone else.
     """
     if not query:
         return None
 
-    keyword = _normalise_keyword(query)
-    if not keyword:
+    core_key = _extract_cache_key(query)
+    if not core_key:
         return None
 
-    # 1) Durable shared cache - instant reuse if anyone made this before.
-    cached = _cache_lookup(keyword)
+    # 1) Check cache with the short core key
+    cached = _cache_lookup(core_key)
     if cached:
         return cached
 
-    # 2) Generate a fresh image.
+    # 2) Generate a fresh image
     api_key = _get_pollinations_key()
     if not api_key:
         return None
 
     prompt = (
-        f"cheerful educational illustration of {keyword}, "
+        f"cheerful educational illustration of {query}, "
         "child-friendly, bright flat colours, friendly cartoon style, "
         "simple clean background, appropriate for ages 4 to 18, "
         "no people, no violence, no scary imagery, no text, no labels"
@@ -1977,15 +2009,15 @@ def search_wikipedia_image(query):
         response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
-            # 3) Save to the shared cache; return the public URL if it worked.
-            public_url = _cache_store(keyword, response.content, mime)
+            # 3) Save to cache using short key + full description
+            public_url = _cache_store(core_key, query, response.content, mime)
             if public_url:
                 return public_url
-            # Fallback: no cache configured / upload failed - use a data URL.
+            # Fallback: cache not configured or upload failed
             b64 = base64.b64encode(response.content).decode()
             return f"data:{mime};base64,{b64}"
     except Exception as e:
-        print(f"Pollinations error for '{keyword}': {e}")
+        print(f"Pollinations error for '{query}': {e}")
 
     return None
 
