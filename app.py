@@ -96,69 +96,141 @@ st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 render_mobile_settings_hint(st.session_state.colour_scheme)
 
 def _render_level_modal(pending_level):
-    """Inline confirmation — fully controlled via session state (no st.dialog).
-
-    The card and its buttons are ALL rendered as native Streamlit elements in a
-    centred column. The previous version drew the card as a fixed-position HTML
-    overlay (z-index 9998) but left the Yes/No buttons in the normal page flow
-    *underneath* that overlay, so the overlay swallowed every click and the
-    buttons were invisible. Keeping everything native avoids that entirely.
-    """
+    """Inline confirmation dialog — styled card with Yes/No buttons."""
     palette = _get_scheme_palette_safe()
     accent  = palette["accent"]
     bg      = palette["card_bg"]
     text    = palette["text"]
+
+    # Derive a softened backdrop colour from the accent
     level_label = pending_level.split("(")[0].strip()
+    level_emoji = pending_level.split(" ")[0]  # e.g. "📖"
 
     st.markdown(f"""
 <style>
-.fcm-card {{
-    background: {bg};
-    border: 2px solid {accent}66;
-    border-left: 6px solid {accent};
-    border-radius: 16px;
-    padding: 26px 26px 10px 26px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-    animation: fcmPop 0.18s ease-out;
+/* Dim overlay behind the modal */
+.fcm-overlay {{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 999;
+    animation: fcmFadeIn 0.15s ease-out;
 }}
-@keyframes fcmPop {{
-    from {{ transform: scale(0.96); opacity: 0; }}
-    to   {{ transform: scale(1);    opacity: 1; }}
+@keyframes fcmFadeIn {{
+    from {{ opacity: 0; }}
+    to   {{ opacity: 1; }}
 }}
-.fcm-title {{ font-size: 1.25em; font-weight: 700; color: {text}; margin: 0 0 10px 0; }}
-.fcm-body  {{ font-size: 1em; color: {text}; opacity: 0.85; margin: 0; line-height: 1.6; }}
-.fcm-level {{ color: {accent}; font-weight: 700; }}
-</style>
-""", unsafe_allow_html=True)
 
-    _, mid, _ = st.columns([1, 3, 1])
-    with mid:
-        st.markdown(f"""
-<div class="fcm-card">
-  <p class="fcm-title">Change reading level?</p>
-  <p class="fcm-body">This will create a new deck of cards at
-     <span class="fcm-level">{_safe(level_label)}</span> level.</p>
+/* Modal card */
+.fcm-modal {{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: {bg};
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.3), 0 0 0 1px {accent}33;
+    padding: 36px 40px 28px 40px;
+    width: min(480px, 90vw);
+    animation: fcmSlideIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
+}}
+@keyframes fcmSlideIn {{
+    from {{ transform: translate(-50%, -46%); opacity: 0; }}
+    to   {{ transform: translate(-50%, -50%); opacity: 1; }}
+}}
+
+.fcm-modal-icon {{
+    font-size: 3em;
+    line-height: 1;
+    margin-bottom: 12px;
+    display: block;
+}}
+.fcm-modal-title {{
+    font-size: 1.3em;
+    font-weight: 800;
+    color: {text};
+    margin: 0 0 10px 0;
+    letter-spacing: -0.01em;
+}}
+.fcm-modal-body {{
+    font-size: 1em;
+    color: {text};
+    opacity: 0.75;
+    margin: 0 0 28px 0;
+    line-height: 1.6;
+}}
+.fcm-modal-level {{
+    color: {accent};
+    font-weight: 700;
+    opacity: 1;
+}}
+.fcm-modal-divider {{
+    height: 1px;
+    background: {accent}22;
+    margin: 0 -40px 24px -40px;
+}}
+
+/* Override Streamlit button styles just inside this modal context */
+.fcm-btn-row .stButton > button {{
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    font-size: 0.95em !important;
+    padding: 12px 20px !important;
+    transition: all 0.15s ease !important;
+}}
+.fcm-btn-yes .stButton > button {{
+    background: {accent} !important;
+    border-color: {accent} !important;
+}}
+.fcm-btn-no .stButton > button {{
+    background: transparent !important;
+    color: {text} !important;
+    border: 2px solid {accent}55 !important;
+}}
+.fcm-btn-no .stButton > button:hover {{
+    border-color: {accent} !important;
+    background: {accent}11 !important;
+}}
+</style>
+
+<div class="fcm-overlay"></div>
+<div class="fcm-modal">
+  <span class="fcm-modal-icon">{level_emoji}</span>
+  <p class="fcm-modal-title">Switch reading level?</p>
+  <p class="fcm-modal-body">
+    Your current cards will be replaced with a new deck at
+    <span class="fcm-modal-level">{_safe(level_label)}</span> level.
+  </p>
+  <div class="fcm-modal-divider"></div>
 </div>
 """, unsafe_allow_html=True)
 
+    # Buttons must be native Streamlit — position them to visually sit inside
+    # the modal using a centred narrow column.
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        st.markdown('<div class="fcm-btn-row">', unsafe_allow_html=True)
         col_no, col_yes = st.columns(2)
         with col_no:
-            if st.button("No, keep current cards", use_container_width=True, key="modal_no"):
+            st.markdown('<div class="fcm-btn-no">', unsafe_allow_html=True)
+            if st.button("✕ Cancel", use_container_width=True, key="modal_no"):
                 st.session_state.pending_reading_level = None
                 st.session_state.revert_dropdown = True
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
         with col_yes:
-            if st.button("Yes, generate new deck ✨", use_container_width=True, key="modal_yes"):
+            st.markdown('<div class="fcm-btn-yes">', unsafe_allow_html=True)
+            if st.button("✨ Yes, switch", use_container_width=True, key="modal_yes"):
                 st.session_state.active_reading_level = pending_level
                 st.session_state.pending_reading_level = None
                 st.session_state.trigger_regenerate = True
                 st.rerun()
-
-        if st.button("✕ Close", use_container_width=True, key="modal_close"):
-            # Same outcome as "No": dismiss and snap the dropdown back.
-            st.session_state.pending_reading_level = None
-            st.session_state.revert_dropdown = True
-            st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _safe(text):
