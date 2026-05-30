@@ -36,8 +36,8 @@ from config import (
 )
 from utils import (
     apply_styles, extract_text_from_file,
-    generate_flashcards_from_llm, stream_flashcards_from_llm,
-    get_card_colors, search_wikipedia_image, render_header,
+    generate_flashcards_from_llm, get_card_colors,
+    search_wikipedia_image, render_header,
     render_card_to_png, fetch_image_bytes, build_cards_zip,
     render_mobile_settings_hint,
 )
@@ -286,7 +286,13 @@ st.caption(f"📝 {word_count} words")
 st.caption("⚠️ Your text is sent to DeepSeek AI and Pollinations image service to create flashcards. Please don't paste anything confidential.")
 
 def _run_generation(level_key, show_imgs, reuse_images=False):
+    """Shared card generation logic used by both the button and auto-regenerate.
+
+    reuse_images=True: carry over any image whose image_search term matches a
+    card in the previous deck (same topic at a different reading level).
+    """
     level_code = READING_LEVELS[level_key]
+    # Snapshot the previous image cache keyed by search term before clearing
     prev_cache = {}
     if reuse_images and st.session_state.image_search_cache:
         prev_cache = dict(st.session_state.image_search_cache)
@@ -294,24 +300,19 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     st.session_state.card_images = {}
     st.session_state.card_flipped = {}
     st.session_state.current_card_idx = 0
-    st.session_state.flashcards = []
-    st.session_state.flashcard_generated = False
 
+    new_cards = None
     _text_to_use = st.session_state.stored_user_text or user_text
-    level_label = level_key.split('(')[0].strip()
+    with st.spinner(f"🤖 AI is creating {level_key.split('(')[0].strip()} flashcards..."):
+        new_cards = generate_flashcards_from_llm(_text_to_use, reading_level=level_code)
+        if new_cards:
+            st.session_state.flashcards = new_cards
+            st.session_state.flashcard_generated = True
 
-    with st.spinner(f"🤖 Generating {level_label} flashcards…"):
-        for card in stream_flashcards_from_llm(_text_to_use, reading_level=level_code):
-            st.session_state.flashcards.append(card)
-
-    if not st.session_state.flashcards:
-        return
-
-    st.session_state.flashcard_generated = True
-
-    if show_imgs:
+    if new_cards and show_imgs:
+        # Populate card_images — reuse from prev_cache where search term matches
         needs_fetch = []
-        for i, card in enumerate(st.session_state.flashcards):
+        for i, card in enumerate(new_cards):
             search_term = card.get('image_search', card['title'])
             if search_term in prev_cache:
                 st.session_state.card_images[i] = prev_cache[search_term]
@@ -319,7 +320,7 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
                 needs_fetch.append((i, search_term))
 
         if needs_fetch:
-            with st.spinner("🖼️ Finding images…"):
+            with st.spinner("🖼️ Finding pictures for each card..."):
                 from concurrent.futures import ThreadPoolExecutor
                 with ThreadPoolExecutor(max_workers=5) as pool:
                     results = list(pool.map(
@@ -329,9 +330,10 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
                 for i, search_term, url in results:
                     st.session_state.card_images[i] = url
 
+        # Update the persistent search-term → url cache for future reuse
         st.session_state.image_search_cache = {
             card.get('image_search', card['title']): st.session_state.card_images.get(i)
-            for i, card in enumerate(st.session_state.flashcards)
+            for i, card in enumerate(new_cards)
             if st.session_state.card_images.get(i) is not None
         }
 
@@ -342,7 +344,6 @@ if st.session_state.trigger_regenerate:
     _regen_text = st.session_state.stored_user_text or user_text
     if _regen_text.strip() and len(_regen_text.split()) >= 20:
         _run_generation(st.session_state.active_reading_level, show_images, reuse_images=True)
-        st.rerun()
     else:
         st.warning("⚠️ Please enter or upload some text first, then change the reading level.")
 
@@ -408,7 +409,6 @@ with btn:
             st.session_state.stored_user_text = user_text
             st.session_state.image_search_cache = {}
             _run_generation(reading_level, show_images, reuse_images=False)
-            st.rerun()
 
 if not st.session_state.flashcard_generated:
     st.markdown(
@@ -471,109 +471,109 @@ def card_body_style(scheme=None):
         return "padding: 24px 22px;"
     return "padding: 28px 24px;"
 
-    total_cards = len(flashcards)
+total_cards = len(flashcards)
 
-    if st.session_state.current_card_idx >= total_cards:
-        st.session_state.current_card_idx = 0
-    idx = st.session_state.current_card_idx
+if st.session_state.current_card_idx >= total_cards:
+    st.session_state.current_card_idx = 0
+idx = st.session_state.current_card_idx
 
-    card = flashcards[idx]
-    is_flipped = st.session_state.card_flipped.get(idx, False)
-    emoji = card.get('emoji', '💡')
-    deco = [DECORATION_EMOJIS[(idx + i*2) % len(DECORATION_EMOJIS)] for i in range(4)]
-    text_color = card_colors['text']
-    label_color = card_colors['label']
-    accent_color = card_colors.get('accent', label_color)
+card = flashcards[idx]
+is_flipped = st.session_state.card_flipped.get(idx, False)
+emoji = card.get('emoji', '💡')
+deco = [DECORATION_EMOJIS[(idx + i*2) % len(DECORATION_EMOJIS)] for i in range(4)]
+text_color = card_colors['text']
+label_color = card_colors['label']
+accent_color = card_colors.get('accent', label_color)
 
-    scheme_name = st.session_state.colour_scheme
-    outer_style = card_outer_style(accent_color, scheme=scheme_name)
-    body_style = card_body_style(scheme=scheme_name)
-    top_strip = emoji_strip_html(accent_color, emoji, scheme=scheme_name)
-    bottom_strip = top_strip
+scheme_name = st.session_state.colour_scheme
+outer_style = card_outer_style(accent_color, scheme=scheme_name)
+body_style = card_body_style(scheme=scheme_name)
+top_strip = emoji_strip_html(accent_color, emoji, scheme=scheme_name)
+bottom_strip = top_strip
 
-    st.markdown(
-        f"<p style='text-align:center; color:{label_color}; font-weight:700; letter-spacing:2px; margin:28px 0 8px 0; font-size:0.85em;'>✨ CARD {idx + 1} OF {total_cards} ✨</p>",
-        unsafe_allow_html=True
+st.markdown(
+    f"<p style='text-align:center; color:{label_color}; font-weight:700; letter-spacing:2px; margin:28px 0 8px 0; font-size:0.85em;'>✨ CARD {idx + 1} OF {total_cards} ✨</p>",
+    unsafe_allow_html=True
+)
+
+has_image = (
+    show_images
+    and idx in st.session_state.card_images
+    and st.session_state.card_images[idx] is not None
+)
+img_url = st.session_state.card_images.get(idx) if has_image else None
+
+if show_images and idx not in st.session_state.card_images:
+    with st.spinner(f"🖼️ Finding picture for card {idx + 1}..."):
+        search_term = card.get('image_search', card['title'])
+        st.session_state.card_images[idx] = search_wikipedia_image(search_term)
+        has_image = st.session_state.card_images[idx] is not None
+        img_url = st.session_state.card_images[idx]
+
+img_alt = f"Illustration related to the topic: {_safe(card['title'])}"
+
+card_bg_color = card_colors.get('card_bg', '#FFFEF9')
+sticker_size = 44
+if has_image:
+    sticker_html = (
+        f"<div style='position:absolute; top:-8px; right:-8px; "
+        f"width:{sticker_size}px; height:{sticker_size}px; border-radius:50%; "
+        f"background:{accent_color}; display:flex; align-items:center; "
+        f"justify-content:center; font-size:24px; line-height:1; "
+        f"border:3px solid {card_bg_color}; "
+        f"box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2;' "
+        f"aria-hidden='true'>{emoji}</div>"
     )
-
-    has_image = (
-        show_images
-        and idx in st.session_state.card_images
-        and st.session_state.card_images[idx] is not None
+    image_frame_style = (
+        f"box-shadow:0 0 0 4px {accent_color}, "
+        f"0 4px 12px rgba(0,0,0,0.12);"
     )
-    img_url = st.session_state.card_images.get(idx) if has_image else None
+else:
+    sticker_html = ""
+    image_frame_style = ""
 
-    if show_images and idx not in st.session_state.card_images:
-        with st.spinner(f"🖼️ Finding picture for card {idx + 1}..."):
-            search_term = card.get('image_search', card['title'])
-            st.session_state.card_images[idx] = search_wikipedia_image(search_term)
-            has_image = st.session_state.card_images[idx] is not None
-            img_url = st.session_state.card_images[idx]
-
-    img_alt = f"Illustration related to the topic: {_safe(card['title'])}"
-
-    card_bg_color = card_colors.get('card_bg', '#FFFEF9')
-    sticker_size = 44
-    if has_image:
-        sticker_html = (
-            f"<div style='position:absolute; top:-8px; right:-8px; "
-            f"width:{sticker_size}px; height:{sticker_size}px; border-radius:50%; "
-            f"background:{accent_color}; display:flex; align-items:center; "
-            f"justify-content:center; font-size:24px; line-height:1; "
-            f"border:3px solid {card_bg_color}; "
-            f"box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2;' "
-            f"aria-hidden='true'>{emoji}</div>"
+if is_flipped:
+    fact_lines = []
+    for fact in card['facts']:
+        if isinstance(fact, dict):
+            fact_emoji = fact.get('emoji', '*')
+            fact_text = fact.get('text', '')
+        else:
+            fact_emoji = '*'
+            fact_text = str(fact)
+        fact_lines.append(
+            f"<div style='display:flex; align-items:flex-start; gap:14px; "
+            f"margin:12px 0; padding-left:4px;'>"
+            f"<span style='flex:0 0 auto; width:2em; font-size:1.2em; "
+            f"line-height:var(--line-height); text-align:center;' aria-hidden='true'>{fact_emoji}</span>"
+            f"<span style='flex:1 1 auto; color:{text_color}; "
+            f'font-family:"{st.session_state.font_style}", sans-serif; '
+            f"font-size:{st.session_state.text_size}px; line-height:var(--line-height); "
+            f"text-align:left;'>{_safe(fact_text)}</span>"
+            f"</div>"
         )
-        image_frame_style = (
-            f"box-shadow:0 0 0 4px {accent_color}, "
-            f"0 4px 12px rgba(0,0,0,0.12);"
+    facts_html = (
+        "<div style='max-width:85ch; margin:0 auto;'>"
+        + "".join(fact_lines)
+        + "</div>"
+    )
+
+    if has_image:
+        image_block = (
+            f"<div style='text-align:center; margin:0 0 24px 0;'>"
+            f"<div style='position:relative; display:inline-block;'>"
+            f"<img src='{img_url}' alt='{img_alt}' "
+            f"style='max-width:100%; max-height:320px; width:auto; height:auto; "
+            f"border-radius:12px; {image_frame_style} display:block;' />"
+            f"{sticker_html}"
+            f"</div>"
+            f"<p style='font-size:0.8em; color:{label_color}; margin:8px 0 0 0;'>{_safe(card['title'])}</p>"
+            f"</div>"
         )
     else:
-        sticker_html = ""
-        image_frame_style = ""
+        image_block = ""
 
-    if is_flipped:
-        fact_lines = []
-        for fact in card['facts']:
-            if isinstance(fact, dict):
-                fact_emoji = fact.get('emoji', '*')
-                fact_text = fact.get('text', '')
-            else:
-                fact_emoji = '*'
-                fact_text = str(fact)
-            fact_lines.append(
-                f"<div style='display:flex; align-items:flex-start; gap:14px; "
-                f"margin:12px 0; padding-left:4px;'>"
-                f"<span style='flex:0 0 auto; width:2em; font-size:1.2em; "
-                f"line-height:var(--line-height); text-align:center;' aria-hidden='true'>{fact_emoji}</span>"
-                f"<span style='flex:1 1 auto; color:{text_color}; "
-                f'font-family:"{st.session_state.font_style}", sans-serif; '
-                f"font-size:{st.session_state.text_size}px; line-height:var(--line-height); "
-                f"text-align:left;'>{_safe(fact_text)}</span>"
-                f"</div>"
-            )
-        facts_html = (
-            "<div style='max-width:85ch; margin:0 auto;'>"
-            + "".join(fact_lines)
-            + "</div>"
-        )
-
-        if has_image:
-            image_block = (
-                f"<div style='text-align:center; margin:0 0 24px 0;'>"
-                f"<div style='position:relative; display:inline-block;'>"
-                f"<img src='{img_url}' alt='{img_alt}' "
-                f"style='max-width:100%; max-height:320px; width:auto; height:auto; "
-                f"border-radius:12px; {image_frame_style} display:block;' />"
-                f"{sticker_html}"
-                f"</div>"
-                f"<p style='font-size:0.8em; color:{label_color}; margin:8px 0 0 0;'>{_safe(card['title'])}</p>"
-                f"</div>"
-            )
-        else:
-            image_block = ""
-
-        st.markdown(
+    st.markdown(
 f"""<div style='{outer_style}'>
 {top_strip}
 <div style='{body_style}'>
@@ -583,27 +583,27 @@ f"""<div style='{outer_style}'>
 </div>
 {bottom_strip}
 </div>""",
-            unsafe_allow_html=True
+        unsafe_allow_html=True
+    )
+else:
+    if has_image:
+        anchor_block = (
+            f"<div style='text-align:center; margin:0 0 20px 0;'>"
+            f"<div style='position:relative; display:inline-block;'>"
+            f"<img src='{img_url}' alt='{img_alt}' "
+            f"style='max-width:280px; max-height:280px; width:auto; height:auto; "
+            f"border-radius:14px; {image_frame_style} display:block;' />"
+            f"{sticker_html}"
+            f"</div>"
+            f"</div>"
         )
     else:
-        if has_image:
-            anchor_block = (
-                f"<div style='text-align:center; margin:0 0 20px 0;'>"
-                f"<div style='position:relative; display:inline-block;'>"
-                f"<img src='{img_url}' alt='{img_alt}' "
-                f"style='max-width:280px; max-height:280px; width:auto; height:auto; "
-                f"border-radius:14px; {image_frame_style} display:block;' />"
-                f"{sticker_html}"
-                f"</div>"
-                f"</div>"
-            )
-        else:
-            anchor_block = (
-                f"<div style='font-size:100px; line-height:1; margin-bottom:20px;' "
-                f"role='img' aria-label='{img_alt}'>{emoji}</div>"
-            )
+        anchor_block = (
+            f"<div style='font-size:100px; line-height:1; margin-bottom:20px;' "
+            f"role='img' aria-label='{img_alt}'>{emoji}</div>"
+        )
 
-        st.markdown(
+    st.markdown(
 f"""<div style='{outer_style}'>
 {top_strip}
 <div style='{body_style} text-align:center;'>
@@ -614,113 +614,113 @@ f"""<div style='{outer_style}'>
 </div>
 {bottom_strip}
 </div>""",
-            unsafe_allow_html=True
-        )
-
-    _, btn_m, _ = st.columns([1, 1, 1])
-    with btn_m:
-        flip_text = "🔄 Show Topic" if is_flipped else "🔄 Reveal Facts"
-        if st.button(flip_text, key=f"flip_{idx}", use_container_width=True):
-            st.session_state.card_flipped[idx] = not is_flipped
-            st.rerun()
-
-    # --- single-card PNG download ---
-    _, dl_single, _ = st.columns([1, 1, 1])
-    with dl_single:
-        wiki_bytes = fetch_image_bytes(img_url) if img_url else None
-        png_bytes = render_card_to_png(
-            card=card,
-            colors=card_colors,
-            idx=idx,
-            total=total_cards,
-            wiki_image_bytes=wiki_bytes,
-            page_bg_hex=PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5"),
-        )
-        safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", card["title"]).strip("_") or "card"
-        st.download_button(
-            label="📸 Download This Card",
-            data=png_bytes,
-            file_name=f"card_{idx + 1}_{safe_title}.png",
-            mime="image/png",
-            key=f"dl_single_{idx}",
-            use_container_width=True,
-        )
-
-    # --- prev / counter / next navigation ---
-    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
-    nav_prev, nav_info, nav_next = st.columns([1, 1.2, 1])
-
-    with nav_prev:
-        if st.button(
-            "◀ Previous",
-            key="nav_prev_btn",
-            disabled=(idx == 0),
-            use_container_width=True,
-        ):
-            st.session_state.current_card_idx = max(0, idx - 1)
-            st.rerun()
-
-    with nav_info:
-        st.markdown(
-            f"<p style='text-align:center; color:{label_color}; font-weight:700; "
-            f"margin: 10px 0 0 0; font-size:0.95em;'>Card {idx + 1} of {total_cards}</p>",
-            unsafe_allow_html=True
-        )
-
-    with nav_next:
-        if st.button(
-            "Next ▶",
-            key="nav_next_btn",
-            disabled=(idx == total_cards - 1),
-            use_container_width=True,
-        ):
-            st.session_state.current_card_idx = min(total_cards - 1, idx + 1)
-            st.rerun()
-
-    
-    st.markdown("---")
-    st.markdown("### 📥 Download All Cards")
-
-    def _format_fact(fact):
-        if isinstance(fact, dict):
-            return f"  {fact.get('emoji', '*')} {fact.get('text', '')}"
-        return f"  * {fact}"
-
-    download_text = "\n\n".join([
-        f"TOPIC: {c['title']}\nFACTS:\n" + "\n".join([_format_fact(f) for f in c['facts']])
-        for c in flashcards
-    ])
-
-    active_page_bg = PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5")
-    zip_cache_key = (
-        flashcards[0]["title"] if flashcards else "",
-        len(flashcards),
-        st.session_state.colour_scheme,
-    )
-    zip_bytes = build_cards_zip(
-        flashcards,
-        st.session_state.card_images,
-        card_colors,
-        active_page_bg,
-        zip_cache_key,
+        unsafe_allow_html=True
     )
 
-    dl_left, dl_right = st.columns(2)
-    with dl_left:
-        st.download_button(
-            label="📦 All Cards (ZIP of PNGs)",
-            data=zip_bytes,
-            file_name="flashcards.zip",
-            mime="application/zip",
-            key="dl_all_zip",
-            use_container_width=True,
-        )
-    with dl_right:
-        st.download_button(
-            label="📝 Text File",
-            data=download_text,
-            file_name="study_cards.txt",
-            mime="text/plain",
-            key="dl_all_text",
-            use_container_width=True,
-        )
+_, btn_m, _ = st.columns([1, 1, 1])
+with btn_m:
+    flip_text = "🔄 Show Topic" if is_flipped else "🔄 Reveal Facts"
+    if st.button(flip_text, key=f"flip_{idx}", use_container_width=True):
+        st.session_state.card_flipped[idx] = not is_flipped
+        st.rerun()
+
+# --- single-card PNG download ---
+_, dl_single, _ = st.columns([1, 1, 1])
+with dl_single:
+    wiki_bytes = fetch_image_bytes(img_url) if img_url else None
+    png_bytes = render_card_to_png(
+        card=card,
+        colors=card_colors,
+        idx=idx,
+        total=total_cards,
+        wiki_image_bytes=wiki_bytes,
+        page_bg_hex=PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5"),
+    )
+    safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", card["title"]).strip("_") or "card"
+    st.download_button(
+        label="📸 Download This Card",
+        data=png_bytes,
+        file_name=f"card_{idx + 1}_{safe_title}.png",
+        mime="image/png",
+        key=f"dl_single_{idx}",
+        use_container_width=True,
+    )
+
+# --- prev / counter / next navigation ---
+st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+nav_prev, nav_info, nav_next = st.columns([1, 1.2, 1])
+
+with nav_prev:
+    if st.button(
+        "◀ Previous",
+        key="nav_prev_btn",
+        disabled=(idx == 0),
+        use_container_width=True,
+    ):
+        st.session_state.current_card_idx = max(0, idx - 1)
+        st.rerun()
+
+with nav_info:
+    st.markdown(
+        f"<p style='text-align:center; color:{label_color}; font-weight:700; "
+        f"margin: 10px 0 0 0; font-size:0.95em;'>Card {idx + 1} of {total_cards}</p>",
+        unsafe_allow_html=True
+    )
+
+with nav_next:
+    if st.button(
+        "Next ▶",
+        key="nav_next_btn",
+        disabled=(idx == total_cards - 1),
+        use_container_width=True,
+    ):
+        st.session_state.current_card_idx = min(total_cards - 1, idx + 1)
+        st.rerun()
+
+
+st.markdown("---")
+st.markdown("### 📥 Download All Cards")
+
+def _format_fact(fact):
+    if isinstance(fact, dict):
+        return f"  {fact.get('emoji', '*')} {fact.get('text', '')}"
+    return f"  * {fact}"
+
+download_text = "\n\n".join([
+    f"TOPIC: {c['title']}\nFACTS:\n" + "\n".join([_format_fact(f) for f in c['facts']])
+    for c in flashcards
+])
+
+active_page_bg = PAGE_BG_MAP.get(st.session_state.colour_scheme, "#E8F1F5")
+zip_cache_key = (
+    flashcards[0]["title"] if flashcards else "",
+    len(flashcards),
+    st.session_state.colour_scheme,
+)
+zip_bytes = build_cards_zip(
+    flashcards,
+    st.session_state.card_images,
+    card_colors,
+    active_page_bg,
+    zip_cache_key,
+)
+
+dl_left, dl_right = st.columns(2)
+with dl_left:
+    st.download_button(
+        label="📦 All Cards (ZIP of PNGs)",
+        data=zip_bytes,
+        file_name="flashcards.zip",
+        mime="application/zip",
+        key="dl_all_zip",
+        use_container_width=True,
+    )
+with dl_right:
+    st.download_button(
+        label="📝 Text File",
+        data=download_text,
+        file_name="study_cards.txt",
+        mime="text/plain",
+        key="dl_all_text",
+        use_container_width=True,
+    )
