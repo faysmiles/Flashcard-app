@@ -70,6 +70,7 @@ defaults = {
     "dialog_answered": False,
     "stored_user_text": "",
     "show_level_banner": False,
+    "show_images_state": True,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -191,21 +192,76 @@ if st.session_state.revert_dropdown:
     st.session_state.revert_dropdown = False
 
 with st.sidebar:
+    # ── Helper: render a labelled row of pill buttons, return selected value ──
+    def _pill_row(label, options, current, key_prefix, cols=None):
+        """
+        Render LABEL then a row of st.button pills (one per option).
+        Pure button taps — no input field, no keyboard, works on any device.
+        Returns the currently-selected value (unchanged unless a button was clicked).
+        cols: list of column width ratios; defaults to equal widths.
+        """
+        palette = _get_scheme_palette_safe()
+        accent  = palette["accent"]
+        bg      = palette["card_bg"]
+        text    = palette["text"]
+
+        # Inject pill styles once per render (idempotent class names)
+        st.markdown(f"""
+<style>
+/* Active pill */
+div[data-testid="stHorizontalBlock"] button.fcm-pill-active,
+div[data-testid="stHorizontalBlock"] button.fcm-pill-active:hover {{
+    background-color: {accent} !important;
+    color: #fff !important;
+    border: 2px solid {accent} !important;
+    border-radius: 999px !important;
+    font-weight: 700 !important;
+}}
+/* Inactive pill */
+div[data-testid="stHorizontalBlock"] button.fcm-pill-inactive {{
+    background-color: transparent !important;
+    color: {text} !important;
+    border: 2px solid {accent}88 !important;
+    border-radius: 999px !important;
+    font-weight: 400 !important;
+}}
+div[data-testid="stHorizontalBlock"] button.fcm-pill-inactive:hover {{
+    background-color: {accent}22 !important;
+}}
+</style>""", unsafe_allow_html=True)
+
+        st.markdown(f"**{label}**")
+        n = len(options)
+        widths = cols if cols else [1] * n
+        button_cols = st.columns(widths)
+        selected = current
+        for i, opt in enumerate(options):
+            with button_cols[i]:
+                # Streamlit doesn't support adding custom CSS classes to buttons,
+                # so we use the type param: primary = active, secondary = inactive.
+                is_active = (opt == current)
+                if st.button(
+                    opt,
+                    key=f"{key_prefix}_{i}",
+                    use_container_width=True,
+                    type="primary" if is_active else "secondary",
+                ):
+                    selected = opt
+        return selected
+
     st.markdown("### ⚙️ Settings")
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
     # ── Reading Level ──────────────────────────────────────────────────────
-    # st.radio renders pure tap targets — no hidden text input, no keyboard.
-    st.markdown("**Reading Level**")
-    selected_level = st.radio(
-        "Reading Level",
-        reading_level_options,
-        index=reading_level_options.index(st.session_state.reading_level_select),
-        key="reading_level_radio",
-        label_visibility="collapsed",
-    )
-    # Keep reading_level_select in sync so the rest of the modal logic works
+    # Short labels for the buttons so they fit cleanly
+    level_labels   = ["📖 Easy", "📚 Medium", "🎓 Advanced"]
+    level_map      = dict(zip(level_labels, reading_level_options))
+    level_map_rev  = {v: k for k, v in level_map.items()}
+    current_label  = level_map_rev.get(st.session_state.reading_level_select, level_labels[0])
+
+    selected_label = _pill_row("Reading Level", level_labels, current_label, "lvl")
+    selected_level = level_map[selected_label]
     st.session_state.reading_level_select = selected_level
-    st.caption("📖 Each level creates a new set of cards.")
 
     if not st.session_state.flashcard_generated:
         reading_level = selected_level
@@ -222,16 +278,23 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Font Style ─────────────────────────────────────────────────────────
-    # st.radio again — pure buttons, zero text input.
-    st.markdown("**Font Style**")
+    # Split into 2-column grid so the sidebar doesn't become a massive list
     safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Arial"
-    new_font = st.radio(
-        "Font Style",
-        FONT_OPTIONS,
-        index=FONT_OPTIONS.index(safe_font),
-        key="font_radio",
-        label_visibility="collapsed",
-    )
+    st.markdown("**Font Style**")
+    font_pairs = [FONT_OPTIONS[i:i+2] for i in range(0, len(FONT_OPTIONS), 2)]
+    new_font = safe_font
+    for pair in font_pairs:
+        pcols = st.columns(len(pair))
+        for j, fname in enumerate(pair):
+            with pcols[j]:
+                is_active = (fname == new_font)
+                if st.button(
+                    fname,
+                    key=f"font_btn_{fname}",
+                    use_container_width=True,
+                    type="primary" if is_active else "secondary",
+                ):
+                    new_font = fname
     if new_font != st.session_state.font_style:
         st.session_state.font_style = new_font
         st.rerun()
@@ -239,21 +302,20 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Text Size ──────────────────────────────────────────────────────────
-    # + / − buttons instead of a slider — no input field at all.
     st.markdown("**Text Size**")
-    _sz_col_minus, _sz_col_val, _sz_col_plus = st.columns([1, 2, 1])
-    with _sz_col_minus:
+    _sz_minus, _sz_val, _sz_plus = st.columns([1, 2, 1])
+    with _sz_minus:
         if st.button("−", key="txt_size_down", use_container_width=True,
                      disabled=(st.session_state.text_size <= MIN_FONT_SIZE)):
             st.session_state.text_size = max(MIN_FONT_SIZE, st.session_state.text_size - 2)
             st.rerun()
-    with _sz_col_val:
+    with _sz_val:
         st.markdown(
-            f"<p style='text-align:center; font-weight:700; margin:6px 0;'>"
+            f"<p style='text-align:center;font-weight:700;margin:6px 0;font-size:1.1em'>"
             f"{st.session_state.text_size}px</p>",
             unsafe_allow_html=True,
         )
-    with _sz_col_plus:
+    with _sz_plus:
         if st.button("+", key="txt_size_up", use_container_width=True,
                      disabled=(st.session_state.text_size >= MAX_FONT_SIZE)):
             st.session_state.text_size = min(MAX_FONT_SIZE, st.session_state.text_size + 2)
@@ -268,15 +330,7 @@ with st.sidebar:
         (k for k, v in SPACING_OPTIONS.items() if v == st.session_state.line_spacing),
         "Normal",
     )
-    st.markdown("**Line Spacing**")
-    new_spacing_key = st.radio(
-        "Line Spacing",
-        spacing_keys,
-        index=spacing_keys.index(current_spacing_key),
-        horizontal=True,
-        key="line_spacing_radio",
-        label_visibility="collapsed",
-    )
+    new_spacing_key = _pill_row("Line Spacing", spacing_keys, current_spacing_key, "spc")
     if SPACING_OPTIONS[new_spacing_key] != st.session_state.line_spacing:
         st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
         st.rerun()
@@ -287,14 +341,26 @@ with st.sidebar:
     colour_options = [name for group in COLOR_SCHEMES.values() for name in group]
     if st.session_state.colour_scheme not in colour_options:
         st.session_state.colour_scheme = "Soft Blue"
+
     st.markdown("**Colour Scheme**")
-    new_colour = st.radio(
-        "Colour Scheme",
-        colour_options,
-        index=colour_options.index(st.session_state.colour_scheme),
-        key="colour_radio",
-        label_visibility="collapsed",
-    )
+    # Group headers make it easy to scan; buttons in 2-column pairs
+    new_colour = st.session_state.colour_scheme
+    for group_name, group_schemes in COLOR_SCHEMES.items():
+        st.markdown(f"<p style='font-size:0.75em;opacity:0.6;margin:6px 0 2px 0;text-transform:uppercase;letter-spacing:1px'>{group_name}</p>", unsafe_allow_html=True)
+        scheme_names = list(group_schemes.keys())
+        pairs = [scheme_names[i:i+2] for i in range(0, len(scheme_names), 2)]
+        for pair in pairs:
+            pcols = st.columns(len(pair))
+            for j, sname in enumerate(pair):
+                with pcols[j]:
+                    is_active = (sname == new_colour)
+                    if st.button(
+                        sname,
+                        key=f"col_btn_{sname}",
+                        use_container_width=True,
+                        type="primary" if is_active else "secondary",
+                    ):
+                        new_colour = sname
     if new_colour != st.session_state.colour_scheme:
         st.session_state.colour_scheme = new_colour
         st.rerun()
@@ -302,11 +368,13 @@ with st.sidebar:
     st.markdown("---")
 
     # ── Images toggle ──────────────────────────────────────────────────────
-    show_images = st.checkbox("Show Images", value=True, key="show_images_check",
-                              help="Show relevant images from Wikipedia on flipped cards")
+    img_current = st.session_state.get("show_images_state", True)
+    img_choice  = _pill_row("Images", ["On", "Off"], "On" if img_current else "Off", "img")
+    show_images = (img_choice == "On")
+    st.session_state.show_images_state = show_images
 
     st.markdown("---")
-    st.caption("💡 These settings adjust the whole app. Change them any time - your cards won't disappear.")
+    st.caption("Tap any option to change it instantly.")
 
 # --- Show reading level modal if needed ---
 if st.session_state.pending_reading_level:
