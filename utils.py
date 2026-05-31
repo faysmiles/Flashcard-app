@@ -2533,50 +2533,52 @@ def _cute_star_img(size="1em", cls=""):
 def render_header(app_title, app_subtitle, text_size, colour_scheme):
     """Header banner tinted to match the active scheme's accent colour.
 
-    Stars are placed in their own absolutely-positioned divs on either side of
-    the title, completely outside the <h1> text flow. This means the title always
-    centres on its own line on any screen width — the stars never wrap with it.
+    Stars are absolutely positioned outside the h1 so the title always
+    centres cleanly on mobile — they never wrap with the text.
     """
+    import urllib.parse
     accent, grad_end, title_color, subtitle_color = _header_colors(colour_scheme)
 
     if colour_scheme == "Low Stimulation":
-        stars_left_html  = ""
-        stars_right_html = ""
+        star_divs = ""
     else:
-        # Larger stars (1.6em / 2.2em) so they read as deliberate decoration,
-        # and positioned outside the title text flow entirely.
-        big   = _cute_star_img("2.2em", "fcm-star-a")
-        small = _cute_star_img("1.6em", "fcm-star-b")
-        stars_left_html = f"""
-        <div style='position:absolute; left:16px; top:50%;
-                    transform:translateY(-50%);
-                    display:flex; flex-direction:column; align-items:center;
-                    gap:4px; line-height:1;'>
-            {big}{small}
-        </div>"""
-        stars_right_html = f"""
-        <div style='position:absolute; right:16px; top:50%;
-                    transform:translateY(-50%);
-                    display:flex; flex-direction:column; align-items:center;
-                    gap:4px; line-height:1;'>
-            {big}{small}
-        </div>"""
+        svg = urllib.parse.quote(_cute_star_svg_markup())
+        uri = f"data:image/svg+xml;utf8,{svg}"
+        # Build star img tags directly — no intermediate variables that
+        # Streamlit could misinterpret as plain text.
+        star_divs = (
+            f"<div style=\"position:absolute;left:12px;top:50%;"
+            f"transform:translateY(-50%);display:flex;flex-direction:column;"
+            f"align-items:center;gap:6px;\">"
+            f"<img class=\"fcm-star-svg fcm-star-a\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
+            f"style=\"height:2.2em;width:2.2em;display:block;\" />"
+            f"<img class=\"fcm-star-svg fcm-star-b\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
+            f"style=\"height:1.6em;width:1.6em;display:block;\" />"
+            f"</div>"
+            f"<div style=\"position:absolute;right:12px;top:50%;"
+            f"transform:translateY(-50%);display:flex;flex-direction:column;"
+            f"align-items:center;gap:6px;\">"
+            f"<img class=\"fcm-star-svg fcm-star-a\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
+            f"style=\"height:2.2em;width:2.2em;display:block;\" />"
+            f"<img class=\"fcm-star-svg fcm-star-b\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
+            f"style=\"height:1.6em;width:1.6em;display:block;\" />"
+            f"</div>"
+        )
 
-    st.markdown(f"""
-    <div class="fcm-header" style='position:relative; text-align:center;
-                padding:24px 80px;
-                background:linear-gradient(135deg, {accent}, {grad_end});
-                border-radius:14px; margin-bottom:20px;'>
-        {stars_left_html}
-        <h1 style='color:{title_color}; margin:0; line-height:1.15;
-                   font-size:{text_size * 2}px;'>
-            <span class="fcm-title-text">{app_title}</span>
-        </h1>
-        <p style='color:{subtitle_color}; margin:12px 0 0 0;
-                  font-size:{text_size}px;'>{app_subtitle}</p>
-        {stars_right_html}
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"<div class=\"fcm-header\" style=\"position:relative;text-align:center;"
+        f"padding:24px 80px;"
+        f"background:linear-gradient(135deg,{accent},{grad_end});"
+        f"border-radius:14px;margin-bottom:20px;\">"
+        f"{star_divs}"
+        f"<h1 style=\"color:{title_color};margin:0;line-height:1.15;"
+        f"font-size:{text_size * 2}px;\">"
+        f"<span class=\"fcm-title-text\">{app_title}</span></h1>"
+        f"<p style=\"color:{subtitle_color};margin:12px 0 0 0;"
+        f"font-size:{text_size}px;\">{app_subtitle}</p>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_feedback_box(feedback_url, colour_scheme):
