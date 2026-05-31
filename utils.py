@@ -1995,18 +1995,22 @@ def search_wikipedia_image(query):
         return None
 
     prompt = (
-        f"educational illustration of {query}, "
-        "colorful, clean, professional diagram style, "
-        "bright friendly colors, flat design, simple clean background, "
-        "appropriate for students ages 4 to 18, child-friendly, "
-        "no people, no violence, no scary content"
+        f"illustration of {query}, "
+        "visual diagram, no text, no words, no letters, "
+        "clean simple style, bright colors, flat design, "
+        "educational, appropriate for students, "
+        "minimal background, focus on visual elements only"
     )
     
     negative_prompt = (
-        "text, letters, words, labels, captions, typography, "
-        "handwriting, signatures, watermark, script, font, "
-        "writing, banner, sign, label, title, annotation, "
-        "blurry, low quality, distorted, ugly"
+        "text, words, letters, writing, font, typography, label, labels, "
+        "caption, captions, title, titles, annotation, annotations, "
+        "writing, handwriting, script, signature, signatures, numbers, "
+        "date, dates, name, names, banner, banners, sign, signs, "
+        "watermark, watermarks, stamp, text overlay, word, words written, "
+        "characters, symbols, ABC, 123, equation, math notation, formula, "
+        "alphabet, linguistic, linguistic text, readable text, legible text, "
+        "blurry, low quality, distorted, artifacts, compression, pixelated, ugly"
     )
 
     try:
