@@ -2561,11 +2561,11 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
     st.markdown(
         f"<div style=\"display:flex;justify-content:center;margin-bottom:6px;\">"
         f"<div class=\"fcm-header\" style=\"position:relative;text-align:center;"
-        f"padding:10px 80px;overflow:visible;display:inline-block;min-width:min(90vw,420px);"
+        f"padding:10px 50px;overflow:hidden;display:inline-block;max-width:min(92vw,600px);"
         f"background:linear-gradient(135deg,{accent},{grad_end});"
         f"border-radius:12px;\">"
         f"{star_divs}"
-        f"<h1 style=\"color:{title_color};margin:0;line-height:1.2;white-space:nowrap;"
+        f"<h1 style=\"color:{title_color};margin:0;line-height:1.2;"
         f"font-size:{int(text_size * 1.5)}px;\">"
         f"<span class=\"fcm-title-text\">{app_title}</span></h1>"
         f"</div></div>"
