@@ -396,14 +396,14 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
             if search_term in prev_cache:
                 st.session_state.card_images[i] = prev_cache[search_term]
             else:
-                needs_fetch.append((i, search_term, card.get('facts', [])))
+                needs_fetch.append((i, search_term))
 
         if needs_fetch:
             _prog_bar.progress(88, text="🖼️ Finding pictures for each card…")
             from concurrent.futures import ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=5) as pool:
                 results = list(pool.map(
-                    lambda item: (item[0], item[1], search_wikipedia_image(item[1], item[2])),
+                    lambda item: (item[0], item[1], search_wikipedia_image(item[1])),
                     needs_fetch
                 ))
             for i, search_term, url in results:
@@ -598,7 +598,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     if show_images and idx not in st.session_state.card_images:
         with st.spinner(f"🖼️ Finding picture for card {idx + 1}..."):
             search_term = card.get('image_search', card['title'])
-            st.session_state.card_images[idx] = search_wikipedia_image(search_term, card.get('facts', []))
+            st.session_state.card_images[idx] = search_wikipedia_image(search_term)
             has_image = st.session_state.card_images[idx] is not None
             img_url = st.session_state.card_images[idx]
 
