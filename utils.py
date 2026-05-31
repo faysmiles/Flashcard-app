@@ -1971,8 +1971,59 @@ def _cache_store(core_key, full_description, image_bytes, mime):
         return None
 
 
+def _build_image_prompt_from_facts(title, facts):
+    """Build a rich visual prompt from title and facts to avoid text in images.
+    
+    Instead of passing 'What Is a Tank', we describe visual characteristics:
+    'military vehicle with turret, cannon, armored tracks, flat design'
+    """
+    # Extract key visual nouns from facts (remove articles, verbs, etc.)
+    visual_words = []
+    stop_words = {
+        'a', 'an', 'the', 'is', 'are', 'has', 'have', 'and', 'or', 'of', 'in', 'on',
+        'it', 'this', 'that', 'which', 'with', 'to', 'for', 'at', 'by', 'from',
+        'be', 'been', 'being', 'do', 'does', 'did', 'can', 'could', 'would',
+        'should', 'may', 'might', 'must', 'will', 'shall', 'very', 'just'
+    }
+    
+    # Process title first
+    title_words = title.lower().split()
+    for word in title_words:
+        clean = re.sub(r'[^a-z0-9]', '', word)
+        if clean and len(clean) > 2 and clean not in stop_words:
+            visual_words.append(clean)
+    
+    # Extract key nouns from facts
+    if isinstance(facts, list):
+        for fact in facts:
+            if isinstance(fact, dict):
+                text = fact.get('text', '')
+            else:
+                text = str(fact)
+            
+            words = text.lower().split()
+            for word in words:
+                clean = re.sub(r'[^a-z0-9]', '', word)
+                if clean and len(clean) > 3 and clean not in stop_words and clean not in visual_words:
+                    visual_words.append(clean)
+                    if len(visual_words) >= 6:  # Limit to 6 key words
+                        break
+            if len(visual_words) >= 6:
+                break
+    
+    # Build prompt using visual words
+    keywords = ', '.join(visual_words[:6])
+    prompt = (
+        f"simple educational diagram illustration showing {keywords}, "
+        f"flat design style, bright friendly colours, clean background, "
+        f"appropriate for children ages 4-18, infographic style, "
+        f"minimalist, no people, no text whatsoever"
+    )
+    return prompt
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
-def search_wikipedia_image(query):
+def search_wikipedia_image(query, facts=None):
     """Return an image URL for the topic query.
     Order: Supabase cache (short core key) -> generate via Pollinations
     then save to cache for everyone else.
@@ -1994,16 +2045,22 @@ def search_wikipedia_image(query):
     if not api_key:
         return None
 
-    prompt = (
-        f"cheerful educational illustration of {query}, "
-        "child-friendly, bright flat colours, friendly cartoon style, "
-        "simple clean background, appropriate for ages 4 to 18, "
-        "no people, no violence, no scary imagery"
-    )
+    # Build prompt from facts if provided, otherwise use query
+    if facts:
+        prompt = _build_image_prompt_from_facts(query, facts)
+    else:
+        prompt = (
+            f"cheerful educational illustration of {query}, "
+            "child-friendly, bright flat colours, friendly cartoon style, "
+            "simple clean background, appropriate for ages 4 to 18"
+        )
     
     negative_prompt = (
-        "text, letters, words, labels, captions, writing, "
-        "watermark, banner, sign, title, annotation"
+        "text, letters, words, writing, numbers, digits, "
+        "labels, captions, typography, font, handwriting, "
+        "watermark, banner, sign, title, annotation, "
+        "character, symbol, script, document, page, "
+        "blurry, low quality, distorted, ugly, artifacts"
     )
 
     try:
