@@ -96,86 +96,69 @@ st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
 render_mobile_settings_hint(st.session_state.colour_scheme)
 
 def _render_level_modal(pending_level):
-    """Inline confirmation dialog — styled card with Yes/No buttons."""
+    """Inline confirmation — fully controlled via session state (no st.dialog).
+
+    The card and its buttons are ALL rendered as native Streamlit elements in a
+    centred column. The previous version drew the card as a fixed-position HTML
+    overlay (z-index 9998) but left the Yes/No buttons in the normal page flow
+    *underneath* that overlay, so the overlay swallowed every click and the
+    buttons were invisible. Keeping everything native avoids that entirely.
+    """
     palette = _get_scheme_palette_safe()
     accent  = palette["accent"]
     bg      = palette["card_bg"]
     text    = palette["text"]
-
-    # Derive a softened backdrop colour from the accent
     level_label = pending_level.split("(")[0].strip()
-    level_emoji = pending_level.split(" ")[0]  # e.g. "📖"
 
     st.markdown(f"""
 <style>
-@keyframes fcmSlideIn {{
-    from {{ transform: translateY(-8px); opacity: 0; }}
-    to   {{ transform: translateY(0);    opacity: 1; }}
-}}
-.fcm-modal {{
+.fcm-card {{
     background: {bg};
-    border-radius: 20px;
-    border: 1px solid {accent}33;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    padding: 32px 36px 24px 36px;
-    text-align: center;
-    animation: fcmSlideIn 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
-    margin-bottom: 16px;
+    border: 2px solid {accent}66;
+    border-left: 6px solid {accent};
+    border-radius: 16px;
+    padding: 26px 26px 10px 26px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    animation: fcmPop 0.18s ease-out;
 }}
-.fcm-modal-icon  {{ font-size: 2.6em; line-height: 1; margin-bottom: 12px; display: block; }}
-.fcm-modal-title {{ font-size: 1.25em; font-weight: 800; color: {text}; margin: 0 0 10px 0; }}
-.fcm-modal-body  {{ font-size: 1em; color: {text}; opacity: 0.72; margin: 0; line-height: 1.65; }}
-.fcm-modal-level {{ color: {accent}; font-weight: 700; opacity: 1; }}
-.fcm-btn-yes .stButton > button {{
-    background: {accent} !important;
-    border-color: {accent} !important;
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    padding: 12px 20px !important;
+@keyframes fcmPop {{
+    from {{ transform: scale(0.96); opacity: 0; }}
+    to   {{ transform: scale(1);    opacity: 1; }}
 }}
-.fcm-btn-no .stButton > button {{
-    background: transparent !important;
-    color: {text} !important;
-    border: 2px solid {accent}66 !important;
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    padding: 12px 20px !important;
-}}
-.fcm-btn-no .stButton > button:hover {{
-    border-color: {accent} !important;
-    background: {accent}15 !important;
-}}
+.fcm-title {{ font-size: 1.25em; font-weight: 700; color: {text}; margin: 0 0 10px 0; }}
+.fcm-body  {{ font-size: 1em; color: {text}; opacity: 0.85; margin: 0; line-height: 1.6; }}
+.fcm-level {{ color: {accent}; font-weight: 700; }}
 </style>
 """, unsafe_allow_html=True)
 
-    _, mid, _ = st.columns([1, 2, 1])
+    _, mid, _ = st.columns([1, 3, 1])
     with mid:
         st.markdown(f"""
-<div class="fcm-modal">
-  <span class="fcm-modal-icon">{level_emoji}</span>
-  <p class="fcm-modal-title">Switch reading level?</p>
-  <p class="fcm-modal-body">
-    Your current cards will be replaced with a new deck at
-    <span class="fcm-modal-level">{_safe(level_label)}</span> level.
-  </p>
+<div class="fcm-card">
+  <p class="fcm-title">Change reading level?</p>
+  <p class="fcm-body">This will create a new deck of cards at
+     <span class="fcm-level">{_safe(level_label)}</span> level.</p>
 </div>
 """, unsafe_allow_html=True)
+
         col_no, col_yes = st.columns(2)
         with col_no:
-            st.markdown('<div class="fcm-btn-no">', unsafe_allow_html=True)
-            if st.button("✕ Cancel", use_container_width=True, key="modal_no"):
+            if st.button("No, keep current cards", use_container_width=True, key="modal_no"):
                 st.session_state.pending_reading_level = None
                 st.session_state.revert_dropdown = True
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
         with col_yes:
-            st.markdown('<div class="fcm-btn-yes">', unsafe_allow_html=True)
-            if st.button("✨ Yes, switch", use_container_width=True, key="modal_yes"):
+            if st.button("Yes, generate new deck ✨", use_container_width=True, key="modal_yes"):
                 st.session_state.active_reading_level = pending_level
                 st.session_state.pending_reading_level = None
                 st.session_state.trigger_regenerate = True
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+
+        if st.button("✕ Close", use_container_width=True, key="modal_close"):
+            # Same outcome as "No": dismiss and snap the dropdown back.
+            st.session_state.pending_reading_level = None
+            st.session_state.revert_dropdown = True
+            st.rerun()
 
 
 def _safe(text):
@@ -203,76 +186,125 @@ if active_level not in reading_level_options:
 if st.session_state.reading_level_select not in reading_level_options:
     st.session_state.reading_level_select = active_level
 if st.session_state.revert_dropdown:
-    st.session_state.reading_level_select = active_level
+    # With radio buttons the displayed selection is driven by the index= arg
+    # computed from active_level above, so no extra state manipulation needed.
     st.session_state.revert_dropdown = False
 
 with st.sidebar:
     st.markdown("### ⚙️ Settings")
-    selected_level = st.selectbox(
+
+    # ── Reading Level ──────────────────────────────────────────────────────
+    # st.radio renders pure tap targets — no hidden text input, no keyboard.
+    st.markdown("**Reading Level**")
+    selected_level = st.radio(
         "Reading Level",
         reading_level_options,
-        key="reading_level_select",
+        index=reading_level_options.index(st.session_state.reading_level_select),
+        key="reading_level_radio",
+        label_visibility="collapsed",
     )
+    # Keep reading_level_select in sync so the rest of the modal logic works
+    st.session_state.reading_level_select = selected_level
     st.caption("📖 Each level creates a new set of cards.")
 
     if not st.session_state.flashcard_generated:
-        # No deck yet — the choice applies directly to the first deck, so
-        # there's nothing to confirm. (This also fixes the first deck always
-        # generating at the default level regardless of the dropdown.)
         reading_level = selected_level
     else:
-        # A deck exists: changing the level needs confirmation.
         if selected_level != active_level:
-            # Open (or re-point) the confirmation at the requested level.
             if st.session_state.pending_reading_level != selected_level:
                 st.session_state.pending_reading_level = selected_level
                 st.rerun()
         else:
-            # Re-selecting the active level dismisses any open dialog.
             if st.session_state.pending_reading_level:
                 st.session_state.pending_reading_level = None
         reading_level = active_level
 
-    st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
+    st.markdown("---")
 
+    # ── Font Style ─────────────────────────────────────────────────────────
+    # st.radio again — pure buttons, zero text input.
+    st.markdown("**Font Style**")
     safe_font = st.session_state.font_style if st.session_state.font_style in FONT_OPTIONS else "Arial"
-    new_font = st.selectbox("Font Style", FONT_OPTIONS, index=FONT_OPTIONS.index(safe_font), key="font_selectbox")
+    new_font = st.radio(
+        "Font Style",
+        FONT_OPTIONS,
+        index=FONT_OPTIONS.index(safe_font),
+        key="font_radio",
+        label_visibility="collapsed",
+    )
     if new_font != st.session_state.font_style:
         st.session_state.font_style = new_font
         st.rerun()
-    
-    new_size = st.slider("Text Size", MIN_FONT_SIZE, MAX_FONT_SIZE, st.session_state.text_size, key="text_size_slider")
-    if new_size != st.session_state.text_size:
-        st.session_state.text_size = new_size
-        st.rerun()
 
-    SPACING_OPTIONS = {"Tight (1.5)": 1.5, "Normal (1.8)": 1.8, "Loose (2.0)": 2.0}
+    st.markdown("---")
+
+    # ── Text Size ──────────────────────────────────────────────────────────
+    # + / − buttons instead of a slider — no input field at all.
+    st.markdown("**Text Size**")
+    _sz_col_minus, _sz_col_val, _sz_col_plus = st.columns([1, 2, 1])
+    with _sz_col_minus:
+        if st.button("−", key="txt_size_down", use_container_width=True,
+                     disabled=(st.session_state.text_size <= MIN_FONT_SIZE)):
+            st.session_state.text_size = max(MIN_FONT_SIZE, st.session_state.text_size - 2)
+            st.rerun()
+    with _sz_col_val:
+        st.markdown(
+            f"<p style='text-align:center; font-weight:700; margin:6px 0;'>"
+            f"{st.session_state.text_size}px</p>",
+            unsafe_allow_html=True,
+        )
+    with _sz_col_plus:
+        if st.button("+", key="txt_size_up", use_container_width=True,
+                     disabled=(st.session_state.text_size >= MAX_FONT_SIZE)):
+            st.session_state.text_size = min(MAX_FONT_SIZE, st.session_state.text_size + 2)
+            st.rerun()
+
+    st.markdown("---")
+
+    # ── Line Spacing ───────────────────────────────────────────────────────
+    SPACING_OPTIONS = {"Tight": 1.5, "Normal": 1.8, "Loose": 2.0}
     spacing_keys = list(SPACING_OPTIONS.keys())
     current_spacing_key = next(
         (k for k, v in SPACING_OPTIONS.items() if v == st.session_state.line_spacing),
-        "Normal (1.8)",
+        "Normal",
     )
-    new_spacing_key = st.selectbox(
+    st.markdown("**Line Spacing**")
+    new_spacing_key = st.radio(
         "Line Spacing",
         spacing_keys,
         index=spacing_keys.index(current_spacing_key),
-        key="line_spacing_select",
-        help="Space between lines of text.",
+        horizontal=True,
+        key="line_spacing_radio",
+        label_visibility="collapsed",
     )
     if SPACING_OPTIONS[new_spacing_key] != st.session_state.line_spacing:
         st.session_state.line_spacing = SPACING_OPTIONS[new_spacing_key]
         st.rerun()
 
+    st.markdown("---")
+
+    # ── Colour Scheme ──────────────────────────────────────────────────────
     colour_options = [name for group in COLOR_SCHEMES.values() for name in group]
     if st.session_state.colour_scheme not in colour_options:
         st.session_state.colour_scheme = "Soft Blue"
-    new_colour = st.selectbox("Colour Scheme", colour_options, index=colour_options.index(st.session_state.colour_scheme), key="colour_selectbox")
+    st.markdown("**Colour Scheme**")
+    new_colour = st.radio(
+        "Colour Scheme",
+        colour_options,
+        index=colour_options.index(st.session_state.colour_scheme),
+        key="colour_radio",
+        label_visibility="collapsed",
+    )
     if new_colour != st.session_state.colour_scheme:
         st.session_state.colour_scheme = new_colour
         st.rerun()
-    
-    show_images = st.checkbox("Show Images", value=True, key="show_images_check", help="Show relevant images from Wikipedia on flipped cards")
-    
+
+    st.markdown("---")
+
+    # ── Images toggle ──────────────────────────────────────────────────────
+    show_images = st.checkbox("Show Images", value=True, key="show_images_check",
+                              help="Show relevant images from Wikipedia on flipped cards")
+
     st.markdown("---")
     st.caption("💡 These settings adjust the whole app. Change them any time - your cards won't disappear.")
 
@@ -308,9 +340,8 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     reuse_images=True: carry over any image whose image_search term matches a
     card in the previous deck (same topic at a different reading level).
     """
-    import time, threading
-
     level_code = READING_LEVELS[level_key]
+    # Snapshot the previous image cache keyed by search term before clearing
     prev_cache = {}
     if reuse_images and st.session_state.image_search_cache:
         prev_cache = dict(st.session_state.image_search_cache)
@@ -319,58 +350,16 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
     st.session_state.card_flipped = {}
     st.session_state.current_card_idx = 0
 
+    new_cards = None
     _text_to_use = st.session_state.stored_user_text or user_text
+    with st.spinner(f"🤖 AI is creating {level_key.split('(')[0].strip()} flashcards..."):
+        new_cards = generate_flashcards_from_llm(_text_to_use, reading_level=level_code)
+        if new_cards:
+            st.session_state.flashcards = new_cards
+            st.session_state.flashcard_generated = True
 
-    # ── Phase 1: AI card generation ──────────────────────────────────────────
-    AI_MESSAGES = [
-        "🤖 Reading your notes...",
-        "✏️ Identifying key ideas...",
-        "🧠 Grouping topics into cards...",
-        "📝 Writing facts for each card...",
-        "🎨 Choosing emojis and images...",
-        "✨ Almost done...",
-    ]
-
-    status_box = st.empty()
-    progress_bar = st.progress(0)
-
-    # Run generation in a background thread so we can animate the bar
-    result_container = {}
-    def _generate():
-        result_container["cards"] = generate_flashcards_from_llm(
-            _text_to_use, reading_level=level_code
-        )
-    thread = threading.Thread(target=_generate)
-    thread.start()
-
-    # Animate progress while the thread runs
-    # Curve: fast 0→70%, then crawl 70→92% until thread finishes
-    elapsed = 0
-    msg_idx = 0
-    while thread.is_alive():
-        if elapsed < 3:
-            pct = int(elapsed / 3 * 60)          # 0→60% in first 3 s
-        elif elapsed < 8:
-            pct = 60 + int((elapsed - 3) / 5 * 20)  # 60→80% over next 5 s
-        else:
-            pct = min(92, 80 + int((elapsed - 8) / 10 * 12))  # 80→92% slowly
-        progress_bar.progress(pct)
-        new_msg_idx = min(int(elapsed / 2.5), len(AI_MESSAGES) - 1)
-        if new_msg_idx != msg_idx:
-            msg_idx = new_msg_idx
-        status_box.markdown(f"**{AI_MESSAGES[msg_idx]}**")
-        time.sleep(0.25)
-        elapsed += 0.25
-
-    thread.join()
-    new_cards = result_container.get("cards")
-
-    if new_cards:
-        st.session_state.flashcards = new_cards
-        st.session_state.flashcard_generated = True
-
-    # ── Phase 2: image fetching ───────────────────────────────────────────────
     if new_cards and show_imgs:
+        # Populate card_images — reuse from prev_cache where search term matches
         needs_fetch = []
         for i, card in enumerate(new_cards):
             search_term = card.get('image_search', card['title'])
@@ -380,37 +369,22 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
                 needs_fetch.append((i, search_term))
 
         if needs_fetch:
-            total = len(needs_fetch)
-            status_box.markdown("**🖼️ Finding images for each card...**")
-            progress_bar.progress(92)
+            with st.spinner("🖼️ Finding pictures for each card..."):
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor(max_workers=5) as pool:
+                    results = list(pool.map(
+                        lambda item: (item[0], item[1], search_wikipedia_image(item[1])),
+                        needs_fetch
+                    ))
+                for i, search_term, url in results:
+                    st.session_state.card_images[i] = url
 
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-            futures = {}
-            with ThreadPoolExecutor(max_workers=5) as pool:
-                for item in needs_fetch:
-                    f = pool.submit(search_wikipedia_image, item[1])
-                    futures[f] = item
-
-                done = 0
-                for future in as_completed(futures):
-                    i, search_term = futures[future]
-                    st.session_state.card_images[i] = future.result()
-                    done += 1
-                    pct = 92 + int(done / total * 7)
-                    progress_bar.progress(pct)
-
+        # Update the persistent search-term → url cache for future reuse
         st.session_state.image_search_cache = {
             card.get('image_search', card['title']): st.session_state.card_images.get(i)
             for i, card in enumerate(new_cards)
             if st.session_state.card_images.get(i) is not None
         }
-
-    # ── Done ──────────────────────────────────────────────────────────────────
-    progress_bar.progress(100)
-    status_box.markdown("**✅ Cards ready!**")
-    time.sleep(0.5)
-    status_box.empty()
-    progress_bar.empty()
 
 # --- Auto-regenerate after dialog confirmation ---
 if st.session_state.trigger_regenerate:
