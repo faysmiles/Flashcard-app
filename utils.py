@@ -831,104 +831,6 @@ _TOPIC_EMOJI_MAP = {
     'dystopia': '⚠️', 'utopia': '🌍',
     'philosophy': '💭', 'philosophical': '💭',
 
-
-    # --- Tourist locations & landmarks ---
-    # UK & Ireland
-    'big ben': '🕰️', 'houses of parliament': '🏛️', 'buckingham palace': '👑',
-    'tower of london': '🏰', 'tower bridge': '🌉', 'london eye': '🎡',
-    'trafalgar square': '🦁', 'piccadilly circus': '🎪', 'oxford street': '🛍️',
-    'stonehenge': '🪨', 'windsor castle': '🏰', 'kensington palace': '👑',
-    'british museum': '🏛️', 'natural history museum': '🦕', 'tate modern': '🎨',
-    'edinburgh castle': '🏰', 'loch ness': '🌊', 'ben nevis': '⛰️',
-    'highlands': '⛰️', 'scottish highlands': '⛰️',
-    'giants causeway': '🪨', 'cliffs of moher': '🌊',
-    'dublin castle': '🏰', 'trinity college dublin': '📚',
-
-    # Europe
-    'eiffel tower': '🗼', 'louvre': '🎨', 'arc de triomphe': '🏛️',
-    'notre dame': '⛪', 'versailles': '🏰', 'mont saint michel': '🏰',
-    'colosseum': '🏛️', 'roman forum': '🏛️', 'trevi fountain': '⛲',
-    'vatican': '⛪', 'sistine chapel': '🎨', 'leaning tower of pisa': '🏛️',
-    'venice': '🚤', 'grand canal': '🚤', 'gondola': '🚤',
-    'sagrada familia': '⛪', 'park guell': '🎨', 'alhambra': '🏰',
-    'parthenon': '🏛️', 'acropolis': '🏛️', 'santorini': '🏝️',
-    'colosseum rome': '🏛️', 'pompeii': '🌋',
-    'neuschwanstein': '🏰', 'cologne cathedral': '⛪',
-    'berlin wall': '🧱', 'brandenburg gate': '🏛️',
-    'anne frank house': '🏠', 'rijksmuseum': '🎨',
-    'charles bridge': '🌉', 'prague castle': '🏰',
-    'red square': '🏛️', 'kremlin': '🏰', 'st basils cathedral': '⛪',
-    'hermitage museum': '🎨', 'winter palace': '🏰',
-    'sagrada familia': '⛪', 'la rambla': '🛍️',
-    'blue lagoon': '♨️', 'northern lights': '🌌', 'aurora borealis': '🌌',
-    'aurora': '🌌', 'fjord': '🌊', 'fjords': '🌊',
-    'amsterdam canals': '🚤', 'tulip fields': '🌷',
-    'swiss alps': '⛰️', 'matterhorn': '⛰️', 'mont blanc': '⛰️',
-
-    # Americas
-    'statue of liberty': '🗽', 'times square': '🌆', 'central park': '🌳',
-    'empire state building': '🏙️', 'brooklyn bridge': '🌉',
-    'one world trade center': '🏙️', 'broadway': '🎭',
-    'grand canyon': '🏜️', 'yellowstone': '🌋', 'niagara falls': '💧',
-    'mount rushmore': '🗿', 'golden gate bridge': '🌉',
-    'hollywood': '🎬', 'hollywood sign': '🎬', 'disney world': '✨',
-    'disneyland': '✨', 'las vegas': '🎰', 'las vegas strip': '🎰',
-    'miami beach': '🏖️', 'florida keys': '🏝️', 'everglades': '🐊',
-    'yosemite': '🏞️', 'sequoia': '🌲', 'death valley': '🏜️',
-    'mount whitney': '⛰️', 'hawaii': '🌺', 'maui': '🌺',
-    'waikiki': '🏄', 'honolulu': '🌺', 'pearl harbor': '⚓',
-    'alaska': '❄️', 'glacier bay': '❄️',
-    'amazon rainforest': '🌿', 'amazon river': '🌊', 'iguazu falls': '💧',
-    'machu picchu': '🏔️', 'galapagos': '🦎', 'patagonia': '⛰️',
-    'christ the redeemer': '✝️', 'rio de janeiro': '🎉', 'copacabana': '🏖️',
-    'angel falls': '💧', 'salt flats bolivia': '🧂',
-    'chichen itza': '🔺', 'teotihuacan': '🔺', 'mexico city': '🌮',
-
-    # Asia
-    'great wall of china': '🧱', 'great wall': '🧱',
-    'forbidden city': '🏯', 'tiananmen square': '🏛️',
-    'mount fuji': '🗻', 'fuji': '🗻', 'tokyo tower': '🗼',
-    'shibuya crossing': '🚦', 'fushimi inari': '⛩️', 'senso-ji': '⛩️',
-    'kyoto': '⛩️', 'osaka castle': '🏯', 'hiroshima': '🕊️',
-    'nara': '🦌', 'arashiyama': '🎋',
-    'taj mahal': '🕌', 'red fort': '🏰', 'india gate': '🏛️',
-    'amber fort': '🏰', 'hawa mahal': '🏯', 'varanasi': '🪔',
-    'angkor wat': '🏛️', 'halong bay': '🌊', 'mekong delta': '🌊',
-    'bali': '🌺', 'borobudur': '🏛️', 'komodo island': '🦎',
-    'mount everest': '🏔️', 'everest': '🏔️', 'himalaya': '🏔️',
-    'himalayas': '🏔️', 'kathmandu': '⛩️',
-    'petra': '🏜️', 'dead sea': '🌊', 'jerusalem': '✝️',
-    'wailing wall': '🪨', 'dome of the rock': '🕌',
-    'burj khalifa': '🏙️', 'dubai': '🏙️', 'palm jumeirah': '🌴',
-    'burj al arab': '🏙️', 'abu dhabi': '🕌',
-    'mecca': '🕌', 'medina': '🕌',
-    'singapore marina bay': '🌆', 'marina bay sands': '🌆',
-    'gardens by the bay': '🌸',
-
-    # Africa & Middle East
-    'pyramids of giza': '🔺', 'pyramids': '🔺', 'sphinx': '🦁',
-    'luxor temple': '🏛️', 'abu simbel': '🏛️', 'nile river': '🌊',
-    'sahara desert': '🏜️', 'sahara': '🏜️',
-    'serengeti': '🦁', 'masai mara': '🦁', 'kilimanjaro': '🏔️',
-    'victoria falls': '💧', 'cape of good hope': '🌊',
-    'table mountain': '⛰️', 'cape town': '⛰️',
-    'marrakech': '🕌', 'fez': '🕌', 'medina morocco': '🕌',
-
-    # Oceania
-    'sydney opera house': '🎭', 'sydney harbour bridge': '🌉',
-    'uluru': '🪨', 'ayers rock': '🪨', 'great barrier reef': '🪸',
-    'whitsundays': '🏝️', 'twelve apostles': '🪨',
-    'queenstown': '⛷️', 'milford sound': '🌊', 'hobbiton': '🏡',
-    'rotorua': '♨️', 'bay of islands': '🌊',
-
-    # General landmark types
-    'cathedral': '⛪', 'mosque': '🕌', 'temple': '⛩️', 'shrine': '⛩️',
-    'palace': '🏰', 'fortress': '🏰', 'citadel': '🏰',
-    'waterfall': '💧', 'national park': '🌿', 'nature reserve': '🌿',
-    'world heritage': '🌍', 'unesco': '🌍',
-    'museum': '🏛️', 'art gallery': '🎨', 'monument': '🗿',
-    'landmark': '📍', 'tourist attraction': '📍',
-
     # --- Music artists & genres ---
     'beatles': '🎸', 'taylor swift': '🎤', 'beyonce': '🎤',
     'ed sheeran': '🎸', 'adele': '🎤', 'coldplay': '🎵',
@@ -1282,324 +1184,6 @@ _TOPIC_EMOJI_MAP = {
     'djing': '🎧', 'podcasting': '🎧', 'field recording': '🎧',
     'blogging': '✍️', 'journaling': '✍️', 'fan fiction': '✍️',
     'poetry slams': '✍️',
-    # --- Video games (titles) ---
-    'tetris': '🟦', 'minecraft': '⛏️', 'grand theft auto': '🚗', 'gta': '🚗',
-    'red dead redemption': '🤠', 'wii sports': '🎳', 'mario kart': '🏎️',
-    'pubg': '🪖', 'battlegrounds': '🪖', 'terraria': '⛏️',
-    'witcher': '⚔️', 'witcher 3': '⚔️', 'super mario': '🍄',
-    'human fall flat': '🧍', 'overwatch': '🎯', 'the sims': '🏠',
-    'stardew valley': '🌾', 'animal crossing': '🍃', 'animal crossing new horizons': '🍃',
-    'pokemon': '⚡', 'pokémon': '⚡', 'wii fit': '🧘',
-    'call of duty': '🪖', 'cod': '🪖', 'black ops': '🪖',
-    'modern warfare': '🪖', 'hogwarts legacy': '🧙',
-    'payday': '💰', 'sonic the hedgehog': '💨', 'sonic': '💨',
-    'super smash bros': '💥', 'smash bros': '💥',
-    'breath of the wild': '🌿', 'zelda': '🗡️', 'legend of zelda': '🗡️',
-    'cyberpunk': '🦾', 'cyberpunk 2077': '🦾',
-    'new super mario bros': '🍄', 'super mario odyssey': '🍄',
-    'pokemon gold': '⚡', 'pokemon silver': '⚡',
-    'elden ring': '💀', 'borderlands': '🔫', 'skyrim': '🐉',
-    'elder scrolls': '📜', 'it takes two': '🤝',
-    'monster hunter': '🗡️', 'duck hunt': '🦆',
-    'garrys mod': '🔧', 'gmod': '🔧', 'phasmophobia': '👻',
-    'black myth wukong': '🐒', 'black myth': '🐒',
-    'grand theft auto san andreas': '🚗', 'last of us': '🍄',
-    'marvel spider-man': '🕷️', 'spider-man game': '🕷️',
-    'elden ring': '💀', 'dark souls': '💀', 'sekiro': '⚔️',
-    'bloodborne': '💀', 'fromsoft': '💀', 'fromsoftware': '💀',
-    'halo': '🪖', 'master chief': '🪖', 'fortnite': '🏗️',
-    'league of legends': '🏆', 'lol game': '🏆', 'dota': '🏆',
-    'world of warcraft': '⚔️', 'wow game': '⚔️', 'warcraft': '⚔️',
-    'hearthstone': '🃏', 'starcraft': '🚀', 'diablo': '👿',
-    'counter-strike': '🔫', 'csgo': '🔫', 'cs2': '🔫',
-    'valorant': '🔫', 'apex legends': '🪖', 'destiny': '🚀',
-    'fallout': '☢️', 'mass effect': '🚀', 'bioshock': '🌊',
-    'portal': '🕳️', 'half-life': '🔫', 'team fortress': '🔫',
-    'left 4 dead': '🧟', 'resident evil': '🧟', 'silent hill': '👻',
-    'final fantasy': '⚔️', 'ff7': '⚔️', 'kingdom hearts': '❤️',
-    'dragon quest': '🐉', 'persona': '🎭', 'persona 5': '🎭',
-    'fire emblem': '🔥', 'xenoblade': '⚔️',
-    'god of war': '⚔️', 'kratos': '⚔️', 'uncharted': '🗺️',
-    'horizon zero dawn': '🏹', 'ghost of tsushima': '⚔️',
-    'death stranding': '👶', 'metal gear': '🤖',
-    'street fighter': '👊', 'mortal kombat': '👊',
-    'tekken': '👊', 'guilty gear': '👊',
-    'splatoon': '🦑', 'arms': '🥊', 'pikmin': '🌱',
-    'kirby': '🩷', 'metroid': '🚀', 'star fox': '🦊',
-    'donkey kong': '🦍', 'yoshi': '🦎', 'wario': '💛',
-    'mega man': '🤖', 'castlevania': '🧛', 'contra': '🔫',
-    'pac-man': '👾', 'space invaders': '👾', 'asteroids': '☄️',
-    'pong': '🏓', 'atari': '🕹️', 'commodore': '🕹️',
-    'roblox': '🟥', 'among us': '🚀', 'fall guys': '👑',
-    'stumble guys': '👑', 'brawl stars': '⭐', 'clash royale': '⚔️',
-    'clash of clans': '⚔️', 'candy crush': '🍬',
-    'geometry dash': '🔷', 'flappy bird': '🐦',
-    'angry birds': '🐦', 'cut the rope': '🍬',
-    'two dots': '🔵', 'wordle': '🟩', 'chess.com': '♟️',
-    'runescape': '⚔️', 'oldschool runescape': '⚔️', 'osrs': '⚔️',
-    'neopets': '🐾', 'habbo': '🏨', 'club penguin': '🐧',
-
-    # --- Game characters ---
-    'mario': '🍄', 'luigi': '🍄', 'princess peach': '👑', 'bowser': '🐢',
-    'yoshi': '🦎', 'toad': '🍄', 'waluigi': '💜', 'wario': '💛',
-    'link': '🗡️', 'ganon': '👿', 'ganondorf': '👿', 'princess zelda': '👑',
-    'pikachu': '⚡', 'charizard': '🔥', 'mewtwo': '🧬', 'eevee': '🦊',
-    'snorlax': '💤', 'gengar': '👻', 'bulbasaur': '🌿',
-    'squirtle': '💧', 'charmander': '🔥', 'jigglypuff': '🎵',
-    'master chief': '🪖', 'cortana': '🤖', 'noble six': '🪖',
-    'kratos': '⚔️', 'atreus': '🏹', 'freya': '🌿',
-    'lara croft': '🏹', 'nathan drake': '🗺️',
-    'geralt': '⚔️', 'ciri': '⚔️', 'yennefer': '🔮',
-    'claude': '⚔️', 'claus': '⚔️',
-    'solid snake': '🤖', 'big boss': '🤖', 'raiden': '⚔️',
-    'samus': '🚀', 'captain falcon': '🏎️', 'fox mccloud': '🦊',
-    'ness': '⚾', 'lucas': '⚾', 'villager': '🍃',
-    'isabelle': '🍃', 'tom nook': '🦝', 'k.k. slider': '🎸',
-    'sonic': '💨', 'tails': '🦊', 'knuckles': '👊', 'shadow': '💨',
-    'amy rose': '💗', 'dr eggman': '🥚',
-    'crash bandicoot': '🦊', 'spyro': '🐉',
-    'banjo kazooie': '🐻', 'conker': '🐿️',
-    'cloud strife': '⚔️', 'tifa': '👊', 'aerith': '🌸',
-    'sephiroth': '⚔️', 'vincent': '🦇',
-    'mega man': '🤖', 'zero': '⚔️',
-    'pac-man': '👾', 'ms pac-man': '👾',
-    'ryu': '👊', 'ken': '👊', 'chun-li': '👊', 'akuma': '👿',
-    'scorpion': '🦂', 'sub-zero': '❄️', 'liu kang': '🔥',
-    'james': '🕵️', 'james bond': '🕵️',
-    'arthur morgan': '🤠', 'john marston': '🤠',
-    'trevor': '🚗', 'michael': '🚗', 'franklin': '🚗',
-    'niko bellic': '🚗', 'tommy vercetti': '🚗',
-    'commander shepard': '🚀', 'liara': '🚀',
-    'the dragonborn': '🐉', 'dovahkiin': '🐉',
-    'sole survivor': '☢️', 'courier': '☢️',
-    'the witcher': '⚔️',
-
-    # --- Anime (series) ---
-    'anime': '🎌', 'manga': '📚', 'shonen': '💥', 'shojo': '💕',
-    'seinen': '🎌', 'isekai': '🌀',
-    'naruto': '🍥', 'naruto shippuden': '🍥', 'boruto': '🍥',
-    'dragon ball': '🐉', 'dragon ball z': '🐉', 'dragon ball super': '🐉',
-    'one piece': '🏴‍☠️', 'luffy': '🏴‍☠️', 'zoro': '⚔️', 'nami': '🍊',
-    'attack on titan': '⚔️', 'aot': '⚔️', 'shingeki no kyojin': '⚔️',
-    'demon slayer': '🗡️', 'kimetsu no yaiba': '🗡️', 'tanjiro': '🗡️',
-    'my hero academia': '💪', 'mha': '💪', 'boku no hero': '💪',
-    'deku': '💪', 'all might': '💪', 'bakugo': '💥',
-    'fullmetal alchemist': '⚗️', 'fma': '⚗️', 'edward elric': '⚗️',
-    'death note': '📓', 'light yagami': '📓', 'l lawliet': '📓',
-    'hunter x hunter': '🎯', 'hxh': '🎯', 'gon': '🎯', 'killua': '⚡',
-    'sword art online': '⚔️', 'sao': '⚔️', 'kirito': '⚔️',
-    'fairy tail': '✨', 'natsu': '🔥', 'erza': '⚔️',
-    'bleach': '⚔️', 'ichigo': '⚔️', 'rukia': '❄️',
-    'one punch man': '👊', 'saitama': '👊',
-    'mob psycho': '🌀', 'mob psycho 100': '🌀',
-    'jujutsu kaisen': '👁️', 'jjk': '👁️', 'gojo': '👁️', 'yuji': '👊',
-    'chainsaw man': '🪚', 'denji': '🪚',
-    'neon genesis evangelion': '🤖', 'evangelion': '🤖', 'eva': '🤖',
-    'cowboy bebop': '🚀', 'spike spiegel': '🚀',
-    'ghost in the shell': '🤖',
-    'studio ghibli': '🌿', 'spirited away': '🌀', 'totoro': '🌿',
-    'howls moving castle': '🏰', 'princess mononoke': '🌿',
-    'nausicaa': '🌿', 'castle in the sky': '🏰',
-    'akira': '🏍️', 'your name': '🌠', 'weathering with you': '🌧️',
-    'a silent voice': '💙',
-    'sword art online': '⚔️', 'overlord': '💀', 're zero': '🌀',
-    'that time i got reincarnated': '🐉', 'slime': '🟢',
-    'konosuba': '💙', 'no game no life': '🎮',
-    'tokyo ghoul': '👁️', 'kaneki': '👁️',
-    'black clover': '🍀', 'asta': '⚔️',
-    'seven deadly sins': '🐗', 'nanatsu no taizai': '🐗',
-    'vinland saga': '⚔️', 'thorfinn': '⚔️',
-    'made in abyss': '🕳️', 'violet evergarden': '💌',
-    'erased': '🔵', 'steins gate': '⏰',
-    'code geass': '♟️', 'lelouch': '♟️',
-    'ouran high school': '🌹', 'sailor moon': '🌙',
-    'cardcaptor sakura': '🌸', 'pretty cure': '💖',
-    'pokemon anime': '⚡', 'digimon': '🖥️',
-    'yu-gi-oh': '🃏', 'beyblade': '🌀',
-    'inuyasha': '🐕', 'ranma': '🐼',
-    'ruroni kenshin': '⚔️', 'kenshin': '⚔️',
-    'trigun': '🔫', 'vash': '🔫',
-
-    # --- Cartoons & animation ---
-    'cartoon': '🎨', 'animation': '🎬', 'animated': '🎬',
-    'spongebob': '🧽', 'spongebob squarepants': '🧽', 'patrick star': '⭐',
-    'squidward': '🦑', 'sandy cheeks': '🐿️', 'mr krabs': '🦀',
-    'the simpsons': '🍩', 'homer simpson': '🍩', 'bart simpson': '🛹',
-    'lisa simpson': '🎷', 'marge simpson': '💙',
-    'family guy': '🐕', 'peter griffin': '🍺', 'stewie griffin': '👶',
-    'american dad': '🇺🇸', 'futurama': '🚀', 'fry': '🚀',
-    'south park': '🏔️', 'cartman': '🏔️', 'kenny': '🏔️',
-    'rick and morty': '🧪', 'rick sanchez': '🧪', 'morty': '🧪',
-    'adventure time': '🗡️', 'finn': '🗡️', 'jake': '🐕',
-    'gravity falls': '🔺', 'dipper': '🔺', 'mabel': '⭐',
-    'steven universe': '💎', 'garnet': '💎', 'amethyst': '💜',
-    'the owl house': '🦉', 'amphibia': '🐸',
-    'regular show': '🦅', 'the amazing world of gumball': '🐟',
-    'we bare bears': '🐻', 'teen titans': '🦸', 'teen titans go': '🦸',
-    'young justice': '🦸', 'justice league': '🦸',
-    'batman animated': '🦇', 'batman beyond': '🦇',
-    'superman animated': '🦸', 'x-men animated': '🦸',
-    'avatar the last airbender': '🌀', 'atla': '🌀', 'aang': '🌀',
-    'korra': '🌊', 'legend of korra': '🌊',
-    'danny phantom': '👻', 'fairly odd parents': '⭐',
-    'invader zim': '👽', 'zim': '👽', 'gir': '👽',
-    'dexters laboratory': '🔬', 'dexter cartoon': '🔬',
-    'powerpuff girls': '💥', 'johnny bravo': '💪',
-    'cow and chicken': '🐄', 'ed edd n eddy': '🍬',
-    'courage the cowardly dog': '🐕', 'courage': '🐕',
-    'scooby-doo': '🐕', 'shaggy': '🐕', 'velma': '🔍',
-    'tom and jerry': '🐭', 'bugs bunny': '🐰', 'daffy duck': '🦆',
-    'tweety': '🐦', 'sylvester': '🐈', 'road runner': '🏃',
-    'wile e coyote': '🐺', 'porky pig': '🐷', 'elmer fudd': '🎯',
-    'mickey mouse': '🐭', 'donald duck': '🦆', 'goofy': '🐕',
-    'pluto': '🐕', 'minnie mouse': '🎀',
-    'frozen': '❄️', 'elsa': '❄️', 'anna': '❄️', 'olaf': '⛄',
-    'moana': '🌊', 'encanto': '🏠', 'coco movie': '💀',
-    'ratatouille movie': '🐀', 'up movie': '🎈', 'wall-e': '🤖',
-    'the incredibles': '🦸', 'finding nemo movie': '🐟',
-    'lilo and stitch': '👽', 'stitch': '👽',
-    'mulan': '🏹', 'pocahontas': '🌿', 'hercules': '💪',
-    'aladdin': '🪔', 'the little mermaid': '🧜', 'beauty and the beast': '🌹',
-    'the lion king': '🦁', 'bambi': '🦌', 'dumbo': '🐘',
-    'snow white': '🍎', 'cinderella': '👠', 'sleeping beauty': '🌹',
-
-    # --- Sports teams & leagues ---
-    'premier league': '⚽', 'champions league': '🏆', 'la liga': '⚽',
-    'serie a': '⚽', 'bundesliga': '⚽', 'ligue 1': '⚽',
-    'manchester united': '🔴', 'man utd': '🔴', 'manchester city': '🔵',
-    'man city': '🔵', 'liverpool': '🔴', 'arsenal': '🔴',
-    'chelsea': '🔵', 'tottenham': '⚪', 'spurs': '⚪',
-    'barcelona': '🔵', 'real madrid': '⚪', 'atletico madrid': '🔴',
-    'juventus': '⚫', 'ac milan': '🔴', 'inter milan': '⚫',
-    'bayern munich': '🔴', 'borussia dortmund': '🟡',
-    'paris saint-germain': '🔵', 'psg': '🔵',
-    'nba': '🏀', 'nfl': '🏈', 'mlb': '⚾', 'nhl': '🏒',
-    'los angeles lakers': '🏀', 'lakers': '🏀',
-    'chicago bulls': '🐂', 'golden state warriors': '🏀',
-    'new york knicks': '🏀', 'boston celtics': '🍀',
-    'new england patriots': '🏈', 'dallas cowboys': '⭐',
-    'new york yankees': '⚾', 'los angeles dodgers': '⚾',
-    'formula 1': '🏎️', 'f1': '🏎️', 'lewis hamilton': '🏎️',
-    'max verstappen': '🏎️', 'ferrari f1': '🏎️',
-    'six nations': '🏉', 'rugby world cup': '🏉',
-    'wimbledon': '🎾', 'us open tennis': '🎾',
-    'french open': '🎾', 'australian open': '🎾',
-    'tour de france': '🚴', 'olympics': '🏅', 'paralympics': '🏅',
-    'world cup': '🏆', 'euro': '⚽', 'copa america': '⚽',
-
-    # --- School subjects ---
-    'english class': '📖', 'english literature': '📖', 'english language': '📖',
-    'maths class': '🔢', 'mathematics class': '🔢', 'statistics': '📊',
-    'biology class': '🔬', 'chemistry class': '🧪', 'physics class': '⚡',
-    'history class': '📜', 'geography class': '🗺️',
-    'art class': '🎨', 'design technology': '🔧', 'dt': '🔧',
-    'physical education': '⚽', 'pe': '⚽', 'sport science': '💪',
-    'music class': '🎵', 'drama': '🎭', 'media studies': '📺',
-    'computer science': '💻', 'ict': '💻', 'business studies': '💼',
-    'economics class': '💰', 'psychology': '🧠', 'sociology': '👥',
-    'religious studies': '⛪', 'rs': '⛪', 'philosophy class': '💭',
-    'spanish class': '🇪🇸', 'french class': '🇫🇷', 'german class': '🇩🇪',
-    'latin class': '🏛️', 'classical civilisation': '🏛️',
-
-    # --- Countries & flags ---
-    'united kingdom': '🇬🇧', 'uk': '🇬🇧', 'england': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'ireland': '🇮🇪',
-    'united states': '🇺🇸', 'usa': '🇺🇸', 'america': '🇺🇸',
-    'france': '🇫🇷', 'germany': '🇩🇪', 'italy': '🇮🇹',
-    'spain': '🇪🇸', 'portugal': '🇵🇹', 'netherlands': '🇳🇱',
-    'belgium': '🇧🇪', 'switzerland': '🇨🇭', 'austria': '🇦🇹',
-    'sweden': '🇸🇪', 'norway': '🇳🇴', 'denmark': '🇩🇰',
-    'finland': '🇫🇮', 'poland': '🇵🇱', 'ukraine': '🇺🇦',
-    'russia': '🇷🇺', 'china': '🇨🇳', 'japan': '🇯🇵',
-    'south korea': '🇰🇷', 'korea': '🇰🇷', 'india': '🇮🇳',
-    'australia': '🇦🇺', 'new zealand': '🇳🇿', 'canada': '🇨🇦',
-    'mexico': '🇲🇽', 'brazil': '🇧🇷', 'argentina': '🇦🇷',
-    'south africa': '🇿🇦', 'nigeria': '🇳🇬', 'kenya': '🇰🇪',
-    'egypt': '🇪🇬', 'turkey': '🇹🇷', 'saudi arabia': '🇸🇦',
-    'israel': '🇮🇱', 'iran': '🇮🇷', 'pakistan': '🇵🇰',
-    'indonesia': '🇮🇩', 'thailand': '🇹🇭', 'vietnam': '🇻🇳',
-    'philippines': '🇵🇭', 'malaysia': '🇲🇾', 'singapore': '🇸🇬',
-    'greece': '🇬🇷', 'czech republic': '🇨🇿', 'hungary': '🇭🇺',
-    'romania': '🇷🇴', 'serbia': '🇷🇸', 'croatia': '🇭🇷',
-
-    # --- Famous people ---
-    'einstein': '⚛️', 'albert einstein': '⚛️',
-    'newton': '🍎', 'isaac newton': '🍎',
-    'darwin': '🧬', 'charles darwin': '🧬',
-    'tesla': '⚡', 'nikola tesla': '⚡',
-    'marie curie': '⚗️', 'curie': '⚗️',
-    'stephen hawking': '🌌', 'hawking': '🌌',
-    'shakespeare': '🎭', 'william shakespeare': '🎭',
-    'beethoven': '🎵', 'mozart': '🎵', 'bach': '🎵',
-    'da vinci': '🎨', 'leonardo da vinci': '🎨',
-    'michelangelo': '🗿', 'picasso': '🎨',
-    'napoleon': '⚔️', 'napoleon bonaparte': '⚔️',
-    'julius caesar': '👑', 'caesar': '👑',
-    'cleopatra': '👑', 'alexander the great': '⚔️',
-    'genghis khan': '🏹', 'attila': '⚔️',
-    'abraham lincoln': '🎩', 'lincoln': '🎩',
-    'martin luther king': '✊', 'mlk': '✊',
-    'nelson mandela': '✊', 'mandela': '✊',
-    'mahatma gandhi': '🕊️', 'gandhi': '🕊️',
-    'winston churchill': '🇬🇧', 'churchill': '🇬🇧',
-    'adolf hitler': '⚔️', 'napoleon': '⚔️',
-    'queen elizabeth': '👑', 'queen victoria': '👑',
-    'henry viii': '👑', 'henry the eighth': '👑',
-    'columbus': '🚢', 'christopher columbus': '🚢',
-    'galileo': '🔭', 'copernicus': '🔭',
-    'freud': '🧠', 'sigmund freud': '🧠',
-    'marx': '📜', 'karl marx': '📜',
-    'plato': '💭', 'aristotle': '💭', 'socrates': '💭',
-
-    # --- Mythology ---
-    'greek mythology': '🏛️', 'greek gods': '⚡', 'olympus': '⛰️',
-    'zeus': '⚡', 'poseidon': '🌊', 'hades': '💀', 'athena': '🦉',
-    'apollo': '☀️', 'artemis': '🌙', 'ares': '⚔️', 'aphrodite': '💕',
-    'hermes': '🪶', 'hephaestus': '🔨', 'demeter': '🌾',
-    'dionysus': '🍇', 'hera': '👑', 'heracles': '💪', 'hercules': '💪',
-    'achilles': '⚔️', 'odysseus': '🚢', 'odyssey': '🚢',
-    'trojan war': '🏹', 'troy': '🏛️', 'helen of troy': '🌹',
-    'medusa': '🐍', 'minotaur': '🐂', 'hydra': '🐍', 'cyclops': '👁️',
-    'icarus': '🪶', 'midas': '💰', 'prometheus': '🔥', 'pandora': '📦',
-    'norse mythology': '🌿', 'norse gods': '⚡',
-    'odin': '🪶', 'thor': '⚡', 'loki': '🐍', 'freyja': '🌸',
-    'valkyrie': '⚔️', 'valhalla': '⚔️', 'yggdrasil': '🌳',
-    'ragnarok': '💥', 'fenrir': '🐺', 'mjolnir': '🔨',
-    'egyptian mythology': '🔺', 'egyptian gods': '☀️',
-    'ra': '☀️', 'osiris': '⚖️', 'isis': '🌿', 'anubis': '🐺',
-    'horus': '🦅', 'set': '🐺', 'thoth': '🦅',
-    'roman mythology': '🏛️', 'roman gods': '🏛️',
-    'jupiter roman': '⚡', 'mars roman': '⚔️', 'venus roman': '💕',
-    'juno': '👑', 'minerva': '🦉', 'neptune roman': '🌊',
-    'celtic mythology': '🍀', 'celtic gods': '🍀',
-    'hindu mythology': '🪔', 'shiva': '🪔', 'vishnu': '🪔',
-    'brahma': '🌸', 'ganesha': '🐘', 'krishna': '💙',
-    'japanese mythology': '🎌', 'amaterasu': '☀️', 'susanoo': '⛈️',
-
-    # --- Music genres & artists ---
-    'rock music': '🎸', 'heavy metal': '🎸', 'punk': '🎸', 'grunge': '🎸',
-    'pop music': '🎤', 'pop star': '🎤', 'k-pop': '🎤', 'j-pop': '🎤',
-    'hip hop': '🎤', 'rap': '🎤', 'grime': '🎤', 'trap': '🎤',
-    'jazz music': '🎷', 'blues': '🎷', 'soul music': '🎷', 'r&b': '🎷',
-    'classical music': '🎻', 'opera': '🎻', 'orchestra': '🎻',
-    'electronic music': '🎧', 'edm': '🎧', 'techno': '🎧', 'house music': '🎧',
-    'country music': '🤠', 'folk music': '🪗', 'reggae': '🌿',
-    'indie music': '🎸', 'alternative': '🎸',
-    'the beatles': '🎸', 'rolling stones': '🎸', 'led zeppelin': '🎸',
-    'pink floyd': '🌈', 'queen band': '🎸', 'david bowie': '⭐',
-    'michael jackson': '🎤', 'madonna': '🎤', 'prince': '💜',
-    'beyonce': '🎤', 'taylor swift': '🎸', 'adele': '🎤',
-    'ed sheeran': '🎸', 'drake': '🎤', 'kanye west': '🎤',
-    'eminem': '🎤', 'jay-z': '🎤', 'kendrick lamar': '🎤',
-    'billie eilish': '🎤', 'ariana grande': '🎤', 'dua lipa': '🎤',
-    'coldplay': '🌟', 'radiohead': '🎸', 'nirvana': '🎸',
-    'metallica': '🎸', 'ac/dc': '⚡', 'iron maiden': '🎸',
-    'black sabbath': '🎸', 'ozzy osbourne': '🎸',
-    'elton john': '🎹', 'freddie mercury': '🎤',
-    'bob marley': '🌿', 'jimi hendrix': '🎸',
-    'frank sinatra': '🎩', 'louis armstrong': '🎷',
-    'mozart': '🎻', 'beethoven': '🎻', 'chopin': '🎹',
-
 }
 
 
@@ -2471,7 +2055,7 @@ def _fetch_flashcard_data_from_llm(raw_text, reading_level="intermediate"):
     if reading_level == "simple":
         level_text = (
             "EASY (Ages 4-11): Use very short, common words only. "
-            "One idea per sentence. Maximum 12 words per sentence. "
+            "One idea per sentence. Maximum 10 words per sentence. "
             "Active voice always. Use digits for numbers (e.g. 3 not three). "
             "No jargon — if a technical word is essential, explain it in the same sentence."
         )
@@ -2500,7 +2084,6 @@ YOUR GOAL: Turn ALL key information from the text into {min_cards}-{max_cards} f
 - Give each card a short, descriptive title that captures its theme at a glance.
 
 WRITING RULES (follow strictly):
-- Grammatically correct: every sentence must be a complete, natural English sentence. Never drop words to hit a word count — write the sentence properly first, then trim only if it still reads naturally.
 - Active voice: write "Dogs use smell to communicate." NOT "Smell is used by dogs."
 - One idea per sentence — never join 2 facts with "and" or "but".
 - Front-load the key word: start the sentence with what the fact is actually about.
@@ -3149,6 +2732,11 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         color: {text} !important;
         border: 1px solid {border_col} !important;
         border-radius: 8px !important;
+        /* iOS fix: font-size below 16px triggers auto-zoom on focus, which
+           is very jarring on mobile. We enforce 16px minimum here.
+           The user's chosen text_size still applies via the CSS cascade for
+           non-input elements. */
+        font-size: max({text_size}px, 16px) !important;
     }}
     .stTextInput input::placeholder, .stTextArea textarea::placeholder {{
         color: {placeholder_col} !important;
@@ -3161,25 +2749,13 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         color: {text} !important;
         border: 1px solid {border_col} !important;
         border-radius: 8px !important;
-        cursor: pointer !important;
     }}
     div[data-baseweb="select"] svg {{ fill: {text} !important; }}
-    /* Prevent keyboard on mobile — make the inner text input read-only visually */
-    div[data-baseweb="select"] input {{
-        pointer-events: none !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
-        caret-color: transparent !important;
-        cursor: pointer !important;
-    }}
     /* dropdown menu popover */
     div[data-baseweb="popover"] li,
     ul[role="listbox"] li {{
         background-color: {input_bg} !important;
         color: {text} !important;
-        font-size: {text_size}px !important;
-        padding: 12px 16px !important;
-        min-height: 44px !important;
     }}
     div[data-baseweb="popover"] li:hover,
     ul[role="listbox"] li:hover {{
@@ -3233,6 +2809,44 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         background-color: {accent} !important;
     }}
     .stSlider [data-testid="stTickBar"] {{ color: {muted_text} !important; }}
+
+    /* ---- MOBILE FIX: stop hidden number inputs on sliders triggering the keyboard ---- */
+    /* Streamlit renders a hidden <input type="number"> inside every slider for
+       accessibility. On mobile browsers this input is sometimes focusable,
+       which pops up the numeric keyboard. We make it truly non-interactive. */
+    .stSlider input[type="number"],
+    .stSlider input {{
+        pointer-events: none !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        opacity: 0 !important;
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        clip: rect(0,0,0,0) !important;
+        /* Prevent mobile browsers from focusing and opening a keyboard */
+        tabindex: -1 !important;
+        readonly: true !important;
+    }}
+
+    /* ---- MOBILE FIX: prevent selectbox from opening soft keyboard ---- */
+    /* BaseWeb select renders an invisible <input> for search/typeahead.
+       On mobile this can trigger the keyboard before the dropdown opens.
+       Setting inputmode=none via CSS isn't possible, but we can block
+       focus on the input while keeping the clickable div above it. */
+    div[data-baseweb="select"] input {{
+        pointer-events: none !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        opacity: 0 !important;
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        clip: rect(0,0,0,0) !important;
+        font-size: 16px !important; /* iOS: prevents zoom on focus (belt-and-braces) */
+    }}
 
     /* ---- Links ---- */
     .stApp a {{ color: {accent} !important; }}
