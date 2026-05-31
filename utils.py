@@ -2556,14 +2556,14 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
         )
         star_row = (
             f"<div style=\"display:flex;justify-content:center;align-items:flex-end;"
-            f"gap:14px;margin-bottom:4px;\">{imgs}</div>"
+            f"gap:38px;margin-bottom:8px;\">{imgs}</div>"
         )
 
     st.markdown(
         f"<div style=\"text-align:center;margin-bottom:6px;\">"
         f"{star_row}"
         f"<div class=\"fcm-header\" style=\"display:inline-block;text-align:center;"
-        f"padding:10px 28px;"
+        f"padding:18px 56px;"
         f"background:linear-gradient(135deg,{accent},{grad_end});"
         f"border-radius:12px;max-width:min(92vw,560px);\">"
         f"<h1 style=\"color:{title_color};margin:0;line-height:1.2;"
