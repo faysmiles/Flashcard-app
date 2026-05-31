@@ -1972,12 +1972,7 @@ def _cache_store(core_key, full_description, image_bytes, mime):
 
 
 def _build_image_prompt_from_facts(title, facts):
-    """Build a rich visual prompt from title and facts to avoid text in images.
-    
-    Instead of passing 'What Is a Tank', we describe visual characteristics:
-    'military vehicle with turret, cannon, armored tracks, flat design'
-    """
-    # Extract key visual nouns from facts (remove articles, verbs, etc.)
+    """Extract key visual keywords from title and facts for UnDraw search."""
     visual_words = []
     stop_words = {
         'a', 'an', 'the', 'is', 'are', 'has', 'have', 'and', 'or', 'of', 'in', 'on',
@@ -1992,8 +1987,14 @@ def _build_image_prompt_from_facts(title, facts):
         clean = re.sub(r'[^a-z0-9]', '', word)
         if clean and len(clean) > 2 and clean not in stop_words:
             visual_words.append(clean)
+            if len(visual_words) >= 3:
+                break
     
-    # Extract key nouns from facts
+    # If title gave us keywords, return the first one
+    if visual_words:
+        return visual_words[0]
+    
+    # Otherwise try facts
     if isinstance(facts, list):
         for fact in facts:
             if isinstance(fact, dict):
@@ -2004,29 +2005,19 @@ def _build_image_prompt_from_facts(title, facts):
             words = text.lower().split()
             for word in words:
                 clean = re.sub(r'[^a-z0-9]', '', word)
-                if clean and len(clean) > 3 and clean not in stop_words and clean not in visual_words:
-                    visual_words.append(clean)
-                    if len(visual_words) >= 6:  # Limit to 6 key words
-                        break
-            if len(visual_words) >= 6:
-                break
+                if clean and len(clean) > 3 and clean not in stop_words:
+                    return clean
     
-    # Build prompt using visual words
-    keywords = ', '.join(visual_words[:6])
-    prompt = (
-        f"simple educational diagram illustration showing {keywords}, "
-        f"flat design style, bright friendly colours, clean background, "
-        f"appropriate for children ages 4-18, infographic style, "
-        f"minimalist, no people, no text whatsoever"
-    )
-    return prompt
+    # Fallback to query itself
+    return title.split()[0] if title else "learning"
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_wikipedia_image(query, facts=None):
-    """Return an image URL for the topic query.
-    Order: Supabase cache (short core key) -> generate via Pollinations
-    then save to cache for everyone else.
+    """Return an image URL using UnDraw API - guaranteed zero text.
+    
+    UnDraw provides professionally designed illustrations with no text,
+    perfect for educational content.
     """
     if not query:
         return None
@@ -2040,53 +2031,52 @@ def search_wikipedia_image(query, facts=None):
     if cached:
         return cached
 
-    # 2) Generate a fresh image
-    api_key = _get_pollinations_key()
-    if not api_key:
-        return None
-
-    # Build prompt from facts if provided, otherwise use query
-    if facts:
-        prompt = _build_image_prompt_from_facts(query, facts)
-    else:
-        prompt = (
-            f"cheerful educational illustration of {query}, "
-            "child-friendly, bright flat colours, friendly cartoon style, "
-            "simple clean background, appropriate for ages 4 to 18"
-        )
-    
-    negative_prompt = (
-        "text, letters, words, writing, numbers, digits, "
-        "labels, captions, typography, font, handwriting, "
-        "watermark, banner, sign, title, annotation, "
-        "character, symbol, script, document, page, "
-        "blurry, low quality, distorted, ugly, artifacts"
-    )
-
+    # 2) Fetch from UnDraw API
     try:
-        import urllib.parse
-        import base64
-        encoded = urllib.parse.quote(prompt)
-        encoded_negative = urllib.parse.quote(negative_prompt)
-        url = (
-            f"https://gen.pollinations.ai/image/{encoded}"
-            f"?model=flux&key={api_key}&width=500&height=500&nologo=true"
-            f"&negative={encoded_negative}"
+        # Extract primary keyword from title/facts
+        search_keyword = _build_image_prompt_from_facts(query, facts)
+        
+        # UnDraw API endpoint
+        response = requests.get(
+            "https://undraw.co/api/illustrations",
+            params={"search": search_keyword},
+            timeout=10
         )
-        response = requests.get(url, timeout=30)
-        if response.ok and response.headers.get("content-type", "").startswith("image"):
-            mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
-            # 3) Save to cache using short key + full description
-            public_url = _cache_store(core_key, query, response.content, mime)
-            if public_url:
-                return public_url
-            # Fallback: cache not configured or upload failed
-            b64 = base64.b64encode(response.content).decode()
-            return f"data:{mime};base64,{b64}"
+        
+        if response.ok:
+            data = response.json()
+            if data and isinstance(data, list) and len(data) > 0:
+                # Get the first matching illustration
+                illustration = data[0]
+                image_url = f"https://undraw.co{illustration.get('image', '')}"
+                
+                # Fetch the actual image to cache it
+                img_response = requests.get(image_url, timeout=15)
+                if img_response.ok:
+                    mime = img_response.headers.get("content-type", "image/svg+xml")
+                    # Cache it
+                    public_url = _cache_store(core_key, query, img_response.content, mime)
+                    if public_url:
+                        return public_url
+                    # Fallback: return the URL directly
+                    return image_url
+        
+        # Fallback: try with simpler query
+        generic_keyword = query.split()[0].lower()
+        response = requests.get(
+            "https://undraw.co/api/illustrations",
+            params={"search": generic_keyword},
+            timeout=10
+        )
+        
+        if response.ok:
+            data = response.json()
+            if data and isinstance(data, list) and len(data) > 0:
+                illustration = data[0]
+                return f"https://undraw.co{illustration.get('image', '')}"
+    
     except Exception as e:
-        print(f"Pollinations error for '{query}': {e}")
-
-    return None
+        print(f"UnDraw fetch error for '{query}': {e}")
 
 
 # ==================== DEEPSEEK FLASHCARD GENERATION ====================
