@@ -2546,43 +2546,32 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
     else:
         svg = urllib.parse.quote(_cute_star_svg_markup())
         uri = f"data:image/svg+xml;utf8,{svg}"
-        # Build star img tags directly — no intermediate variables that
-        # Streamlit could misinterpret as plain text.
+        # Single star each side, absolutely positioned and centred on the
+        # title line. overflow:hidden on the banner means they can never
+        # push the banner taller than the title text + padding.
         star_divs = (
-            f"<div style=\"position:absolute;left:12px;top:50%;"
-            f"transform:translateY(-50%);display:flex;flex-direction:column;"
-            f"align-items:center;gap:6px;\">"
             f"<img class=\"fcm-star-svg fcm-star-a\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
-            f"style=\"height:2.2em;width:2.2em;display:block;\" />"
+            f"style=\"position:absolute;left:14px;top:50%;transform:translateY(-50%);"
+            f"height:1.8em;width:1.8em;\" />"
             f"<img class=\"fcm-star-svg fcm-star-b\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
-            f"style=\"height:1.6em;width:1.6em;display:block;\" />"
-            f"</div>"
-            f"<div style=\"position:absolute;right:12px;top:50%;"
-            f"transform:translateY(-50%);display:flex;flex-direction:column;"
-            f"align-items:center;gap:6px;\">"
-            f"<img class=\"fcm-star-svg fcm-star-a\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
-            f"style=\"height:2.2em;width:2.2em;display:block;\" />"
-            f"<img class=\"fcm-star-svg fcm-star-b\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
-            f"style=\"height:1.6em;width:1.6em;display:block;\" />"
-            f"</div>"
+            f"style=\"position:absolute;right:14px;top:50%;transform:translateY(-50%);"
+            f"height:1.8em;width:1.8em;\" />"
         )
 
-    # Banner: title + stars only (compact).
-    # Subtitle sits below the banner in normal page flow so it never
-    # inflates the banner height on any screen size.
     st.markdown(
+        f"<div style=\"display:flex;justify-content:center;margin-bottom:6px;\">"
         f"<div class=\"fcm-header\" style=\"position:relative;text-align:center;"
-        f"padding:12px 70px;"
+        f"padding:10px 60px;overflow:hidden;display:inline-block;"
         f"background:linear-gradient(135deg,{accent},{grad_end});"
-        f"border-radius:12px;margin-bottom:6px;\">"
+        f"border-radius:12px;\">"
         f"{star_divs}"
-        f"<h1 style=\"color:{title_color};margin:0;line-height:1.2;"
+        f"<h1 style=\"color:{title_color};margin:0;line-height:1.2;white-space:nowrap;"
         f"font-size:{int(text_size * 1.5)}px;\">"
         f"<span class=\"fcm-title-text\">{app_title}</span></h1>"
-        f"</div>"
-        f"<p style=\"text-align:center;color:{subtitle_color};"
+        f"</div></div>"
+        f"<p style=\"text-align:center;color:{page_text};"
         f"font-size:{text_size}px;margin:4px 0 12px 0;"
-        f"opacity:0.8;\">{app_subtitle}</p>",
+        f"opacity:0.75;\">{app_subtitle}</p>",
         unsafe_allow_html=True,
     )
 
