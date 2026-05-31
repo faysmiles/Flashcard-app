@@ -375,9 +375,13 @@ def _run_generation(level_key, show_imgs, reuse_images=False):
 
     # Animated progress bar during generation
     _prog_bar = st.progress(0, text=f"🤖 AI is creating your {_level_label} flashcards…")
-    for _p in range(0, 86, 5):
-        _prog_bar.progress(_p, text=f"🤖 AI is creating your {_level_label} flashcards…")
-        time.sleep(0.05)
+    # Fast start (0-30%), slow middle (30-70%), crawl at end (70-85%)
+    # so the bar doesn't appear frozen while the API finishes
+    _schedule = [(range(0, 30, 5), 0.03), (range(30, 70, 5), 0.18), (range(70, 86, 5), 0.55)]
+    for _rng, _delay in _schedule:
+        for _p in _rng:
+            _prog_bar.progress(_p, text=f"🤖 AI is creating your {_level_label} flashcards…")
+            time.sleep(_delay)
 
     new_cards = generate_flashcards_from_llm(_text_to_use, reading_level=level_code)
     if new_cards:
