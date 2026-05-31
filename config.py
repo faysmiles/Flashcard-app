@@ -1,6 +1,6 @@
 # config.py - Complete app configuration
 
-APP_TITLE = "Iconic Flashcard app"
+APP_TITLE = "Iconic Flashcard Designer"
 APP_SUBTITLE = "Turn your pages of notes into visual flashcards for easier, faster learning"
 
 # Reading levels
@@ -18,6 +18,7 @@ FONT_OPTIONS = [
     "Calibri",            # soft humanist sans
     "Roboto",             # clean screen sans
     "Gotham",             # clean geometric sans
+    "Merriweather",       # sturdy serif designed for screens
     "Garamond",           # classic elegant serif
     "Oswald",             # condensed display sans
     "Playfair Display",   # high-contrast display serif
@@ -160,100 +161,6 @@ EMOJI_CATEGORIES = {
     "geography|map|globe|world": "🗺️",
     "language|words|dictionary|vocabulary": "🔤",
     "mathematics|math|algebra|calculus": "🔢",
-    # Landmarks & tourist locations
-    "eiffel tower|louvre|notre dame|versailles": "🗼",
-    "colosseum|roman forum|vatican|pompeii": "🏛️",
-    "big ben|buckingham palace|tower of london": "🏰",
-    "stonehenge|edinburgh castle|loch ness": "🪨",
-    "statue of liberty|empire state|times square": "🗽",
-    "grand canyon|yellowstone|niagara falls": "🏜️",
-    "great wall of china|forbidden city|tiananmen": "🧱",
-    "taj mahal|red fort|india gate": "🕌",
-    "mount fuji|tokyo|shibuya|kyoto": "🗻",
-    "pyramids|sphinx|nile|sahara": "🔺",
-    "machu picchu|amazon|galapagos": "🏔️",
-    "sydney opera house|great barrier reef|uluru": "🎭",
-    "burj khalifa|dubai|abu dhabi": "🏙️",
-    "angkor wat|bali|borobudur": "🏛️",
-    "acropolis|parthenon|santorini": "🏛️",
-    "northern lights|aurora borealis|fjord": "🌌",
-    "mount everest|himalaya|nepal": "🏔️",
-    "petra|dead sea|jerusalem": "🏜️",
-    "serengeti|kilimanjaro|victoria falls": "🦁",
-    "national park|world heritage|unesco": "🌍",
-    "cathedral|mosque|temple|shrine": "⛪",
-    "museum|art gallery|monument|landmark": "🏛️",
-
-    # Video games
-    "minecraft|terraria|roblox": "⛏️",
-    "mario|luigi|bowser|mushroom kingdom": "🍄",
-    "zelda|link|hyrule|triforce": "🗡️",
-    "pokemon|pokémon|pikachu|charizard": "⚡",
-    "sonic|hedgehog|sega": "💨",
-    "call of duty|halo|battlefield": "🪖",
-    "grand theft auto|gta|rockstar": "🚗",
-    "fortnite|pubg|apex legends": "🪖",
-    "minecraft|terraria|stardew": "⛏️",
-    "final fantasy|dragon quest|jrpg": "⚔️",
-    "elden ring|dark souls|fromsoft": "💀",
-    "overwatch|valorant|league of legends": "🎯",
-    "the sims|animal crossing|stardew valley": "🏡",
-    "video game|gaming|gamer|esports": "🎮",
-    "playstation|xbox|nintendo switch": "🕹️",
-    # Anime
-    "anime|manga|otaku": "🎌",
-    "naruto|sasuke|ninja anime": "🍥",
-    "dragon ball|goku|vegeta": "🐉",
-    "one piece|luffy|pirate anime": "🏴‍☠️",
-    "attack on titan|titan|aot": "⚔️",
-    "demon slayer|tanjiro|kimetsu": "🗡️",
-    "my hero academia|deku|quirk": "💪",
-    "death note|light yagami|shinigami": "📓",
-    "studio ghibli|spirited away|totoro": "🌿",
-    "fullmetal alchemist|alchemy|elric": "⚗️",
-    "jujutsu kaisen|gojo|cursed": "👁️",
-    "sailor moon|magical girl|shoujo": "🌙",
-    "pokemon anime|ash|misty": "⚡",
-    # Cartoons
-    "spongebob|krabby patty|bikini bottom": "🧽",
-    "simpsons|springfield|homer": "🍩",
-    "rick and morty|interdimensional": "🧪",
-    "adventure time|candy kingdom": "🗡️",
-    "avatar airbender|bending|aang": "🌀",
-    "gravity falls|dipper|mabel": "🔺",
-    "looney tunes|bugs bunny|daffy": "🐰",
-    "disney|pixar|dreamworks": "✨",
-    "cartoon|animated series|animation": "🎬",
-    # Countries
-    "united kingdom|britain|british": "🇬🇧",
-    "united states|american|usa": "🇺🇸",
-    "france|french|paris": "🇫🇷",
-    "germany|german|berlin": "🇩🇪",
-    "japan|japanese|tokyo": "🇯🇵",
-    "china|chinese|beijing": "🇨🇳",
-    "australia|australian|sydney": "🇦🇺",
-    # Mythology
-    "greek myth|olympus|zeus|poseidon": "🏛️",
-    "norse myth|odin|thor|loki|valhalla": "🌿",
-    "egyptian myth|pharaoh|ra|anubis": "🔺",
-    "roman myth|jupiter|mars|venus": "🏛️",
-    # Famous people
-    "einstein|newton|darwin|curie|hawking": "🔬",
-    "shakespeare|dickens|austen|tolkien": "📖",
-    "beethoven|mozart|bach|chopin": "🎵",
-    # Music genres
-    "rock music|metal|punk|grunge": "🎸",
-    "hip hop|rap|grime|trap": "🎤",
-    "jazz|blues|soul|rnb": "🎷",
-    "classical music|orchestra|symphony": "🎻",
-    "electronic|edm|techno|house": "🎧",
-    "pop music|pop star|kpop": "🎤",
-    # Sports teams
-    "premier league|football league": "⚽",
-    "champions league|europa league": "🏆",
-    "formula 1|f1|racing": "🏎️",
-    "olympics|paralympics|olympic games": "🏅",
-
 }
 
 def get_emoji_for_text(text):
