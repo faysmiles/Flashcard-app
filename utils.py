@@ -2556,7 +2556,7 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
         )
         star_row = (
             f"<div style=\"display:flex;justify-content:center;align-items:flex-end;"
-            f"gap:38px;margin-bottom:8px;\">{imgs}</div>"
+            f"gap:56px;margin-bottom:8px;\">{imgs}</div>"
         )
 
     st.markdown(
