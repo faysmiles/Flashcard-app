@@ -2556,7 +2556,7 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
         )
         star_row = (
             f"<div style=\"display:flex;justify-content:center;align-items:flex-end;"
-            f"gap:6px;margin-bottom:4px;\">{imgs}</div>"
+            f"gap:14px;margin-bottom:4px;\">{imgs}</div>"
         )
 
     st.markdown(
@@ -2865,20 +2865,16 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     /* Cute star gentle bob + wiggle. Disabled when prefers-reduced-motion.  */
     @keyframes fcmStarBob {{
         0%, 100% {{ transform: translateY(0) rotate(0deg); }}
-        30%      {{ transform: translateY(-4px) rotate(-8deg); }}
-        60%      {{ transform: translateY(-2px) rotate(8deg); }}
+        30%      {{ transform: translateY(-5px) rotate(-9deg); }}
+        60%      {{ transform: translateY(-2px) rotate(9deg); }}
     }}
-    .stApp .fcm-header .fcm-star-svg {{
+    .stApp .fcm-star-svg {{
         animation: fcmStarBob 2.6s ease-in-out infinite;
         transform-origin: 50% 60%;
-        display: block;
-    }}
-    .stApp .fcm-header .fcm-star-b {{
-        animation-duration: 3.4s;
-        animation-delay: 0.6s;
+        display: inline-block;
     }}
     @media (prefers-reduced-motion: reduce) {{
-        .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
+        .stApp .fcm-star-svg {{ animation: none; }}
     }}
     </style>
     """, unsafe_allow_html=True)
