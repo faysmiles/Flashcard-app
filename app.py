@@ -98,7 +98,8 @@ _components.html("""
         // Target every input inside a BaseWeb select control
         par.querySelectorAll(
             'div[data-baseweb="select"] input, ' +
-            'div[data-baseweb="select"] input[type="search"]'
+            'div[data-baseweb="select"] input[type="search"], ' +
+            '.stSlider input[type="number"]'
         ).forEach(function (el) {
             if (el._kbFixed) return;
             el.setAttribute("inputmode", "none");
@@ -269,6 +270,8 @@ with st.sidebar:
         st.rerun()
 
     # ── Text Size ──────────────────────────────────────────────────────────
+    # Slider for drag users + − / + buttons for those who prefer tapping.
+    # Both update the same session state value.
     st.markdown("**Text Size**")
     _sz_minus, _sz_val, _sz_plus = st.columns([1, 2, 1])
     with _sz_minus:
@@ -287,6 +290,17 @@ with st.sidebar:
                      disabled=(st.session_state.text_size >= MAX_FONT_SIZE)):
             st.session_state.text_size = min(MAX_FONT_SIZE, st.session_state.text_size + 2)
             st.rerun()
+    new_size = st.slider(
+        "Text Size Slider",
+        MIN_FONT_SIZE, MAX_FONT_SIZE,
+        st.session_state.text_size,
+        step=2,
+        key="text_size_slider",
+        label_visibility="collapsed",
+    )
+    if new_size != st.session_state.text_size:
+        st.session_state.text_size = new_size
+        st.rerun()
 
     # ── Line Spacing ───────────────────────────────────────────────────────
     SPACING_OPTIONS = {"Tight (1.5)": 1.5, "Normal (1.8)": 1.8, "Loose (2.0)": 2.0}
