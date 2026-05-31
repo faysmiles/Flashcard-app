@@ -1991,50 +1991,17 @@ def search_wikipedia_image(query):
     if cached:
         return cached
 
-    # 2) Fetch a clean image from Pexels (better curated than Unsplash)
-    # Extract the most important keyword to search for
+    # 2) Fetch a clean image from Unsplash Source
+    # Unsplash Source requires no authentication and is reliable
     search_keyword = core_key.split()[0] if core_key else query.split()[0]
     
     try:
-        # Try Pexels API first - better curated, high-quality images
-        pexels_params = {
-            "query": search_keyword,
-            "per_page": 1,
-            "page": 1
-        }
-        pexels_response = requests.get(
-            "https://api.pexels.com/v1/search",
-            params=pexels_params,
-            timeout=10
-        )
-        
-        if pexels_response.ok:
-            pexels_data = pexels_response.json()
-            if pexels_data.get("photos"):
-                photo_url = pexels_data["photos"][0]["src"]["large"]
-                response = requests.get(photo_url, timeout=30)
-            else:
-                # Fallback: no Pexels results, try Unsplash
-                safe_keyword = urllib.parse.quote(search_keyword)
-                response = requests.get(
-                    f"https://source.unsplash.com/500x500/?{safe_keyword}",
-                    timeout=30, allow_redirects=True
-                )
-        else:
-            # Fallback to Unsplash
-            safe_keyword = urllib.parse.quote(search_keyword)
-            response = requests.get(
-                f"https://source.unsplash.com/500x500/?{safe_keyword}",
-                timeout=30, allow_redirects=True
-            )
-    except Exception as pexels_err:
-        # Final fallback to Unsplash Source
-        print(f"Pexels lookup failed, using Unsplash: {pexels_err}")
+        # Clean up keyword for URL
         safe_keyword = urllib.parse.quote(search_keyword)
-        response = requests.get(
-            f"https://source.unsplash.com/500x500/?{safe_keyword}",
-                timeout=30, allow_redirects=True
-            )
+        
+        # Unsplash Source returns a random relevant photo
+        url = f"https://source.unsplash.com/500x500/?{safe_keyword}"
+        response = requests.get(url, timeout=15, allow_redirects=True)
         
         if response.ok and response.headers.get("content-type", "").startswith("image"):
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
