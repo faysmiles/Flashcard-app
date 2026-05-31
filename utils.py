@@ -2538,6 +2538,8 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
     """
     import urllib.parse
     accent, grad_end, title_color, subtitle_color = _header_colors(colour_scheme)
+    palette = _get_scheme_palette(colour_scheme)
+    page_text = palette["text"]
 
     if colour_scheme == "Low Stimulation":
         star_divs = ""
@@ -2565,18 +2567,22 @@ def render_header(app_title, app_subtitle, text_size, colour_scheme):
             f"</div>"
         )
 
+    # Banner: title + stars only (compact).
+    # Subtitle sits below the banner in normal page flow so it never
+    # inflates the banner height on any screen size.
     st.markdown(
         f"<div class=\"fcm-header\" style=\"position:relative;text-align:center;"
-        f"padding:14px 70px;"
+        f"padding:12px 70px;"
         f"background:linear-gradient(135deg,{accent},{grad_end});"
-        f"border-radius:14px;margin-bottom:20px;\">"
+        f"border-radius:12px;margin-bottom:6px;\">"
         f"{star_divs}"
-        f"<h1 style=\"color:{title_color};margin:0;line-height:1.15;"
-        f"font-size:{int(text_size * 1.6)}px;\">"
+        f"<h1 style=\"color:{title_color};margin:0;line-height:1.2;"
+        f"font-size:{int(text_size * 1.5)}px;\">"
         f"<span class=\"fcm-title-text\">{app_title}</span></h1>"
-        f"<p style=\"color:{subtitle_color};margin:12px 0 0 0;"
-        f"margin:6px 0 0 0;font-size:{text_size}px;\">{app_subtitle}</p>"
-        f"</div>",
+        f"</div>"
+        f"<p style=\"text-align:center;color:{subtitle_color};"
+        f"font-size:{text_size}px;margin:4px 0 12px 0;"
+        f"opacity:0.8;\">{app_subtitle}</p>",
         unsafe_allow_html=True,
     )
 
