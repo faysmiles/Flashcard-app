@@ -133,7 +133,7 @@ PAGE_BG_MAP = {
 }
 
 render_header(APP_TITLE, APP_SUBTITLE, st.session_state.text_size, st.session_state.colour_scheme)
-st.markdown("<div style='margin-bottom: 28px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 render_mobile_settings_hint(st.session_state.colour_scheme)
 
 def _render_level_modal(pending_level):
@@ -331,7 +331,7 @@ st.markdown("### 📝 Your Text")
 input_type = st.radio("Input Type", ["Paste Text", "Upload File"], horizontal=True, label_visibility="collapsed")
 
 if input_type == "Paste Text":
-    user_text = st.text_area("Type or paste your text...", height=150, placeholder="Paste your text here...", label_visibility="collapsed")
+    user_text = st.text_area("Type or paste your text...", height=100, placeholder="Paste your text here...", label_visibility="collapsed")
 else:
     uploaded_file = st.file_uploader("Upload a text file (TXT, PDF, or DOCX)", type=["txt", "pdf", "docx"], label_visibility="collapsed")
     if uploaded_file:
