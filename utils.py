@@ -2533,41 +2533,48 @@ def _cute_star_img(size="1em", cls=""):
 def render_header(app_title, app_subtitle, text_size, colour_scheme):
     """Header banner tinted to match the active scheme's accent colour.
 
-    NOTE: the title/subtitle/star colours are NOT set reliably inline here.
-    Streamlit's HTML sanitizer strips `!important` from inline style attributes,
-    so an inline colour loses to the global `.stApp h1 { color: text !important }`
-    rule - which paints the title in the body-text colour. On the High Contrast
-    schemes that colour equals the banner background, making the title invisible.
-    The real colours are applied by apply_styles() via `.fcm-header` class
-    selectors inside a <style> block (where !important IS preserved) with higher
-    specificity than the blanket rule. The inline colours below are a harmless
-    fallback for the brief moment before the stylesheet loads.
-
-    Decorative stars flank the title on every scheme EXCEPT Low Stimulation,
-    which stays clean to reduce visual clutter for sensory-sensitive users.
+    Stars are placed in their own absolutely-positioned divs on either side of
+    the title, completely outside the <h1> text flow. This means the title always
+    centres on its own line on any screen width — the stars never wrap with it.
     """
     accent, grad_end, title_color, subtitle_color = _header_colors(colour_scheme)
 
     if colour_scheme == "Low Stimulation":
-        left_stars = right_stars = ""
+        stars_left_html  = ""
+        stars_right_html = ""
     else:
-        left_stars = (
-            _cute_star_img("0.7em", "fcm-star-b")
-            + _cute_star_img("1.05em", "fcm-star-a") + " "
-        )
-        right_stars = (
-            " " + _cute_star_img("1.05em", "fcm-star-a")
-            + _cute_star_img("0.7em", "fcm-star-b")
-        )
+        # Larger stars (1.6em / 2.2em) so they read as deliberate decoration,
+        # and positioned outside the title text flow entirely.
+        big   = _cute_star_img("2.2em", "fcm-star-a")
+        small = _cute_star_img("1.6em", "fcm-star-b")
+        stars_left_html = f"""
+        <div style='position:absolute; left:16px; top:50%;
+                    transform:translateY(-50%);
+                    display:flex; flex-direction:column; align-items:center;
+                    gap:4px; line-height:1;'>
+            {big}{small}
+        </div>"""
+        stars_right_html = f"""
+        <div style='position:absolute; right:16px; top:50%;
+                    transform:translateY(-50%);
+                    display:flex; flex-direction:column; align-items:center;
+                    gap:4px; line-height:1;'>
+            {big}{small}
+        </div>"""
 
     st.markdown(f"""
-    <div class="fcm-header" style='text-align:center; padding:24px 20px;
+    <div class="fcm-header" style='position:relative; text-align:center;
+                padding:24px 80px;
                 background:linear-gradient(135deg, {accent}, {grad_end});
                 border-radius:14px; margin-bottom:20px;'>
+        {stars_left_html}
         <h1 style='color:{title_color}; margin:0; line-height:1.15;
-                   font-size:{text_size * 2}px;'>{left_stars}<span class="fcm-title-text">{app_title}</span>{right_stars}</h1>
+                   font-size:{text_size * 2}px;'>
+            <span class="fcm-title-text">{app_title}</span>
+        </h1>
         <p style='color:{subtitle_color}; margin:12px 0 0 0;
                   font-size:{text_size}px;'>{app_subtitle}</p>
+        {stars_right_html}
     </div>
     """, unsafe_allow_html=True)
 
@@ -2843,37 +2850,21 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         color: {header_subtitle_col} !important;
         font-size: {text_size}px !important;
     }}
-    .stApp .fcm-header h1 * {{
-        color: {header_title_col} !important;
-    }}
-    /* Decorative stars: themed colour + a crisp 1px outline in the title    */
-    /* colour so they pop on any banner. Higher specificity (0,3,0) than the  */
-    /* `.fcm-header h1 *` rule (0,2,1) so the star colour wins.               */
-    .stApp .fcm-header .fcm-star {{
-        color: {star_col} !important;
-        display: inline-block;
-        text-shadow: -1px -1px 0 {header_title_col}, 1px -1px 0 {header_title_col},
-                     -1px 1px 0 {header_title_col}, 1px 1px 0 {header_title_col};
-    }}
-    .stApp .fcm-header .fcm-star-sm {{
-        font-size: 0.6em;
-        vertical-align: 0.25em;
-        opacity: 0.9;
-    }}
-    /* Cute star gentle bob + wiggle. Disabled automatically when the user   */
-    /* has asked their device for reduced motion (sensory-friendly).         */
+    /* Stars are now outside the h1 — no need to force-colour h1 children    */
+    /* Cute star gentle bob + wiggle. Disabled when prefers-reduced-motion.  */
     @keyframes fcmStarBob {{
         0%, 100% {{ transform: translateY(0) rotate(0deg); }}
-        30%      {{ transform: translateY(-3px) rotate(-7deg); }}
-        60%      {{ transform: translateY(-1px) rotate(7deg); }}
+        30%      {{ transform: translateY(-4px) rotate(-8deg); }}
+        60%      {{ transform: translateY(-2px) rotate(8deg); }}
     }}
     .stApp .fcm-header .fcm-star-svg {{
         animation: fcmStarBob 2.6s ease-in-out infinite;
         transform-origin: 50% 60%;
+        display: block;
     }}
     .stApp .fcm-header .fcm-star-b {{
-        animation-duration: 3.2s;
-        animation-delay: 0.5s;
+        animation-duration: 3.4s;
+        animation-delay: 0.6s;
     }}
     @media (prefers-reduced-motion: reduce) {{
         .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
