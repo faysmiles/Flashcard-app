@@ -2607,6 +2607,7 @@ def render_mobile_settings_hint(colour_scheme="Soft Blue"):
     """, unsafe_allow_html=True)
 
 
+
 def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     """Re-theme the whole Streamlit app to the chosen scheme.
 
@@ -2830,15 +2831,6 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         readonly: true !important;
     }}
 
-    /* ---- MOBILE FIX: prevent selectbox from opening soft keyboard ---- */
-    /* BaseWeb select renders an invisible <input> for search/typeahead.
-       On mobile this can trigger the keyboard before the dropdown opens.
-       CSS alone cannot set inputmode="none" — that requires JS (injected below).
-       This rule only handles the iOS auto-zoom-on-focus side-effect. */
-    div[data-baseweb="select"] input {{
-        font-size: 16px !important; /* iOS: prevents auto-zoom on focus */
-    }}
-
     /* ---- Links ---- */
     .stApp a {{ color: {accent} !important; }}
 
@@ -2892,56 +2884,4 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
     }}
     </style>
-
-    <script>
-    /*
-     * MOBILE KEYBOARD FIX
-     * -------------------
-     * Streamlit selectbox (BaseWeb) and slider both render hidden <input>
-     * elements. CSS cannot set inputmode or readonly as real DOM attributes —
-     * those must be set via JavaScript.
-     *
-     *   inputmode="none"  -> tells mobile browsers: no soft keyboard
-     *   readonly          -> prevents typing even if the input gets focus
-     *   tabIndex=-1       -> removes the input from the tab order entirely
-     *
-     * We patch immediately, then re-patch on every Streamlit re-render via
-     * MutationObserver (Streamlit replaces DOM nodes on each rerun).
-     */
-    (function patchMobileInputs() {{
-        function patch() {{
-            // 1. SelectBox search inputs (BaseWeb)
-            document.querySelectorAll('div[data-baseweb="select"] input').forEach(function(el) {{
-                el.setAttribute('inputmode', 'none');
-                el.setAttribute('readonly', '');
-                el.tabIndex = -1;
-                if (!el._mobilePatchDone) {{
-                    el.addEventListener('focus', function() {{ el.blur(); }}, true);
-                    el._mobilePatchDone = true;
-                }}
-            }});
-
-            // 2. Slider hidden number inputs
-            document.querySelectorAll('.stSlider input').forEach(function(el) {{
-                el.setAttribute('inputmode', 'none');
-                el.setAttribute('readonly', '');
-                el.tabIndex = -1;
-                if (!el._mobilePatchDone) {{
-                    el.addEventListener('focus', function() {{ el.blur(); }}, true);
-                    el._mobilePatchDone = true;
-                }}
-            }});
-        }}
-
-        // Run once immediately
-        patch();
-
-        // Re-run whenever Streamlit re-renders
-        var observer = new MutationObserver(function(mutations) {{
-            var needsPatch = mutations.some(function(m) {{ return m.addedNodes.length > 0; }});
-            if (needsPatch) {{ patch(); }}
-        }});
-        observer.observe(document.body, {{ childList: true, subtree: true }});
-    }})();
-    </script>
     """, unsafe_allow_html=True)
