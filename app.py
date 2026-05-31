@@ -330,55 +330,7 @@ if st.session_state.pending_reading_level:
 st.markdown("### 📝 Your Text")
 
 # --- Example chips (only shown before any deck is made) ---
-SAMPLE_TEXTS = {
-    "🌱 Photosynthesis": (
-        "Photosynthesis is the process by which green plants, algae and some bacteria "
-        "convert light energy into chemical energy stored in glucose. It takes place "
-        "mainly in the leaves, inside structures called chloroplasts, which contain a "
-        "green pigment called chlorophyll. Chlorophyll absorbs sunlight, mostly red and "
-        "blue light, and reflects green light, which is why plants look green. During "
-        "photosynthesis, plants take in carbon dioxide from the air through tiny pores "
-        "called stomata, and absorb water from the soil through their roots. Using light "
-        "energy, the plant combines carbon dioxide and water to produce glucose and oxygen. "
-        "The glucose is used as food for energy and growth, while the oxygen is released "
-        "back into the air. This process is essential for life on Earth because it produces "
-        "the oxygen that animals and humans need to breathe."
-    ),
-    "🏰 Causes of WW1": (
-        "The First World War began in 1914 and was caused by a combination of long-term "
-        "and short-term factors. The main long-term causes are often summarised as "
-        "militarism, alliances, imperialism and nationalism. Militarism meant that "
-        "European countries were building up large armies and navies and were ready to "
-        "use them. A system of alliances divided Europe into two armed camps: the Triple "
-        "Alliance of Germany, Austria-Hungary and Italy, and the Triple Entente of Britain, "
-        "France and Russia. Imperialism created rivalry as nations competed for colonies "
-        "and resources around the world. Nationalism made people fiercely loyal to their "
-        "own countries and eager to expand. The spark that triggered the war was the "
-        "assassination of Archduke Franz Ferdinand of Austria-Hungary in Sarajevo in June "
-        "1914. This set off a chain reaction of declarations of war across the alliance system."
-    ),
-    "🌊 The Water Cycle": (
-        "The water cycle, also called the hydrological cycle, describes how water moves "
-        "continuously around our planet. It is powered by energy from the sun. The cycle "
-        "begins with evaporation, where heat from the sun turns liquid water in oceans, "
-        "rivers and lakes into water vapour, a gas that rises into the air. Plants also "
-        "release water vapour through a process called transpiration. As the water vapour "
-        "rises higher, it cools down and turns back into tiny droplets of liquid water in "
-        "a process called condensation, forming clouds. When these droplets join together "
-        "and become heavy enough, they fall back to the ground as precipitation, which can "
-        "be rain, snow, sleet or hail. This water then collects in rivers and oceans, or "
-        "soaks into the ground as groundwater, and the whole cycle begins again."
-    ),
-}
 
-if not st.session_state.flashcard_generated:
-    st.caption("✨ New here? Tap an example to try it out:")
-    _chip_cols = st.columns(len(SAMPLE_TEXTS))
-    for _i, (_label, _text) in enumerate(SAMPLE_TEXTS.items()):
-        with _chip_cols[_i]:
-            if st.button(_label, key=f"sample_{_i}", use_container_width=True):
-                st.session_state.main_text_input = _text
-                st.rerun()
 
 input_type = st.radio("Input Type", ["Paste Text", "Upload File"], horizontal=True, label_visibility="collapsed")
 
