@@ -4,6 +4,8 @@ import re
 import os
 import requests
 import json
+import urllib.parse
+import base64
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from openai import OpenAI
@@ -1989,53 +1991,48 @@ def search_wikipedia_image(query):
     if cached:
         return cached
 
-    # 2) Fetch a clean image from Unsplash (no AI-generated text artifacts)
-        import urllib.parse
-        import base64
+    # 2) Fetch a clean image from Pexels (better curated than Unsplash)
+    # Extract the most important keyword to search for
+    search_keyword = core_key.split()[0] if core_key else query.split()[0]
+    
+    try:
+        # Try Pexels API first - better curated, high-quality images
+        pexels_params = {
+            "query": search_keyword,
+            "per_page": 1,
+            "page": 1
+        }
+        pexels_response = requests.get(
+            "https://api.pexels.com/v1/search",
+            params=pexels_params,
+            timeout=10
+        )
         
-        # Use Unsplash Source API instead of Pollinations
-        # Unsplash gives real photography with ZERO text/label issues
-        # Extract the most important keyword to search for
-        search_keyword = core_key.split()[0] if core_key else query.split()[0]
-        
-        try:
-            # Try Pexels API first - better curated, high-quality images
-            pexels_params = {
-                "query": search_keyword,
-                "per_page": 1,
-                "page": 1
-            }
-            pexels_response = requests.get(
-                "https://api.pexels.com/v1/search",
-                params=pexels_params,
-                timeout=10
-            )
-            
-            if pexels_response.ok:
-                pexels_data = pexels_response.json()
-                if pexels_data.get("photos"):
-                    photo_url = pexels_data["photos"][0]["src"]["large"]
-                    response = requests.get(photo_url, timeout=30)
-                else:
-                    # Fallback: no Pexels results, try Unsplash
-                    safe_keyword = urllib.parse.quote(search_keyword)
-                    response = requests.get(
-                        f"https://source.unsplash.com/500x500/?{safe_keyword}",
-                        timeout=30, allow_redirects=True
-                    )
+        if pexels_response.ok:
+            pexels_data = pexels_response.json()
+            if pexels_data.get("photos"):
+                photo_url = pexels_data["photos"][0]["src"]["large"]
+                response = requests.get(photo_url, timeout=30)
             else:
-                # Fallback to Unsplash
+                # Fallback: no Pexels results, try Unsplash
                 safe_keyword = urllib.parse.quote(search_keyword)
                 response = requests.get(
                     f"https://source.unsplash.com/500x500/?{safe_keyword}",
                     timeout=30, allow_redirects=True
                 )
-        except Exception as pexels_err:
-            # Final fallback to Unsplash Source
-            print(f"Pexels lookup failed, using Unsplash: {pexels_err}")
+        else:
+            # Fallback to Unsplash
             safe_keyword = urllib.parse.quote(search_keyword)
             response = requests.get(
                 f"https://source.unsplash.com/500x500/?{safe_keyword}",
+                timeout=30, allow_redirects=True
+            )
+    except Exception as pexels_err:
+        # Final fallback to Unsplash Source
+        print(f"Pexels lookup failed, using Unsplash: {pexels_err}")
+        safe_keyword = urllib.parse.quote(search_keyword)
+        response = requests.get(
+            f"https://source.unsplash.com/500x500/?{safe_keyword}",
                 timeout=30, allow_redirects=True
             )
         
