@@ -2603,10 +2603,12 @@ def render_mobile_settings_hint(colour_scheme="Soft Blue"):
     border = _mix(palette["bg"], accent, 0.30)
 
     st.markdown(f"""
-    <div style='background:{box_bg}; padding:10px 14px; border-radius:8px;
-                margin-bottom:15px; text-align:center; font-size:14px;
-                border:1px solid {border}; color:{text};'>
-        ⚙️ Tap the <strong style='color:{accent};'>arrow icon</strong> in the top-left corner to open settings!
+    <div style='display:flex; justify-content:center; margin-bottom:15px;'>
+      <div style='background:{box_bg}; padding:8px 18px; border-radius:8px;
+                  text-align:center; font-size:14px; display:inline-block;
+                  border:1px solid {border}; color:{text};'>
+          ⚙️ Tap the <strong style='color:{accent};'>arrow icon</strong> in the top-left corner to open settings!
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2801,6 +2803,16 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         border-radius: 10px !important;
         padding: 10px 20px !important;
         font-weight: 700 !important;
+        max-width: 340px !important;
+        width: auto !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        display: block !important;
+    }}
+    /* Ensure the button wrapper also centres */
+    .stButton, .stDownloadButton {{
+        display: flex !important;
+        justify-content: center !important;
     }}
     .stButton > button *, .stDownloadButton > button * {{
         color: {on_accent} !important;
