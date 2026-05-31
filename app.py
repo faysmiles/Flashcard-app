@@ -270,33 +270,12 @@ with st.sidebar:
         st.rerun()
 
     # ── Text Size ──────────────────────────────────────────────────────────
-    # Slider for drag users + − / + buttons for those who prefer tapping.
-    # Both update the same session state value.
-    st.markdown("**Text Size**")
-    _sz_minus, _sz_val, _sz_plus = st.columns([1, 2, 1])
-    with _sz_minus:
-        if st.button("−", key="txt_size_down", use_container_width=True,
-                     disabled=(st.session_state.text_size <= MIN_FONT_SIZE)):
-            st.session_state.text_size = max(MIN_FONT_SIZE, st.session_state.text_size - 2)
-            st.rerun()
-    with _sz_val:
-        st.markdown(
-            f"<p style='text-align:center;font-weight:700;margin:6px 0;font-size:1.1em'>"
-            f"{st.session_state.text_size}px</p>",
-            unsafe_allow_html=True,
-        )
-    with _sz_plus:
-        if st.button("+", key="txt_size_up", use_container_width=True,
-                     disabled=(st.session_state.text_size >= MAX_FONT_SIZE)):
-            st.session_state.text_size = min(MAX_FONT_SIZE, st.session_state.text_size + 2)
-            st.rerun()
     new_size = st.slider(
-        "Text Size Slider",
+        "Text Size",
         MIN_FONT_SIZE, MAX_FONT_SIZE,
         st.session_state.text_size,
         step=2,
         key="text_size_slider",
-        label_visibility="collapsed",
     )
     if new_size != st.session_state.text_size:
         st.session_state.text_size = new_size
