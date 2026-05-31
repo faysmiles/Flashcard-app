@@ -2833,19 +2833,10 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     /* ---- MOBILE FIX: prevent selectbox from opening soft keyboard ---- */
     /* BaseWeb select renders an invisible <input> for search/typeahead.
        On mobile this can trigger the keyboard before the dropdown opens.
-       Setting inputmode=none via CSS isn't possible, but we can block
-       focus on the input while keeping the clickable div above it. */
+       CSS alone cannot set inputmode="none" — that requires JS (injected below).
+       This rule only handles the iOS auto-zoom-on-focus side-effect. */
     div[data-baseweb="select"] input {{
-        pointer-events: none !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
-        opacity: 0 !important;
-        position: absolute !important;
-        width: 1px !important;
-        height: 1px !important;
-        overflow: hidden !important;
-        clip: rect(0,0,0,0) !important;
-        font-size: 16px !important; /* iOS: prevents zoom on focus (belt-and-braces) */
+        font-size: 16px !important; /* iOS: prevents auto-zoom on focus */
     }}
 
     /* ---- Links ---- */
@@ -2901,4 +2892,56 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         .stApp .fcm-header .fcm-star-svg {{ animation: none; }}
     }}
     </style>
+
+    <script>
+    /*
+     * MOBILE KEYBOARD FIX
+     * -------------------
+     * Streamlit selectbox (BaseWeb) and slider both render hidden <input>
+     * elements. CSS cannot set inputmode or readonly as real DOM attributes —
+     * those must be set via JavaScript.
+     *
+     *   inputmode="none"  -> tells mobile browsers: no soft keyboard
+     *   readonly          -> prevents typing even if the input gets focus
+     *   tabIndex=-1       -> removes the input from the tab order entirely
+     *
+     * We patch immediately, then re-patch on every Streamlit re-render via
+     * MutationObserver (Streamlit replaces DOM nodes on each rerun).
+     */
+    (function patchMobileInputs() {{
+        function patch() {{
+            // 1. SelectBox search inputs (BaseWeb)
+            document.querySelectorAll('div[data-baseweb="select"] input').forEach(function(el) {{
+                el.setAttribute('inputmode', 'none');
+                el.setAttribute('readonly', '');
+                el.tabIndex = -1;
+                if (!el._mobilePatchDone) {{
+                    el.addEventListener('focus', function() {{ el.blur(); }}, true);
+                    el._mobilePatchDone = true;
+                }}
+            }});
+
+            // 2. Slider hidden number inputs
+            document.querySelectorAll('.stSlider input').forEach(function(el) {{
+                el.setAttribute('inputmode', 'none');
+                el.setAttribute('readonly', '');
+                el.tabIndex = -1;
+                if (!el._mobilePatchDone) {{
+                    el.addEventListener('focus', function() {{ el.blur(); }}, true);
+                    el._mobilePatchDone = true;
+                }}
+            }});
+        }}
+
+        // Run once immediately
+        patch();
+
+        // Re-run whenever Streamlit re-renders
+        var observer = new MutationObserver(function(mutations) {{
+            var needsPatch = mutations.some(function(m) {{ return m.addedNodes.length > 0; }});
+            if (needsPatch) {{ patch(); }}
+        }});
+        observer.observe(document.body, {{ childList: true, subtree: true }});
+    }})();
+    </script>
     """, unsafe_allow_html=True)
