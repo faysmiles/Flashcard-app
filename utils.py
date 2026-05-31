@@ -2750,6 +2750,7 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
         color: {text} !important;
         border: 1px solid {border_col} !important;
         border-radius: 8px !important;
+        cursor: pointer !important;
     }}
     div[data-baseweb="select"] svg {{ fill: {text} !important; }}
     /* dropdown menu popover */
@@ -2757,10 +2758,23 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     ul[role="listbox"] li {{
         background-color: {input_bg} !important;
         color: {text} !important;
+        cursor: pointer !important;
     }}
     div[data-baseweb="popover"] li:hover,
     ul[role="listbox"] li:hover {{
         background-color: {_mix(input_bg, accent, 0.20)} !important;
+        cursor: pointer !important;
+    }}
+
+    /* ---- Slider — pointer on track and thumb ---- */
+    .stSlider [data-baseweb="slider"],
+    .stSlider [data-baseweb="slider"] * {{
+        cursor: pointer !important;
+    }}
+
+    /* ---- Checkbox ---- */
+    .stCheckbox label {{
+        cursor: pointer !important;
     }}
 
     /* ---- Radio + checkbox ---- */
