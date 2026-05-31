@@ -1971,128 +1971,11 @@ def _cache_store(core_key, full_description, image_bytes, mime):
         return None
 
 
-def _build_image_prompt_from_facts(title, facts):
-    """Extract key visual keywords from title and facts for UnDraw search."""
-    visual_words = []
-    stop_words = {
-        'a', 'an', 'the', 'is', 'are', 'has', 'have', 'and', 'or', 'of', 'in', 'on',
-        'it', 'this', 'that', 'which', 'with', 'to', 'for', 'at', 'by', 'from',
-        'be', 'been', 'being', 'do', 'does', 'did', 'can', 'could', 'would',
-        'should', 'may', 'might', 'must', 'will', 'shall', 'very', 'just'
-    }
-    
-    # Process title first
-    title_words = title.lower().split()
-    for word in title_words:
-        clean = re.sub(r'[^a-z0-9]', '', word)
-        if clean and len(clean) > 2 and clean not in stop_words:
-            visual_words.append(clean)
-            if len(visual_words) >= 3:
-                break
-    
-    # If title gave us keywords, return the first one
-    if visual_words:
-        return visual_words[0]
-    
-    # Otherwise try facts
-    if isinstance(facts, list):
-        for fact in facts:
-            if isinstance(fact, dict):
-                text = fact.get('text', '')
-            else:
-                text = str(fact)
-            
-            words = text.lower().split()
-            for word in words:
-                clean = re.sub(r'[^a-z0-9]', '', word)
-                if clean and len(clean) > 3 and clean not in stop_words:
-                    return clean
-    
-    # Fallback to query itself
-    return title.split()[0] if title else "learning"
-
-
-def _is_geography_topic(query):
-    """Detect if this is a geography/map-related topic."""
-    geography_keywords = {
-        'map', 'country', 'continent', 'state', 'region', 'province',
-        'ocean', 'sea', 'river', 'mountain', 'geography', 'location',
-        'border', 'capital', 'city', 'nation', 'territory', 'world',
-        'europe', 'asia', 'africa', 'america', 'australia', 'atlantic',
-        'pacific', 'indian', 'arctic', 'france', 'spain', 'germany',
-        'england', 'italy', 'greece', 'china', 'japan', 'india',
-        'brazil', 'egypt', 'north', 'south', 'east', 'west', 'coast',
-        'island', 'peninsula', 'gulf', 'bay', 'lake', 'forest',
-        'desert', 'plains', 'valley', 'plateau', 'canyon', 'glacier',
-        'terrain', 'landscape', 'topography', 'atlas', 'globe', 'glance',
-        'at a glance', 'overview'
-    }
-    
-    query_lower = query.lower()
-    for keyword in geography_keywords:
-        if keyword in query_lower:
-            return True
-    return False
-
-
-def _fetch_wikipedia_map(query):
-    """Fetch a clean map/geography image from Wikipedia.
-    Returns the image URL or None if not found."""
-    try:
-        search_url = "https://en.wikipedia.org/w/api.php"
-        
-        # 1) Find the Wikipedia page
-        params = {
-            "action": "query",
-            "format": "json",
-            "list": "search",
-            "srsearch": query,
-            "srlimit": 1
-        }
-        response = requests.get(search_url, params=params, timeout=10)
-        results = response.json().get("query", {}).get("search", [])
-        
-        if not results:
-            print(f"Wikipedia search found no results for '{query}'")
-            return None
-        
-        title = results[0]["title"]
-        print(f"Found Wikipedia article: {title}")
-        
-        # 2) Get the page's main image
-        params2 = {
-            "action": "query",
-            "format": "json",
-            "titles": title,
-            "prop": "pageimages",
-            "pithumbsize": 500,
-            "piprop": "thumbnail"
-        }
-        response2 = requests.get(search_url, params=params2, timeout=10)
-        pages = response2.json().get("query", {}).get("pages", {})
-        
-        for page in pages.values():
-            thumb = page.get("thumbnail", {}).get("source")
-            if thumb:
-                print(f"Found Wikipedia image: {thumb[:80]}...")
-                return thumb
-        
-        print(f"No image found for Wikipedia article: {title}")
-        return None
-        
-    except Exception as e:
-        print(f"Wikipedia map fetch error for '{query}': {e}")
-        return None
-
-
 @st.cache_data(show_spinner=False, ttl=3600)
-def search_wikipedia_image(query, facts=None):
-    """Return an image URL using smart routing:
-    
-    Geography topics: Wikipedia maps (clean, educational, with labels)
-    Everything else: Pollinations anime style (zero text illustrations)
-    
-    Perfect for dyslexic learners.
+def search_wikipedia_image(query):
+    """Return an image URL for the topic query.
+    Order: Supabase cache (short core key) -> generate via Pollinations
+    then save to cache for everyone else.
     """
     if not query:
         return None
@@ -2106,73 +1989,33 @@ def search_wikipedia_image(query, facts=None):
     if cached:
         return cached
 
-    # 2) Route based on topic type
-    if _is_geography_topic(query):
-        # Geography topics → ONLY use Wikipedia maps, no fallback to AI
-        print(f"Geography topic detected: '{query}' → Fetching from Wikipedia")
-        wiki_url = _fetch_wikipedia_map(query)
-        if wiki_url:
-            return wiki_url
-        else:
-            # If Wikipedia has no image, return None (show emoji instead)
-            # Don't fall back to Pollinations for geography topics
-            print(f"No Wikipedia map found for '{query}' - returning None")
-            return None
-    
-    # 3) Non-geography topics → Pollinations anime style (zero text)
-    print(f"Anime topic detected: '{query}' → Using Pollinations")
+    # 2) Generate a fresh image
     api_key = _get_pollinations_key()
     if not api_key:
         return None
 
+    prompt = (
+        f"cheerful educational illustration of {query}, "
+        "child-friendly, bright flat colours, friendly cartoon style, "
+        "simple clean background, appropriate for ages 4 to 18, "
+        "no people, no violence, no scary imagery, no text, no labels"
+    )
+
     try:
         import urllib.parse
         import base64
-        
-        # Build prompt: anime/illustration style, child-appropriate
-        prompt = (
-            f"cute anime illustration of {query}, "
-            "colorful, expressive, simple cartoon style, "
-            "bright colors, child-friendly, storybook illustration, "
-            "no diagram, no educational poster, no infographic, "
-            "illustration only, just the character or object, clean background"
-        )
-        
-        # EXTREME SAFETY GUARDRAILS - block ALL text and label elements
-        negative_prompt = (
-            "text, words, letters, writing, numbers, digits, symbols, "
-            "labels, captions, annotations, callouts, pointers, arrows, "
-            "diagram, infographic, chart, graph, ui elements, buttons, "
-            "label box, text box, speech bubble, dialog, title, subtitle, "
-            "educational poster, instruction, guide, manual, "
-            "watermark, logo, signature, stamp, badge, ribbon, banner, sign, "
-            "yellow label, label text, annotation text, pointing, bracketed text, "
-            "violence, weapons, gore, blood, scary, horror, dark, "
-            "inappropriate, adult, sexual, suggestive, harmful, "
-            "gun, knife, fight, battle, war, death, weapon, "
-            "realistic, photorealistic, photo, blurry, low quality, ugly, artifacts"
-        )
-        
-        encoded_prompt = urllib.parse.quote(prompt)
-        encoded_negative = urllib.parse.quote(negative_prompt)
-        
-        url = (
-            f"https://gen.pollinations.ai/image/{encoded_prompt}"
-            f"?model=flux&key={api_key}&width=500&height=500&nologo=true"
-            f"&negative={encoded_negative}"
-        )
-        
+        encoded = urllib.parse.quote(prompt)
+        url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
         response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
-            # Cache the image
+            # 3) Save to cache using short key + full description
             public_url = _cache_store(core_key, query, response.content, mime)
             if public_url:
                 return public_url
-            # Fallback: return as base64
+            # Fallback: cache not configured or upload failed
             b64 = base64.b64encode(response.content).decode()
             return f"data:{mime};base64,{b64}"
-    
     except Exception as e:
         print(f"Pollinations error for '{query}': {e}")
 
