@@ -603,14 +603,16 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     card_bg_color = card_colors.get('card_bg', '#FFFEF9')
     sticker_size = 44
     if has_image:
+        from utils import twemojify
+        _sticker_emoji = twemojify(emoji, size=f"{sticker_size - 14}px")
         sticker_html = (
             f"<div style='position:absolute; top:-8px; right:-8px; "
             f"width:{sticker_size}px; height:{sticker_size}px; border-radius:50%; "
             f"background:{accent_color}; display:flex; align-items:center; "
-            f"justify-content:center; font-size:24px; line-height:1; "
+            f"justify-content:center; line-height:1; "
             f"border:3px solid {card_bg_color}; "
             f"box-shadow:0 2px 8px rgba(0,0,0,0.25); z-index:2;' "
-            f"aria-hidden='true'>{emoji}</div>"
+            f"aria-hidden='true'>{_sticker_emoji}</div>"
         )
         image_frame_style = (
             f"box-shadow:0 0 0 4px {accent_color}, "
