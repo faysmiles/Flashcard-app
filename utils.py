@@ -2531,44 +2531,46 @@ def _cute_star_img(size="1em", cls=""):
 
 
 def render_header(app_title, app_subtitle, text_size, colour_scheme):
-    """Header banner tinted to match the active scheme's accent colour.
-
-    Stars are absolutely positioned outside the h1 so the title always
-    centres cleanly on mobile — they never wrap with the text.
-    """
+    """Header banner — clean title with a row of animated stars above it."""
     import urllib.parse
     accent, grad_end, title_color, subtitle_color = _header_colors(colour_scheme)
     palette = _get_scheme_palette(colour_scheme)
     page_text = palette["text"]
 
     if colour_scheme == "Low Stimulation":
-        star_divs = ""
+        star_row = ""
     else:
         svg = urllib.parse.quote(_cute_star_svg_markup())
         uri = f"data:image/svg+xml;utf8,{svg}"
-        # Single star each side, absolutely positioned and centred on the
-        # title line. overflow:hidden on the banner means they can never
-        # push the banner taller than the title text + padding.
-        star_divs = (
-            f"<img class=\"fcm-star-svg fcm-star-a\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
-            f"style=\"position:absolute;left:14px;top:50%;transform:translateY(-50%);"
-            f"height:1.8em;width:1.8em;\" />"
-            f"<img class=\"fcm-star-svg fcm-star-b\" src=\"{uri}\" alt=\"\" aria-hidden=\"true\" "
-            f"style=\"position:absolute;right:14px;top:50%;transform:translateY(-50%);"
-            f"height:1.8em;width:1.8em;\" />"
+        # 5 stars in a row above the banner, graduating in size centre-out,
+        # each with a staggered animation delay for a ripple effect.
+        sizes  = ["1.0em", "1.4em", "1.8em", "1.4em", "1.0em"]
+        delays = ["0.0s",  "0.25s", "0.5s",  "0.75s", "1.0s"]
+        classes= ["fcm-star-b","fcm-star-a","fcm-star-b","fcm-star-a","fcm-star-b"]
+        imgs = "".join(
+            f"<img class=\"{cls} fcm-star-svg\" src=\"{uri}\" "
+            f"alt=\"\" aria-hidden=\"true\" "
+            f"style=\"height:{sz};width:{sz};display:inline-block;"
+            f"animation-delay:{dl};\" />"
+            for sz, dl, cls in zip(sizes, delays, classes)
+        )
+        star_row = (
+            f"<div style=\"display:flex;justify-content:center;align-items:flex-end;"
+            f"gap:6px;margin-bottom:4px;\">{imgs}</div>"
         )
 
     st.markdown(
-        f"<div style=\"display:flex;justify-content:center;margin-bottom:6px;\">"
-        f"<div class=\"fcm-header\" style=\"position:relative;text-align:center;"
-        f"padding:10px 50px;overflow:hidden;display:inline-block;max-width:min(92vw,600px);"
+        f"<div style=\"text-align:center;margin-bottom:6px;\">"
+        f"{star_row}"
+        f"<div class=\"fcm-header\" style=\"display:inline-block;text-align:center;"
+        f"padding:10px 28px;"
         f"background:linear-gradient(135deg,{accent},{grad_end});"
-        f"border-radius:12px;\">"
-        f"{star_divs}"
+        f"border-radius:12px;max-width:min(92vw,560px);\">"
         f"<h1 style=\"color:{title_color};margin:0;line-height:1.2;"
         f"font-size:{int(text_size * 1.5)}px;\">"
         f"<span class=\"fcm-title-text\">{app_title}</span></h1>"
-        f"</div></div>"
+        f"</div>"
+        f"</div>"
         f"<p style=\"text-align:center;color:{page_text};"
         f"font-size:{text_size}px;margin:4px 0 12px 0;"
         f"opacity:0.75;\">{app_subtitle}</p>",
