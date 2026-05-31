@@ -1995,17 +1995,31 @@ def search_wikipedia_image(query):
         return None
 
     prompt = (
-        f"cheerful educational illustration of {query}, "
-        "child-friendly, bright flat colours, friendly cartoon style, "
-        "simple clean background, appropriate for ages 4 to 18, "
-        "no people, no violence, no scary imagery, no text, no labels"
+        f"educational illustration of {query}, "
+        "colorful, clean, professional diagram style, "
+        "bright friendly colors, flat design, simple clean background, "
+        "appropriate for students ages 4 to 18, child-friendly, "
+        "no people, no violence, no scary content"
+    )
+    
+    negative_prompt = (
+        "text, letters, words, labels, captions, typography, "
+        "handwriting, signatures, watermark, script, font, "
+        "writing, banner, sign, label, title, annotation, "
+        "blurry, low quality, distorted, ugly"
     )
 
     try:
         import urllib.parse
         import base64
-        encoded = urllib.parse.quote(prompt)
-        url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
+        # Build URL with both positive and negative prompts for maximum clarity
+        encoded_prompt = urllib.parse.quote(prompt)
+        encoded_negative = urllib.parse.quote(negative_prompt)
+        url = (
+            f"https://gen.pollinations.ai/image/{encoded_prompt}"
+            f"?model=flux&key={api_key}&width=500&height=500&nologo=true"
+            f"&negative={encoded_negative}"
+        )
         response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
