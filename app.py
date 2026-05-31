@@ -72,6 +72,7 @@ defaults = {
     "stored_user_text": "",
     "show_level_banner": False,
     "show_images_state": True,
+    "main_text_input": "",
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -328,10 +329,61 @@ if st.session_state.pending_reading_level:
 
 st.markdown("### 📝 Your Text")
 
+# --- Example chips (only shown before any deck is made) ---
+SAMPLE_TEXTS = {
+    "🌱 Photosynthesis": (
+        "Photosynthesis is the process by which green plants, algae and some bacteria "
+        "convert light energy into chemical energy stored in glucose. It takes place "
+        "mainly in the leaves, inside structures called chloroplasts, which contain a "
+        "green pigment called chlorophyll. Chlorophyll absorbs sunlight, mostly red and "
+        "blue light, and reflects green light, which is why plants look green. During "
+        "photosynthesis, plants take in carbon dioxide from the air through tiny pores "
+        "called stomata, and absorb water from the soil through their roots. Using light "
+        "energy, the plant combines carbon dioxide and water to produce glucose and oxygen. "
+        "The glucose is used as food for energy and growth, while the oxygen is released "
+        "back into the air. This process is essential for life on Earth because it produces "
+        "the oxygen that animals and humans need to breathe."
+    ),
+    "🏰 Causes of WW1": (
+        "The First World War began in 1914 and was caused by a combination of long-term "
+        "and short-term factors. The main long-term causes are often summarised as "
+        "militarism, alliances, imperialism and nationalism. Militarism meant that "
+        "European countries were building up large armies and navies and were ready to "
+        "use them. A system of alliances divided Europe into two armed camps: the Triple "
+        "Alliance of Germany, Austria-Hungary and Italy, and the Triple Entente of Britain, "
+        "France and Russia. Imperialism created rivalry as nations competed for colonies "
+        "and resources around the world. Nationalism made people fiercely loyal to their "
+        "own countries and eager to expand. The spark that triggered the war was the "
+        "assassination of Archduke Franz Ferdinand of Austria-Hungary in Sarajevo in June "
+        "1914. This set off a chain reaction of declarations of war across the alliance system."
+    ),
+    "🌊 The Water Cycle": (
+        "The water cycle, also called the hydrological cycle, describes how water moves "
+        "continuously around our planet. It is powered by energy from the sun. The cycle "
+        "begins with evaporation, where heat from the sun turns liquid water in oceans, "
+        "rivers and lakes into water vapour, a gas that rises into the air. Plants also "
+        "release water vapour through a process called transpiration. As the water vapour "
+        "rises higher, it cools down and turns back into tiny droplets of liquid water in "
+        "a process called condensation, forming clouds. When these droplets join together "
+        "and become heavy enough, they fall back to the ground as precipitation, which can "
+        "be rain, snow, sleet or hail. This water then collects in rivers and oceans, or "
+        "soaks into the ground as groundwater, and the whole cycle begins again."
+    ),
+}
+
+if not st.session_state.flashcard_generated:
+    st.caption("✨ New here? Tap an example to try it out:")
+    _chip_cols = st.columns(len(SAMPLE_TEXTS))
+    for _i, (_label, _text) in enumerate(SAMPLE_TEXTS.items()):
+        with _chip_cols[_i]:
+            if st.button(_label, key=f"sample_{_i}", use_container_width=True):
+                st.session_state.main_text_input = _text
+                st.rerun()
+
 input_type = st.radio("Input Type", ["Paste Text", "Upload File"], horizontal=True, label_visibility="collapsed")
 
 if input_type == "Paste Text":
-    user_text = st.text_area("Type or paste your text...", height=100, placeholder="Paste your text here...", label_visibility="collapsed")
+    user_text = st.text_area("Type or paste your text...", height=100, placeholder="Paste your text here...", label_visibility="collapsed", key="main_text_input")
 else:
     uploaded_file = st.file_uploader("Upload a text file (TXT, PDF, or DOCX)", type=["txt", "pdf", "docx"], label_visibility="collapsed")
     if uploaded_file:
@@ -526,8 +578,17 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     st.markdown(f"### 📚 Your Flashcards ({len(flashcards)} cards)")
 
     flipped_count = sum(1 for i in range(len(flashcards)) if st.session_state.card_flipped.get(i, False))
+    _pct = int((flipped_count / len(flashcards)) * 100) if flashcards else 0
+    _accent = card_colors.get('accent', '#3A7CA5')
     st.markdown(
-        f"<div style='padding:10px; text-align:center; background:rgba(212, 160, 23, 0.1); border-radius:8px; font-weight:700; color:#D4A017; font-size:0.9em; margin:10px 0 20px 0;'>👀 Studied: {flipped_count}/{len(flashcards)}</div>",
+        f"<div style='margin:10px 0 20px 0;'>"
+        f"<div style='display:flex; justify-content:space-between; align-items:center; "
+        f"margin-bottom:6px; font-weight:700; font-size:0.9em; color:{card_colors['label']};'>"
+        f"<span>👀 Studied</span><span>{flipped_count}/{len(flashcards)}</span></div>"
+        f"<div style='background:rgba(0,0,0,0.08); border-radius:999px; height:10px; overflow:hidden;'>"
+        f"<div style='background:{_accent}; height:100%; width:{_pct}%; border-radius:999px; "
+        f"transition:width 0.4s ease;'></div></div>"
+        f"</div>",
         unsafe_allow_html=True
     )
 
@@ -701,7 +762,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
         )
         safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", card["title"]).strip("_") or "card"
         st.download_button(
-            label="📸 Download This Card",
+            label="📸 This Card",
             data=png_bytes,
             file_name=f"card_{idx + 1}_{safe_title}.png",
             mime="image/png",
@@ -740,9 +801,23 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
             st.session_state.current_card_idx = min(total_cards - 1, idx + 1)
             st.rerun()
 
+    # --- carousel dots (only when the deck is small enough to fit) ---
+    if total_cards <= 15:
+        _accent = card_colors.get('accent', '#3A7CA5')
+        _dots = "".join(
+            f"<span style='display:inline-block; width:{12 if d == idx else 8}px; "
+            f"height:{12 if d == idx else 8}px; border-radius:50%; margin:0 4px; "
+            f"background:{_accent if d == idx else 'rgba(0,0,0,0.18)'}; "
+            f"transition:all 0.25s ease; vertical-align:middle;'></span>"
+            for d in range(total_cards)
+        )
+        st.markdown(
+            f"<div style='text-align:center; margin:14px 0 0 0;'>{_dots}</div>",
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
-    st.markdown("### 📥 Download All Cards")
+    st.markdown("### 📥 Download")
 
     def _format_fact(fact):
         if isinstance(fact, dict):
@@ -771,7 +846,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
     dl_left, dl_right = st.columns(2)
     with dl_left:
         st.download_button(
-            label="📦 All Cards (ZIP of PNGs)",
+            label="📦 All Cards (ZIP)",
             data=zip_bytes,
             file_name="flashcards.zip",
             mime="application/zip",
@@ -780,7 +855,7 @@ if st.session_state.flashcard_generated and st.session_state.flashcards:
         )
     with dl_right:
         st.download_button(
-            label="📝 Text File",
+            label="📝 As Text",
             data=download_text,
             file_name="study_cards.txt",
             mime="text/plain",
