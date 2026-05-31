@@ -1976,8 +1976,7 @@ def _cache_store(core_key, full_description, image_bytes, mime):
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_wikipedia_image(query):
     """Return an image URL for the topic query.
-    Order: Supabase cache (short core key) -> generate via Pollinations
-    then save to cache for everyone else.
+    Order: Supabase cache (short core key) -> fetch from Unsplash Source -> return None
     """
     if not query:
         return None
