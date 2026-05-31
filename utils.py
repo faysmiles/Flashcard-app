@@ -1971,11 +1971,53 @@ def _cache_store(core_key, full_description, image_bytes, mime):
         return None
 
 
+def _build_image_prompt_from_facts(title, facts):
+    """Extract key visual keywords from title and facts for UnDraw search."""
+    visual_words = []
+    stop_words = {
+        'a', 'an', 'the', 'is', 'are', 'has', 'have', 'and', 'or', 'of', 'in', 'on',
+        'it', 'this', 'that', 'which', 'with', 'to', 'for', 'at', 'by', 'from',
+        'be', 'been', 'being', 'do', 'does', 'did', 'can', 'could', 'would',
+        'should', 'may', 'might', 'must', 'will', 'shall', 'very', 'just'
+    }
+    
+    # Process title first
+    title_words = title.lower().split()
+    for word in title_words:
+        clean = re.sub(r'[^a-z0-9]', '', word)
+        if clean and len(clean) > 2 and clean not in stop_words:
+            visual_words.append(clean)
+            if len(visual_words) >= 3:
+                break
+    
+    # If title gave us keywords, return the first one
+    if visual_words:
+        return visual_words[0]
+    
+    # Otherwise try facts
+    if isinstance(facts, list):
+        for fact in facts:
+            if isinstance(fact, dict):
+                text = fact.get('text', '')
+            else:
+                text = str(fact)
+            
+            words = text.lower().split()
+            for word in words:
+                clean = re.sub(r'[^a-z0-9]', '', word)
+                if clean and len(clean) > 3 and clean not in stop_words:
+                    return clean
+    
+    # Fallback to query itself
+    return title.split()[0] if title else "learning"
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
-def search_wikipedia_image(query):
-    """Return an image URL for the topic query.
-    Order: Supabase cache (short core key) -> generate via Pollinations
-    then save to cache for everyone else.
+def search_wikipedia_image(query, facts=None):
+    """Return an image URL using Pollinations AI with refined prompting.
+    
+    Creates child-friendly anime/illustration style images perfect for
+    dyslexic learners - zero text, engaging, memorable.
     """
     if not query:
         return None
@@ -1989,33 +2031,55 @@ def search_wikipedia_image(query):
     if cached:
         return cached
 
-    # 2) Generate a fresh image
+    # 2) Generate via Pollinations with refined prompts
     api_key = _get_pollinations_key()
     if not api_key:
         return None
 
-    prompt = (
-        f"cheerful educational illustration of {query}, "
-        "child-friendly, bright flat colours, friendly cartoon style, "
-        "simple clean background, appropriate for ages 4 to 18, "
-        "no people, no violence, no scary imagery, no text, no labels"
-    )
-
     try:
         import urllib.parse
         import base64
-        encoded = urllib.parse.quote(prompt)
-        url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
+        
+        # Build prompt: anime/illustration style, child-appropriate
+        prompt = (
+            f"child-friendly anime illustration of {query}, "
+            "colorful, cute, engaging style, simple cartoon anime, "
+            "bright colors, expressive characters, educational theme, "
+            "appropriate for ages 4-12, no text, no labels, no annotations, "
+            "illustration only, no diagram elements"
+        )
+        
+        # STRICT SAFETY GUARDRAILS - block inappropriate content
+        negative_prompt = (
+            "text, labels, captions, annotations, diagram, infographic, "
+            "numbers, letters, words, writing, mathematical symbols, "
+            "violence, weapons, gore, blood, scary, horror, dark, "
+            "inappropriate, adult, sexual, suggestive, harmful, "
+            "weapon, gun, knife, fight, battle, war, death, "
+            "watermark, logo, signature, ui elements, buttons, "
+            "realistic, photorealistic, blurry, low quality, ugly"
+        )
+        
+        encoded_prompt = urllib.parse.quote(prompt)
+        encoded_negative = urllib.parse.quote(negative_prompt)
+        
+        url = (
+            f"https://gen.pollinations.ai/image/{encoded_prompt}"
+            f"?model=flux&key={api_key}&width=500&height=500&nologo=true"
+            f"&negative={encoded_negative}"
+        )
+        
         response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
-            # 3) Save to cache using short key + full description
+            # Cache the image
             public_url = _cache_store(core_key, query, response.content, mime)
             if public_url:
                 return public_url
-            # Fallback: cache not configured or upload failed
+            # Fallback: return as base64
             b64 = base64.b64encode(response.content).decode()
             return f"data:{mime};base64,{b64}"
+    
     except Exception as e:
         print(f"Pollinations error for '{query}': {e}")
 
