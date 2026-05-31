@@ -2811,25 +2811,6 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     }}
     .stSlider [data-testid="stTickBar"] {{ color: {muted_text} !important; }}
 
-    /* ---- MOBILE FIX: stop hidden number inputs on sliders triggering the keyboard ---- */
-    /* Streamlit renders a hidden <input type="number"> inside every slider for
-       accessibility. On mobile browsers this input is sometimes focusable,
-       which pops up the numeric keyboard. We make it truly non-interactive. */
-    .stSlider input[type="number"],
-    .stSlider input {{
-        pointer-events: none !important;
-        user-select: none !important;
-        -webkit-user-select: none !important;
-        opacity: 0 !important;
-        position: absolute !important;
-        width: 1px !important;
-        height: 1px !important;
-        overflow: hidden !important;
-        clip: rect(0,0,0,0) !important;
-        /* Prevent mobile browsers from focusing and opening a keyboard */
-        tabindex: -1 !important;
-        readonly: true !important;
-    }}
 
     /* ---- Links ---- */
     .stApp a {{ color: {accent} !important; }}
