@@ -2827,6 +2827,21 @@ def apply_styles(font_style, text_size, colour_scheme, line_spacing=1.8):
     .stDownloadButton > button:disabled {{
         opacity: 0.4 !important;
     }}
+    /* ---- Keyboard focus outline for accessibility ---- */
+    .stButton > button:focus-visible,
+    .stDownloadButton > button:focus-visible {{
+        outline: 3px solid {accent} !important;
+        outline-offset: 2px !important;
+        box-shadow: 0 0 0 3px {bg} !important;
+    }}
+    div[data-baseweb="select"] > div:focus-within {{
+        outline: 3px solid {accent} !important;
+        outline-offset: 1px !important;
+    }}
+    .stSlider [role="slider"]:focus-visible {{
+        outline: 3px solid {accent} !important;
+        outline-offset: 2px !important;
+    }}
 
     /* ---- File uploader ---- */
     [data-testid="stFileUploader"] section,
