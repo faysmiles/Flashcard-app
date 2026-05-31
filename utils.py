@@ -2042,22 +2042,26 @@ def search_wikipedia_image(query, facts=None):
         
         # Build prompt: anime/illustration style, child-appropriate
         prompt = (
-            f"child-friendly anime illustration of {query}, "
-            "colorful, cute, engaging style, simple cartoon anime, "
-            "bright colors, expressive characters, educational theme, "
-            "appropriate for ages 4-12, no text, no labels, no annotations, "
-            "illustration only, no diagram elements"
+            f"cute anime illustration of {query}, "
+            "colorful, expressive, simple cartoon style, "
+            "bright colors, child-friendly, storybook illustration, "
+            "no diagram, no educational poster, no infographic, "
+            "illustration only, just the character or object, clean background"
         )
         
-        # STRICT SAFETY GUARDRAILS - block inappropriate content
+        # EXTREME SAFETY GUARDRAILS - block ALL text and label elements
         negative_prompt = (
-            "text, labels, captions, annotations, diagram, infographic, "
-            "numbers, letters, words, writing, mathematical symbols, "
+            "text, words, letters, writing, numbers, digits, symbols, "
+            "labels, captions, annotations, callouts, pointers, arrows, "
+            "diagram, infographic, chart, graph, ui elements, buttons, "
+            "label box, text box, speech bubble, dialog, title, subtitle, "
+            "educational poster, instruction, guide, manual, "
+            "watermark, logo, signature, stamp, badge, ribbon, banner, sign, "
+            "yellow label, label text, annotation text, pointing, bracketed text, "
             "violence, weapons, gore, blood, scary, horror, dark, "
             "inappropriate, adult, sexual, suggestive, harmful, "
-            "weapon, gun, knife, fight, battle, war, death, "
-            "watermark, logo, signature, ui elements, buttons, "
-            "realistic, photorealistic, blurry, low quality, ugly"
+            "gun, knife, fight, battle, war, death, weapon, "
+            "realistic, photorealistic, photo, blurry, low quality, ugly, artifacts"
         )
         
         encoded_prompt = urllib.parse.quote(prompt)
