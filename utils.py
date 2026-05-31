@@ -1998,14 +1998,24 @@ def search_wikipedia_image(query):
         f"cheerful educational illustration of {query}, "
         "child-friendly, bright flat colours, friendly cartoon style, "
         "simple clean background, appropriate for ages 4 to 18, "
-        "no people, no violence, no scary imagery, no text, no labels"
+        "no people, no violence, no scary imagery"
+    )
+    
+    negative_prompt = (
+        "text, letters, words, labels, captions, writing, "
+        "watermark, banner, sign, title, annotation"
     )
 
     try:
         import urllib.parse
         import base64
         encoded = urllib.parse.quote(prompt)
-        url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
+        encoded_negative = urllib.parse.quote(negative_prompt)
+        url = (
+            f"https://gen.pollinations.ai/image/{encoded}"
+            f"?model=flux&key={api_key}&width=500&height=500&nologo=true"
+            f"&negative={encoded_negative}"
+        )
         response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
