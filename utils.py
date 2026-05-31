@@ -4,8 +4,6 @@ import re
 import os
 import requests
 import json
-import urllib.parse
-import base64
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from openai import OpenAI
@@ -1976,7 +1974,8 @@ def _cache_store(core_key, full_description, image_bytes, mime):
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_wikipedia_image(query):
     """Return an image URL for the topic query.
-    Order: Supabase cache (short core key) -> fetch from Unsplash Source -> return None
+    Order: Supabase cache (short core key) -> generate via Pollinations
+    then save to cache for everyone else.
     """
     if not query:
         return None
@@ -1990,18 +1989,24 @@ def search_wikipedia_image(query):
     if cached:
         return cached
 
-    # 2) Fetch a clean image from Unsplash Source
-    # Unsplash Source requires no authentication and is reliable
-    search_keyword = core_key.split()[0] if core_key else query.split()[0]
-    
+    # 2) Generate a fresh image
+    api_key = _get_pollinations_key()
+    if not api_key:
+        return None
+
+    prompt = (
+        f"cheerful educational illustration of {query}, "
+        "child-friendly, bright flat colours, friendly cartoon style, "
+        "simple clean background, appropriate for ages 4 to 18, "
+        "no people, no violence, no scary imagery, no text, no labels"
+    )
+
     try:
-        # Clean up keyword for URL
-        safe_keyword = urllib.parse.quote(search_keyword)
-        
-        # Unsplash Source returns a random relevant photo
-        url = f"https://source.unsplash.com/500x500/?{safe_keyword}"
-        response = requests.get(url, timeout=15, allow_redirects=True)
-        
+        import urllib.parse
+        import base64
+        encoded = urllib.parse.quote(prompt)
+        url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&key={api_key}&width=500&height=500&nologo=true"
+        response = requests.get(url, timeout=30)
         if response.ok and response.headers.get("content-type", "").startswith("image"):
             mime = response.headers.get("content-type", "image/jpeg").split(";")[0]
             # 3) Save to cache using short key + full description
@@ -2012,7 +2017,7 @@ def search_wikipedia_image(query):
             b64 = base64.b64encode(response.content).decode()
             return f"data:{mime};base64,{b64}"
     except Exception as e:
-        print(f"Image fetch error for '{query}': {e}")
+        print(f"Pollinations error for '{query}': {e}")
 
     return None
 
