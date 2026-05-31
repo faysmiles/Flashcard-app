@@ -2012,82 +2012,13 @@ def _build_image_prompt_from_facts(title, facts):
     return title.split()[0] if title else "learning"
 
 
-def _is_geography_topic(query):
-    """Detect if this is a geography/map-related topic."""
-    geography_keywords = {
-        'map', 'country', 'continent', 'state', 'region', 'province',
-        'ocean', 'sea', 'river', 'mountain', 'geography', 'location',
-        'border', 'capital', 'city', 'nation', 'territory', 'world',
-        'europe', 'asia', 'africa', 'america', 'australia', 'atlantic',
-        'pacific', 'indian', 'arctic', 'france', 'spain', 'germany',
-        'england', 'italy', 'greece', 'china', 'japan', 'india',
-        'brazil', 'egypt', 'north', 'south', 'east', 'west', 'coast',
-        'island', 'peninsula', 'gulf', 'bay', 'lake', 'forest',
-        'desert', 'plains', 'valley', 'plateau', 'canyon', 'glacier',
-        'terrain', 'landscape', 'topography', 'atlas', 'globe'
-    }
-    
-    query_lower = query.lower()
-    for keyword in geography_keywords:
-        if keyword in query_lower:
-            return True
-    return False
-
-
-def _fetch_wikipedia_map(query):
-    """Fetch a clean map/geography image from Wikipedia/Wikimedia Commons."""
-    try:
-        # Try Wikipedia API for the article's main image
-        search_url = "https://en.wikipedia.org/w/api.php"
-        
-        # 1) Find the Wikipedia page
-        params = {
-            "action": "query",
-            "format": "json",
-            "list": "search",
-            "srsearch": query,
-            "srlimit": 1
-        }
-        response = requests.get(search_url, params=params, timeout=10)
-        results = response.json().get("query", {}).get("search", [])
-        
-        if not results:
-            return None
-        
-        title = results[0]["title"]
-        
-        # 2) Get the page's main image
-        params2 = {
-            "action": "query",
-            "format": "json",
-            "titles": title,
-            "prop": "pageimages",
-            "pithumbsize": 400,
-            "piprop": "thumbnail"
-        }
-        response2 = requests.get(search_url, params=params2, timeout=10)
-        pages = response2.json().get("query", {}).get("pages", {})
-        
-        for page in pages.values():
-            thumb = page.get("thumbnail", {}).get("source")
-            if thumb:
-                # Verify it's a map/geography image by checking it's not a portrait
-                return thumb
-        
-        return None
-    except Exception as e:
-        print(f"Wikipedia map fetch error for '{query}': {e}")
-        return None
-
-
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_wikipedia_image(query, facts=None):
-    """Return an image URL using hybrid approach:
-    - Geography topics: Clean Wikipedia maps (educational with labels)
-    - Everything else: Pollinations anime style (zero text)
+    """Return an image URL using Pollinations anime style.
     
-    Perfect for dyslexic learners - maps are labeled for learning,
-    other topics are pure illustration with no confusing text.
+    All topics get cute anime illustrations - zero text, 
+    perfect for dyslexic learners. Even geography topics 
+    become engaging illustrations instead of confusing maps.
     """
     if not query:
         return None
@@ -2101,15 +2032,7 @@ def search_wikipedia_image(query, facts=None):
     if cached:
         return cached
 
-    # 2) Route based on topic type
-    if _is_geography_topic(query):
-        # Geography topics → use Wikipedia maps (clean, educational)
-        wiki_url = _fetch_wikipedia_map(query)
-        if wiki_url:
-            return wiki_url
-        # Fall through to Pollinations if no Wikipedia map found
-    
-    # 3) Everything else → Pollinations anime style (zero text)
+    # 2) Fetch via Pollinations with anime style
     api_key = _get_pollinations_key()
     if not api_key:
         return None
